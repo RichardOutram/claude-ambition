@@ -46,10 +46,11 @@ Ask up to 4 questions, **one at a time**. Use the AskUserQuestion tool when it's
 
 In `--auto` mode, answer the questions yourself from evidence. List each answer as a labelled **assumption**. Stop and ask only if an unknown would change the direction materially.
 
-Then restate the task at the level that serves the goal:
+Then restate the task at the level that serves the goal. Altitude **adds to** the request and never replaces it. The original ask is still delivered in full, as a hard requirement:
 
 ```
 You asked for:   <original>
+Still delivers:  <the original ask, in full>
 Aiming at:       <restated goal>, because <reason>
 Excellent means: <specific hard target>
 Proven by:       <outside check>
@@ -71,10 +72,10 @@ Run each move from the method in order. After each one, give a short step report
 3. **Range:** the verb form, the fields borrowed from with the method taken from each, and what the red team found.
 4. **Stretch:** a stretch variant of the plan, with where it would likely break.
 5. **Judge:** define the outside check the build will be held to. If you can build it cheaply now, do. A plan with its acceptance test already written is a stronger plan.
-6. **Output the plan** with sections for: goal beyond the goal · target · approach and instruments · assumptions tested · borrowed methods · outside check · stretch option · what will be locked in afterwards. In plan mode, present it for approval through the normal plan-approval step. Otherwise stop and ask for approval.
+6. **Output the plan** with sections for: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · borrowed methods · outside check · stretch option · what will be locked in afterwards. In plan mode, present it for approval through the normal plan-approval step. Otherwise stop and ask for approval.
 
 **Build route.** Run Depth → Challenge → Range, doing the work as you go. Then:
-- **Judge:** run the outside check, preferably the `ambition-judge` agent or a real tool, and iterate until it passes. Meet the original brief first and keep it passing.
+- **Judge:** run the outside check, preferably the `ambition-judge` agent or a real tool, and iterate until it passes. The check must cover the original ask as well as the raised goal. Meet the original ask first and keep it passing.
 - **Stretch:** go for the harder target and report where it broke.
 - **Lock:** script or spec, a CLAUDE.md note, and a command if the task will recur.
 
@@ -87,7 +88,7 @@ Only with `--delegate`: read [delegate.md](delegate.md) (`${CLAUDE_SKILL_DIR}/de
 ## 4. Report
 
 Finish with:
-- **You asked for → it became:** one line each.
+- **You asked for → it became:** one line each, plus where the original ask is delivered in full.
 - **Outside check:** what ran, and what it returned.
 - **Stretch:** the target, how far it got, and where it broke.
 - **Locked in:** the files created, and how to rerun.

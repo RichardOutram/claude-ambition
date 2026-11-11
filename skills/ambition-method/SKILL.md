@@ -38,7 +38,7 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
    - What, other than me, would prove it?
    - What access am I missing?
 
-   Then restate the task at the level that serves the goal. The ladder runs: feed in all the data → ask for decisions → question whether the artifact should exist at all. Tell-tale sign that altitude applies: people would hold meetings about this work.
+   Then restate the task at the level that serves the goal. That restatement adds to the original ask, and the original is still delivered in full. The ladder runs: feed in all the data → ask for decisions → question whether the artifact should exist at all. Tell-tale sign that altitude applies: people would hold meetings about this work.
 2. **Depth: deeper, not bigger.** Before working, state four things:
    1. what a top professional would do that wasn't asked for;
    2. the rawest material they would start from;
@@ -66,7 +66,7 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
 
 - **Access comes first.** The method assumes a computer that can install software and reach real data. If data, tools, machines or permissions are missing, getting them is the first job. Ask for them; don't fake around them.
 - **Evidence over assertion.** Every claim that something works, is faster or is correct needs a check you ran. Never say a check passed if you didn't run it.
-- **Raise the goal openly.** *(ours)* When you restate a task at a higher altitude, say what changed and why, and let the user veto it. Ambition never overrides explicit constraints, permissions, safety, or the user's stated scope.
+- **Raise the goal openly.** *(ours)* When you restate a task at a higher altitude, say what changed and why, and let the user veto it. The original ask stays a hard requirement: altitude is additive, never a replacement. Ambition never overrides explicit constraints, permissions, safety, or the user's stated scope.
 - **Deeper, not bigger.** Ambition means a better method and a better outcome, not more output. Cut anything that doesn't serve the goal.
 - **Proportion.** *(ours)* Match the effort to the stakes. A typo fix needs no interview. When in doubt, do a light pass: one altitude question and one outside check.
 - **Know where it fits.** Altitude works less well for open-ended creative work, and "go make money" is too high a level to act on yet. Depth and range still apply there.
