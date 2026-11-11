@@ -33,4 +33,4 @@ For each field, name the concrete method you are borrowing: a checklist, a test,
 
 ## Using subagents
 
-Give each field its own subagent when the work is big enough. Brief each with the verb form, the raw material and the specific method it should apply, and ask for findings rather than prose. The red team should get the finished output and the goal, never your reasoning.
+Give each field its own subagent when the work is big enough. Brief each with the verb form, the raw material and the specific method it should apply, and ask for findings rather than prose: a short list of what was found, with evidence, plus paths to any longer material. The red team should get the finished output and the goal, never your reasoning.

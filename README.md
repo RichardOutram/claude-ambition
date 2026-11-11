@@ -145,6 +145,7 @@ To analyse any past session: `python3 skills/be-ambitious/scripts/ambition-metri
 - **Give it a computer.** The method assumes Claude can run code, install tools and reach real data. Without that access, the challenge and judge steps fall back to reasoning, which is the very habit they exist to break.
 - **Missing access is the first task.** The essay's "keep the apps crash-free" goal first needed easy access to crash reports, version-to-commit mapping, and real machines on each OS.
 - **Falling short at the stretch step is the point.** A broken stretch target shows you where the real limit is.
+- **Start long runs with a clean context.** Every API call re-reads the whole conversation, so a run started deep in a long session costs more per step. Start `/be-ambitious` in a fresh session or after `/compact`. Alternatively use `--delegate`, so the heavy work happens in a runner with a fresh context.
 - **The lock step is what compounds.** If the result can't be reproduced cheaply, you pay for the ambition again next time.
 
 ## Manual install (without the plugin system)

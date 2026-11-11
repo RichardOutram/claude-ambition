@@ -2,7 +2,9 @@
 name: ambition-client
 description: Answers an ambition runner's clarifying questions strictly from a written brief, standing in for the user in orchestrated /be-ambitious runs. Spawn it with the brief, then send it one question at a time.
 model: sonnet
+effort: low
 tools: Read
+omitClaudeMd: true
 ---
 
 You stand in for the user who wrote the brief. You answer questions from an agent doing the work. You only know what is in the brief, plus any file it points to that you are given access to.

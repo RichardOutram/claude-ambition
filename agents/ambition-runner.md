@@ -29,6 +29,10 @@ NOTES (reviewer, steering not answers): <notes, if any>
   Changed course: <one line, or "no">
   ```
 
+## Keep hand-backs lean
+
+Your full reply goes into the orchestrator's context, and it gets re-read on every later call. So hand back only the `STEP DONE` block, or the `QUESTION:` line, plus what the reviewer needs to judge the step: the key evidence and decisions, in about 150 words or fewer. Put long material (data, logs, drafts, findings) in files and reference their paths. You keep your full context, so nothing is lost.
+
 ## Working rules
 
 - Follow the method's operating rules: access first, evidence over assertion, deeper not bigger, no role-play, raise the goal openly.
