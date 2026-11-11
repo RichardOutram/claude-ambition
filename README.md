@@ -78,6 +78,7 @@ The last three only happen if you ask for them. Models also have habits that wor
 | `--brief <file>` | The brief the client agent answers from |
 | `--review me` / `--review claude` | Pause after every step for notes from you, or from the orchestrator |
 | `--log` | Write the full run to `.ambition/runs/<date>-<slug>.md` |
+| `--no-metrics` | Skip the token metrics block at the end |
 
 You don't always have to type the command. The skill's description tells Claude to use it when you explicitly ask it to "be ambitious about this" or "aim much higher", so phrasing like that can trigger it. Typing `/be-ambitious` is the reliable way.
 
@@ -117,6 +118,27 @@ skills:
   - ambition-method
 ---
 ```
+
+## Metrics
+
+Each `/be-ambitious` run ends with a small token report covering the main session and every subagent:
+
+```
+Metrics (cost: /cost, or total_cost_usd in headless JSON)
+total   in 134 · out 80.8k (think 29.0k) · cache read 4.31M · write 170.8k · hit 96% · 53 calls
+model   opus-5-5: in 126 · out 61.6k (think 21.6k) · cache read 4.30M · write 149.6k · hit 97% · 49 calls
+agent   main: in 118 · out 60.7k (think 21.5k) · cache read 4.24M · write 113.7k · hit 97% · 46 calls
+agent   web-fetch ×2: in 8 · out 19.2k (think 7.5k) · cache read 7.9k · write 21.2k · hit 27% · 4 calls
+```
+
+A bundled script reads the session transcripts, so the model only reads the summary, which is about 100 tokens. Cost in dollars isn't stored in transcripts. Use `/cost` interactively, or run headless, which reports exact figures:
+
+```sh
+claude -p --output-format json "/be-ambitious --auto <task>" \
+  | jq '{cost: .total_cost_usd, turns: .num_turns, ms: .duration_ms, models: .modelUsage}'
+```
+
+To analyse any past session: `python3 skills/be-ambitious/scripts/ambition-metrics.py <session-id> [--since ISO8601] [--json]`. In headless runs, use the JSON above, because the transcript is only written in full when the run ends.
 
 ## Tips
 

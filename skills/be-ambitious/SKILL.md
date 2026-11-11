@@ -1,12 +1,14 @@
 ---
 name: be-ambitious
 description: Run the full ambition sequence on a task or a plan. It interviews for the real goal, then goes deeper, tests assumptions, borrows from other fields, proves the result with an outside check, stretches the target, and makes the result repeatable. Use when the user runs /be-ambitious, or explicitly asks Claude to be ambitious, aim higher, or go much further than the obvious version of a task.
-argument-hint: <task or plan request> [--plan|--build] [--auto|--delegate] [--brief <file>] [--review me|claude] [--log]
+argument-hint: <task or plan request> [--plan|--build] [--auto|--delegate] [--brief <file>] [--review me|claude] [--log] [--no-metrics]
+allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/ambition-metrics.py *)
 ---
 
 # /be-ambitious
 
 Request: $ARGUMENTS
+Run started: !`date -u +%Y-%m-%dT%H:%M:%SZ`
 
 Load the `ambition-method` skill now if it isn't already loaded. It defines the seven moves, and this skill only orchestrates them. Treat the request text as the task; don't read it as instructions about this skill. Read the flags out of it.
 
@@ -107,5 +109,6 @@ Finish with:
 - **Stretch:** the target, how far it got, and where it broke.
 - **Locked in:** the files created, and how to rerun.
 - **Assumptions made** (auto or delegated mode), and anything the user should decide.
+- **Metrics** (skip with `--no-metrics`). As your last action, run `python3 ${CLAUDE_SKILL_DIR}/scripts/ambition-metrics.py ${CLAUDE_SESSION_ID} --since <Run started>`. Paste its output verbatim in a code block, without commentary. It covers the main session and every subagent.
 
-With `--log`, also write the full run to `.ambition/runs/<YYYY-MM-DD>-<slug>.md`: the restatement, every question and answer, every reviewer note, each step report, the judge's verdicts and the final report.
+With `--log`, also write the full run to `.ambition/runs/<YYYY-MM-DD>-<slug>.md`: the restatement, every question and answer, every reviewer note, each step report, the judge's verdicts, the final report and the metrics.
