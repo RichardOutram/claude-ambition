@@ -1,0 +1,57 @@
+{
+  "slug": "write/explain-https",
+  "pair": [
+    "ambitious",
+    "briefed"
+  ],
+  "run": 1,
+  "winner": "briefed",
+  "orders": [
+    {
+      "order": 1,
+      "A": "ambitious",
+      "B": "briefed",
+      "winner": "briefed",
+      "confidence": "medium",
+      "summary": "A's verified MITM lab is great for breaking the verify=False habit but never explains how HTTPS works (3/5 comprehension); B explains the protocol and the habit well (5/5), with one minor verify-path error.",
+      "scores": {
+        "A": {
+          "technical_accuracy": 5,
+          "behaviour_change": 5,
+          "comprehension": 2,
+          "answers_request": 2
+        },
+        "B": {
+          "technical_accuracy": 4,
+          "behaviour_change": 4,
+          "comprehension": 5,
+          "answers_request": 5
+        }
+      },
+      "cost_usd": 0.5147232
+    },
+    {
+      "order": 2,
+      "A": "briefed",
+      "B": "ambitious",
+      "winner": "briefed",
+      "confidence": "medium",
+      "summary": "A explains HTTPS end-to-end and tackles the verify=False habit, scoring 5 of 5 on comprehension; B's runnable lab (15 of 15 checks pass) changes behaviour better but never explains the handshake or key exchange and scores 4 of 5.",
+      "scores": {
+        "A": {
+          "technical_accuracy": 4,
+          "behaviour_change": 4,
+          "comprehension_test": 5,
+          "answers_request": 5
+        },
+        "B": {
+          "technical_accuracy": 5,
+          "behaviour_change": 5,
+          "comprehension_test": 4,
+          "answers_request": 2
+        }
+      },
+      "cost_usd": 0.31133485
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "slug": "write/explain-https",
+  "pair": [
+    "ambitious",
+    "not-ambitious"
+  ],
+  "run": 1,
+  "winner": "ambitious",
+  "orders": [
+    {
+      "order": 1,
+      "A": "not-ambitious",
+      "B": "ambitious",
+      "winner": "ambitious",
+      "confidence": "medium",
+      "summary": "A best explains how HTTPS works but ignores the verify=False habit; B's lab (ran: 15/15, shows a stolen bearer token) and fix tables target the habit directly, though it leaves out handshake and key exchange.",
+      "scores": {
+        "A": {
+          "technical_accuracy": 5,
+          "behaviour_change": 2,
+          "comprehension": 4
+        },
+        "B": {
+          "technical_accuracy": 4,
+          "behaviour_change": 5,
+          "comprehension": 3
+        }
+      },
+      "cost_usd": 0.355011855
+    },
+    {
+      "order": 2,
+      "A": "ambitious",
+      "B": "not-ambitious",
+      "winner": "ambitious",
+      "confidence": "medium",
+      "summary": "B explains the HTTPS mechanics better, but only A addresses the habit of disabling verification, with a passing 15/15 lab that shows the token theft and a fix for each error.",
+      "scores": {
+        "A": {
+          "technical_accuracy": 4,
+          "changes_behaviour": 5,
+          "comprehension_test": 3
+        },
+        "B": {
+          "technical_accuracy": 5,
+          "changes_behaviour": 2,
+          "comprehension_test": 3.5
+        }
+      },
+      "cost_usd": 0.5106298
+    }
+  ]
+}

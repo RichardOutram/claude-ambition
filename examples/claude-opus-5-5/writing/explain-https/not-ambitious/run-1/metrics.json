@@ -1,0 +1,30 @@
+{
+  "slug": "write/explain-https",
+  "arm": "not-ambitious",
+  "model": "claude-opus-5-5",
+  "effort": null,
+  "isolation": "clean-config",
+  "started": "2026-11-11T18:36:20Z",
+  "session_id": "8a4dfd63-68d3-4370-b6e7-aceb02286959",
+  "exchanges": 1,
+  "cost_usd": 0.109,
+  "client_cost_usd": 0.0322,
+  "duration_ms": 15344,
+  "num_turns": 1,
+  "errors": [],
+  "by_model": {
+    "claude-opus-5-5": {
+      "inputTokens": 2,
+      "outputTokens": 1518,
+      "cacheReadInputTokens": 11661,
+      "cacheCreationInputTokens": 9540,
+      "webSearchRequests": 0,
+      "costUSD": 0.10902020000000001,
+      "thinkingTokens": 21,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 9540
+    }
+  },
+  "plugin_commit": "0cd5366",
+  "claude_version": "2.1.322 (Claude Code)"
+}
