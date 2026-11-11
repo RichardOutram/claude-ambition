@@ -1,0 +1,14 @@
+{
+  "name": "ambition",
+  "displayName": "Ambition",
+  "version": "0.1.0",
+  "description": "Push Claude past its defaults: find the goal behind the task, work like the best practitioner, borrow from other fields, prove the result with a check that isn't the model, then make it repeatable.",
+  "author": {
+    "name": "Richard Outram",
+    "url": "https://github.com/RichardOutram"
+  },
+  "homepage": "https://github.com/RichardOutram/claude-ambition",
+  "repository": "https://github.com/RichardOutram/claude-ambition",
+  "license": "MIT",
+  "keywords": ["ambition", "prompting", "workflow", "agents", "planning", "verification"]
+}

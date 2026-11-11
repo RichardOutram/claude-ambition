@@ -1,0 +1,17 @@
+{
+  "name": "claude-ambition",
+  "owner": {
+    "name": "Richard Outram",
+    "url": "https://github.com/RichardOutram"
+  },
+  "metadata": {
+    "description": "Claude Code plugins for working more ambitiously with models."
+  },
+  "plugins": [
+    {
+      "name": "ambition",
+      "source": "./",
+      "description": "/be-ambitious and the seven-step ambition sequence, with runner, client and judge agents for orchestrated runs."
+    }
+  ]
+}
