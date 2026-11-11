@@ -1,38 +1,29 @@
 A = ambitious, B = not-ambitious (the judge did not know this)
 
-**Verdict: A wins (medium confidence).** B is the better general explanation of how HTTPS works. But A is the only one that would change the junior's habit of disabling certificate verification, and that is the real goal here.
+A is the clear winner. Both explain HTTPS accurately. Only A tackles the junior's real problem, which is switching off certificate verification, and the checks back it up.
 
-**Checks run the same way on both**
-- **Comprehension test:** a fresh agent read only each explanation and answered the same five questions, saying "not covered" where the text was silent. For A it read `RESPONSE.md` plus `cert-lab/GUIDE.md`; for B it read `RESPONSE.md`.
-
-  | Question | A | B |
-  |---|---|---|
-  | 1. What HTTPS provides; which part verification gives | ✅ | ✅ |
-  | 2. Verification off: still encrypted? What can an attacker do? | ✅ explicit, with the stolen token | ½ (inferred from the man-in-the-middle line) |
-  | 3. Fix for "unable to get local issuer certificate" instead of `verify=False` | ✅ trust that one CA, or fix the server's chain | ❌ not covered |
-  | 4. How the session key is agreed (Diffie–Hellman) | ❌ not covered | ✅ |
-  | 5. What HTTPS doesn't hide | ❌ not covered | ✅ |
-  | **Total** | **3/5** | **3.5/5** |
-
-- **A's lab:** `python3 cert-lab.py` exited 0 with "15 checks behaved as expected, 0 unexpected". In case 7, with verification off, the attacker's server received `Authorization: Bearer sk_live_DO_NOT_LEAK` in plain text.
-- **A's demo:** `https-demo.sh` gave correct results for chain checks, hostname checks and the X25519 shared secret (both sides got the same value). The handshake section printed nothing, probably because the sandbox blocks local ports.
-- **A's Node check:** it fails without a certs-directory argument. A's response says to pass one, so this is expected. I didn't rerun it with the argument because that command needed approval.
-- B produced no files, so it had nothing to run.
-
-**Accuracy (my own review)**
-- A is accurate throughout: the error-to-cause table, the per-tool commands, and the note that `REQUESTS_CA_BUNDLE` replaces the default CA bundle while `NODE_EXTRA_CA_CERTS` adds to it. One overstatement: "it always does" end up in production.
-- B is accurate on TLS 1.3, forward secrecy, CertificateVerify, 0-RTT replay, SNI/ECH and Certificate Transparency.
+**Checks**
+- **Ground truth:** there is no `hidden/` directory, so I judged technical accuracy myself.
+- **Comprehension test:** two fresh agents each read only one explanation (A's `HTTPS-for-developers.md`, B's `RESPONSE.md`) and answered the same 5 questions. Each was told to say "NOT COVERED" for anything its document didn't cover.
+  - **A: 5/5 answered from the text.** One small gap: the reader marked the TLS 1.3 forward-secrecy details as only partly covered.
+  - **B: 3/5.** Question 3 (`unable to get local issuer certificate` in Python while the browser works, and what to do instead of `verify=False`) was "mostly NOT COVERED". Question 5 (corporate TLS-inspection proxy) was "NOT COVERED".
+- **A's lab:** I ran it on a copy in `$TMPDIR`. `./setup.sh` exited 0, then I started `servers.py`.
+  - `mitm_demo.py`: with verification off, the token leaks and the reply is altered. With it on, the request is blocked with `unable to get local issuer certificate`.
+  - `check.py`: 0/5 scenarios fixed and the attacker canary blocked. That's the intended starting state; the errors really happen in Python, curl and Node.
+  - `tools/selftest.sh`: all 10 checks pass, including canary detection, rejecting a server-side "fix" of the proxy scenario, the reference fixes solving 5/5, and the scanner catching all 31 insecure samples with no false positives.
+  - I then stopped the servers.
+- **B** produced no files, so it had nothing to run.
 
 **Scores**
 
-| Criterion | A | B | Evidence |
-|---|---|---|---|
-| Technical accuracy | 4 | 5 | A is correct on certificates, but leaves out the handshake and key exchange. B is a correct, complete overview of the mechanism. |
-| Changes behaviour | 5 | 2 | A runs the attack on the junior's own machine, gives a proper fix for each error, and a checklist before `verify=False`. B only notes that the certificate stops a man-in-the-middle and never addresses the habit. |
-| Comprehension test | 3 | 3.5 | Table above: A misses the mechanics questions, B misses the "what to do instead" question. |
+| Criterion | A | B |
+|---|---|---|
+| Technical accuracy | **5:** handshake, the role of CertificateVerify, SAN-only name matching, trust store behaviour for each runtime and the 200-day certificate limit since March 2026 (CA/B Forum SC-081) all check out. | **5:** a correct, current TLS 1.3 walkthrough (hybrid ML-KEM key exchange, Certificate Transparency, HKDF, AEAD, the ECH caveat). |
+| Changes behaviour (verification habit) | **5:** opens with a runnable demo where verification off means a leaked API key. Then gives a fix for each error type instead of `verify=False`, a triage flowchart, rebuttals to the usual excuses, and a CI scanner for disabled verification. | **2:** one sentence ("encryption alone doesn't help if you're encrypting to the wrong party") hints at it. It never mentions `verify=False`, real error messages or how to fix them. |
+| Comprehension test | **5:** 5/5 answered, with specific, usable fixes. | **3:** 3/5; it fails exactly the two questions about what to do instead of disabling verification. |
 
-A's weaknesses: `RESPONSE.md` is written to a mentor about "your junior developer" rather than as the explanation itself, and its material never explains how the key is agreed. Even so, the user's real need is stopping the verification habit, and only A meets it, with a demonstration that runs and passes.
+B is a good general explanation of HTTPS. A explains the same mechanics just as accurately and also gives this junior a working way to stop bypassing verification. A is much longer, but the extra length is what answers those two questions, and its lab runs.
 
 ```json
-{"winner": "A", "confidence": "medium", "scores": {"A": {"technical_accuracy": 4, "changes_behaviour": 5, "comprehension_test": 3}, "B": {"technical_accuracy": 5, "changes_behaviour": 2, "comprehension_test": 3.5}}, "summary": "B explains the HTTPS mechanics better, but only A addresses the habit of disabling verification, with a passing 15/15 lab that shows the token theft and a fix for each error."}
+{"winner": "A", "confidence": "high", "scores": {"A": {"technical_accuracy": 5, "changes_behaviour": 5, "comprehension_test": 5}, "B": {"technical_accuracy": 5, "changes_behaviour": 2, "comprehension_test": 3}}, "summary": "Both are accurate, but only A tackles the verify=False habit (working MITM demo, per-error fixes, lab whose selftest passes 10/10); B's reader couldn't answer the two practical-fix questions."}
 ```

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>claude-ambition results</title>
+<meta name="description" content="Blind A/B results for the ambition plugin for Claude Code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script defer src="assets/app.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap top-in">
+  <a class="brand" href="index.html">claude-ambition <span>results</span></a>
+  <nav><a href="index.html#method">How it's tested</a><a href="https://github.com/RichardOutram/claude-ambition">GitHub</a></nav>
+</div></header>
+<main class="wrap">
+<section class="hero">
+  <p class="eyebrow">An open A/B test of the <a href="https://github.com/RichardOutram/claude-ambition">ambition plugin</a> for Claude Code</p>
+  <h1>Does asking for more get you more, and is it worth paying for?</h1>
+  <p class="lede">Each example is one ordinary request, run three ways on the same model under identical conditions. A blind judge picks the better work. Only then does a separate step look at the bill and decide whether the difference was worth it.</p>
+</section>
+<section id="results"><h2>Results</h2>
+<div class="table-wrap"><table class="results"><thead><tr><th>Example</th><th>Runs</th><th>vs plain prompt</th><th>vs briefed prompt</th><th>Cost per run<span class="sub">plain · briefed · ambitious</span></th><th>Minutes<span class="sub">plain · ambitious</span></th><th>Worth the extra cost?<span class="sub">vs plain</span></th><th>Worth it?<span class="sub">vs briefed</span></th></tr></thead>
+<tbody><tr><td><a href="claude-opus-5-5/writing/explain-https/index.html">write/explain-https</a><span class="sub">claude-opus-5-5</span></td><td>1</td>
+<td><span class="badge good">Won</span><span class="sub">high/high confidence</span></td><td><span class="badge good">Won</span><span class="sub">high/medium confidence</span></td><td class="num">$0.109 · $0.126 · $4.15</td><td class="num">0.3 · 14.4</td>
+<td><span class="badge good">Yes</span><span class="sub">major uplift · 38.1× cost</span></td><td><span class="badge good">Yes</span><span class="sub">material uplift · 32.9× cost</span></td></tr></tbody></table></div>
+<p class="hint">One run can be luck. Examples with a single run are illustrations, not measurements.</p>
+</section>
+<section><h2>Examples</h2><div class="ex-grid"><a class="ex-card" href="claude-opus-5-5/writing/explain-https/index.html">
+  <div class="ex-visual"><blockquote>“Explain how HTTPS works.”</blockquote></div>
+  <div class="ex-body"><p class="eyebrow">writing</p><h3>Explain how HTTPS works.</h3>
+  <p>The explanation is meant to change a risky habit or unblock real errors, especially when mentoring a team where a runnable demo and CI guardrail will be reused.</p><div class="badges"><span class="badge good">Won</span><span class="sub">high/high confidence</span><span class="badge good">Yes</span><span class="sub">major uplift · 38.1× cost</span></div></div>
+</a></div></section>
+<section id="method" class="method"><h2>How it's tested</h2>
+<ol class="steps">
+  <li><b>Three arms.</b> The <span class="dot not-ambitious"></span>plain prompt as typed; a <span class="dot briefed"></span>briefed prompt that adds what the user knew but didn't say; and <span class="dot ambitious"></span><code>/be-ambitious</code>. The briefed arm is the control: it shows whether the method adds anything beyond extracting more context.</li>
+  <li><b>Identical conditions.</b> Same model, settings, tools, sandbox and turn limit. Each run starts in an empty folder outside the repo. If any arm asks a question, the same stand-in user answers it from the brief.</li>
+  <li><b>A blind judge.</b> A fresh session sees only the request, the context, the check and two outputs labelled A and B. It runs objective checks, then scores a rubric. Each pair is judged twice with the labels swapped, and a disagreement is a tie.</li>
+  <li><b>Then the bill.</b> A separate session reads the blind reports plus the cost and time of each output, and decides whether the improvement was worth it for this user: yes, marginal or no, with when to use it and when to skip it.</li>
+</ol>
+<p class="hint">Code: <a href="https://github.com/RichardOutram/claude-ambition/tree/main/bench">bench/</a> · Raw results: <a href="https://github.com/RichardOutram/claude-ambition/blob/main/examples/RESULTS.md">examples/RESULTS.md</a></p>
+</section>
+</main>
+<footer class="wrap foot">Generated from <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples">examples/</a> by <code>bench/ab.py report</code>.
+Outputs are shown exactly as produced. Model-made pages run in sandboxed frames.</footer>
+</body>
+</html>

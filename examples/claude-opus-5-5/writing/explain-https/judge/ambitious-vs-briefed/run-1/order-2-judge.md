@@ -1,34 +1,49 @@
-A = briefed, B = ambitious (the judge did not know this)
+A = ambitious, B = briefed (the judge did not know this)
 
-I'd pick **A**, with medium confidence. Both responses are accurate and both go after the habit of disabling certificate verification. The difference is that only A actually explains how HTTPS works, and its reader passed all five comprehension questions while B's reader passed four.
+# HTTPS explainer judgment: A beats B
 
-**Checks run, the same way on both**
+A wins. Both explanations are accurate and both go after the habit of turning verification off. A backs its claims with a demo and a lab that actually run, and its reader got all 5 comprehension questions right. B's reader got about 4.
 
-- **Reading both responses:** A is a single 1,067-word explanation. B's `RESPONSE.md` is a 581-word cover note about deliverables, addressed to whoever asked for the explanation, not the junior developer. B's real explanation is in `cert-lab/GUIDE.md`. B also includes `cert-lab.py`, `node-check.mjs` and `https-demo.sh`.
-- **Running B's lab:** `python3 -I cert-lab.py` in a temporary directory gave "15 checks behaved as expected, 0 unexpected", exit code 0. It does show the attack: a fake certificate is refused with verification on, and with verification off the client sends `Authorization: Bearer sk_live_DO_NOT_LEAK` to the attacker in readable form. A has nothing to run, so there is no equivalent check for it.
-- **Searching B for the protocol itself:** `grep` for handshake, ECDHE, key exchange, symmetric and private key in `GUIDE.md` and `RESPONSE.md` found only passing mentions of "real TLS handshake". B never explains how the session key is agreed. B's `https-demo.sh` does demonstrate the handshake and key agreement, but neither the response nor the guide mentions it.
-- **Comprehension test:** a fresh agent read only each response (for B, `RESPONSE.md` plus `GUIDE.md`) and answered five questions:
-  1. What does HTTPS provide?
-  2. How is the key agreed?
-  3. What happens under interception with verification off?
-  4. What is the fix behind a corporate proxy with Python requests?
-  5. What checks run on a certificate?
-  - **A:** 5 of 5 correct. It covered ECDHE and the secret never being sent, plus proof of possession.
-  - **B:** 4 of 5. Question 2 came back "not covered".
+## Checks run
 
-**Scores**
+**A's material runs and does what it says.**
+- **Attacker demo (`python3 lab/mitm_demo.py`):** works. With verification off, the fake API token leaks, the account number in the reply is swapped, and the app sees HTTP 200. With it on, the client fails with `unable to get local issuer certificate` and the request is never sent.
+- **Lab checker (`python3 check.py`, servers running):** in the starting state, 0/5 scenarios are fixed and the attacker server stays blocked. Errors reproduce in Python, curl and Node.
+- **Self-test (`tools/selftest.sh`):** 10/10 PASS. That covers the attacker canary, rejecting the wrong fix on the corporate-proxy scenario, the reference fixes solving 5/5, and the scanner flagging all 31 insecure samples with no false positives.
+- **Clean-up:** I reset the lab with `./setup.sh` and stopped the servers.
+- **A's scanner on B's file (`tools/find-insecure.sh`):** it flagged the "don't do this" lines in B's prose, including B's title line. That's harmless in docs but shows the scanner is noisy outside code.
 
-| Criterion | A | B | Evidence |
-|---|---|---|---|
-| Technical accuracy | 4 | 5 | A is correct, but lists `unable to get local issuer certificate` twice in its table without saying how to tell the cases apart. B is correct and more detailed: wrong clock, revocation, and that `REQUESTS_CA_BUNDLE` replaces the default certificates while `NODE_EXTRA_CA_CERTS` adds to them. |
-| Changes the verification habit | 4 | 5 | A has a man-in-the-middle diagram, rebuttals to "it's just dev", a table from error to fix, the safe alternative for each tool, and a rule of thumb. B adds a lab the developer can run that leaks their own credentials, a checklist, and verified Node behaviour. |
-| Comprehension test | 5 | 4 | A: 5 of 5. B: 4 of 5, failing the key-exchange question. |
-| Answers the request (how HTTPS works) | 5 | 2 | A walks through TCP, the handshake, certificates, the four checks, key exchange and encrypted traffic. B covers only certificate verification and its errors, not the handshake or how keys are agreed. |
+B is a single document, so there was nothing of B's to run.
 
-**Verdict**
+## Comprehension test
+A fresh agent read only the explanation and answered 5 questions. For A that was the guide, `HTTPS-for-developers.md`; for B it was `RESPONSE.md`.
 
-B's lab is a strong, tested way to change behaviour. But B treats "explain how HTTPS works" as "explain certificate errors", and its main response is a note about the deliverables rather than the explanation. A answers the actual question and covers most of what B uses to change the habit. A fresh reader also understood A better.
+| Question | A | B |
+|---|---|---|
+| 1. What you keep and lose with verification off | ✔ | ✔ |
+| 2. What proves the private key; what the client checks | ✔ (CertificateVerify, plus a 4th check) | ✔ |
+| 3. Fails in Python but works in the browser: causes, and how to tell | ✔ (AIA fetching, separate trust stores) | ½: two causes and how to diagnose, but "why the browser works" is not covered |
+| 4. Fix behind a corporate proxy, in Node and Python | ✔ (warns that `REQUESTS_CA_BUNDLE` replaces certifi) | ✔ |
+| 5. Why the error message alone doesn't prove a config issue | ✔ (stated directly: the attacker's error is identical) | ½: had to be pieced together; the doc never says it outright |
+| **Score** | **5/5** | **~4/5** |
+
+## Accuracy notes
+- **A:** I found no errors. The TLS 1.3 message order is right, the trust-store details per runtime are right, and the 2026 certificate-lifetime figure is current.
+- **B:**
+  - It's mostly accurate.
+  - The Python fix of setting `verify=` (or `REQUESTS_CA_BUNDLE`) to the corporate root alone throws away the certifi roots. That can break other connections, especially off the corporate network.
+  - Its "server signs its part" wording for the handshake describes TLS 1.2 rather than 1.3. That's fine as a simplification.
+
+## Scores
+
+| Criterion | A | B |
+|---|---|---|
+| Technical accuracy | 5: no errors found; runnable checks back the claims | 4: correct overall, but the corp-CA advice for requests replaces the default roots |
+| Changes behaviour | 5: a working demo shows the token theft, the guide shows that "config bug" and "attack" give the same error, and there is a CI scanner | 4: clear "❌ vs ✔" fixes for each stack and the man-in-the-middle argument, but nothing hands-on |
+| Comprehension | 5: 5/5 answered from the text | 4: about 4/5; Q3 and Q5 only partly covered |
+
+Length isn't why A wins: B is the quicker read and a perfectly good handout. A wins because its central argument is shown working, not just stated: you can't tell an attack from a misconfiguration by the error message alone. That speaks directly to the habit, and the comprehension test picked up the difference.
 
 ```json
-{"winner": "A", "confidence": "medium", "scores": {"A": {"technical_accuracy": 4, "behaviour_change": 4, "comprehension_test": 5, "answers_request": 5}, "B": {"technical_accuracy": 5, "behaviour_change": 5, "comprehension_test": 4, "answers_request": 2}}, "summary": "A explains HTTPS end-to-end and tackles the verify=False habit, scoring 5 of 5 on comprehension; B's runnable lab (15 of 15 checks pass) changes behaviour better but never explains the handshake or key exchange and scores 4 of 5."}
+{"winner": "A", "confidence": "medium", "scores": {"A": {"technical_accuracy": 5, "changes_behaviour": 5, "comprehension": 5}, "B": {"technical_accuracy": 4, "changes_behaviour": 4, "comprehension": 4}}, "summary": "Both are accurate and both target the verify=False habit, but A's runnable attacker demo and lab (selftest 10/10) prove the 'same error as an attack' point and its reader scored 5/5 vs about 4/5 for B."}
 ```

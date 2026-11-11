@@ -1,0 +1,65 @@
+{
+  "slug": "write/explain-https",
+  "pair": [
+    "ambitious",
+    "briefed"
+  ],
+  "run": 1,
+  "winner": "ambitious",
+  "orders": [
+    {
+      "order": 1,
+      "A": "briefed",
+      "B": "ambitious",
+      "winner": "ambitious",
+      "confidence": "high",
+      "summary": "Both accurate. B's runnable MITM demo (verified to leak the token with verify off), lab and CI scanner plus the identical-error insight change the habit more directly, and it scored 5/5 vs 4.5/5 on comprehension. A's REQUESTS_CA_BUNDLE advice silently replaces certifi.",
+      "scores": {
+        "A": {
+          "technical_accuracy": 4,
+          "changes_verification_behaviour": 3,
+          "comprehension_test": 4
+        },
+        "B": {
+          "technical_accuracy": 5,
+          "changes_verification_behaviour": 5,
+          "comprehension_test": 5
+        }
+      },
+      "cost_usd": 0.7077814
+    },
+    {
+      "order": 2,
+      "A": "ambitious",
+      "B": "briefed",
+      "winner": "ambitious",
+      "confidence": "medium",
+      "summary": "Both are accurate and both target the verify=False habit, but A's runnable attacker demo and lab (selftest 10/10) prove the 'same error as an attack' point and its reader scored 5/5 vs about 4/5 for B.",
+      "scores": {
+        "A": {
+          "technical_accuracy": 5,
+          "changes_behaviour": 5,
+          "comprehension": 5
+        },
+        "B": {
+          "technical_accuracy": 4,
+          "changes_behaviour": 4,
+          "comprehension": 4
+        }
+      },
+      "cost_usd": 0.7665728000000002
+    }
+  ],
+  "worth": {
+    "cheaper": "briefed",
+    "dearer": "ambitious",
+    "cost_multiple": 32.9,
+    "time_multiple": 35.3,
+    "uplift": "material",
+    "worth_it": "yes",
+    "reason": "For a junior who habitually disables verification, the dearer response fixes the cheaper one's bundle-replacement trap (which would push them back to verify=False), states the attack-vs-misconfig 'identical error' point outright, and adds a verified runnable MITM demo that makes the risk visible, all for about $4 and 14 minutes against a recurring credential-leak risk.",
+    "use_when": "The goal is to change a risky habit or teach a team, where a runnable demonstration and copy-paste-correct fixes will be reused or shared and a mistake has security consequences.",
+    "skip_when": "The reader just wants a conceptual explanation of HTTPS for reading, with no habit to break, or a short handout is enough; then a compact answer with the combined-bundle fix and the identical-error point added covers most of the value.",
+    "cost_usd": 0.0728978
+  }
+}

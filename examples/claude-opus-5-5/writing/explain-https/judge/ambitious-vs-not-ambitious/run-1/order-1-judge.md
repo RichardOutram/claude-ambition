@@ -1,32 +1,28 @@
 A = not-ambitious, B = ambitious (the judge did not know this)
 
-**Checks run (the same way for both)**
-- **Read both deliverables.** A is a 650-word explanation in RESPONSE.md. B is a RESPONSE.md written to a manager, plus `cert-lab/GUIDE.md`, `cert-lab.py`, `node-check.mjs`, and a `https-demo.sh` that RESPONSE.md never mentions.
-- **Ran B's lab** with `python3 -I cert-lab.py`. Exit code 0, and it reported "15 checks behaved as expected, 0 unexpected". Section 7 really does show the attacker reading `Authorization: Bearer sk_live_DO_NOT_LEAK` once verification is off. That backs up B's claims. The handshake ran on TLS 1.2 (LibreSSL), which B had already disclosed.
-- **No `hidden/` directory** was present, so I had no ground truth to compare against.
-- **Comprehension test.** I gave a fresh agent only A's RESPONSE.md, and another only B's RESPONSE.md plus GUIDE.md, with the same five questions. The first attempt failed because the agents weren't allowed to read the temp directory, so I copied the files into the working directory and ran it again.
-  1. What HTTPS guarantees, and which part verification provides. **A: correct. B: correct.**
-  2. What `verify=False` makes possible, and why the request still works. **A: partly; the agent inferred the attack from one MITM sentence and said so. B: complete; attacker cert, stolen bearer token, relayed response.**
-  3. Fix for "unable to get local issuer" with an internal CA. **A: not covered, a reasonable guess. B: complete, with the exact per-tool commands.**
-  4. How the two sides agree on a key. **A: correct (ephemeral Diffie–Hellman / X25519). B: not covered.**
-  5. What an observer can still see. **A: correct (IP, SNI, DNS, traffic volume). B: not covered.**
-  - **Totals:** about 3.75/5 for A and 3/5 for B.
+B wins. A gives an accurate explanation of how HTTPS works, but it never deals with the junior developer turning off certificate checks. B is built around that habit, and its demo and lab actually run.
 
-**Technical accuracy (my review)**
-- **A:** correct throughout. TLS 1.3 handshake, `CertificateVerify`, forward secrecy, the 0‑RTT replay caveat, ECH, and the Certificate Transparency requirement are all right.
-- **B:** correct. It is right that `REQUESTS_CA_BUNDLE` replaces the default bundle while `NODE_EXTRA_CA_CERTS` adds to it, and its error-to-cause mapping matched the lab output. One overstatement: "ends up in production. It always does."
+**Checks run (both responses got the same ones where it made sense)**
+- **Files:** A is a single 654-word answer. B is a 763-word summary plus a 4,208-word guide (`HTTPS-for-developers.md`) and a runnable lab. There was no `hidden/` folder, so there was no answer key to compare against.
+- **B's lab, run in a copy (`tmph2edy8yi/work`):**
+  - **`python3 mitm_demo.py`:** with checks off, the request succeeds with no error while the fake attacker logs the API token and swaps the bank account number. With checks on, it fails with `unable to get local issuer certificate` and nothing is sent. This matches what B claimed.
+  - **`./setup.sh`, then `servers.py`, then `check.py`:** 0 of 5 scenarios fixed at the start, and the fake attacker's server stays blocked. The error messages from Python, curl and Node match the ones quoted in the guide.
+  - **`tools/selftest.sh`:** all 10 checks pass. That includes the reference fixes solving 5 of 5, trusting the attacker's certificate being caught, and the scanner for disabled checks flagging all 31 bad samples and none of the 13 good ones.
+- **Comprehension test:** a fresh agent got only one document each (A's answer, or B's guide) and answered the same 5 questions.
+  - **A: 4 of 5.** It answered the three guarantees, why encryption alone isn't enough, the certificate checks and forward secrecy well. On "what to do about `unable to get local issuer certificate` on a corporate network" it said the document doesn't cover it.
+  - **B: 5 of 5.** The corporate-network answer was the right one: get the company's root certificate from IT, confirm its fingerprint through a separate channel, and add that one certificate where each tool looks for trusted ones. On forward secrecy it explained the mechanism but said the guide doesn't explain why TLS 1.3 was designed that way.
+- **Accuracy review:** both handshake descriptions are correct. In B, I spot-checked the per-tool details (Node's `NODE_EXTRA_CA_CERTS`, Python `requests` replacing rather than adding to its certificate list, the Java `keytool` command, Python 3.13's stricter checks, the 200-day certificate limit from March 2026) and found nothing wrong. A is correct but has nothing on fixing errors.
 
 **Scores**
-- **Technical accuracy:** A 5 (no errors found). B 4 (accurate and lab-verified, but it leaves out the mechanism and overstates once).
-- **Behaviour change:** A 2 (one sentence on man-in-the-middle; nothing on the verification habit or what to do instead). B 5 (a runnable attack demo, an error-to-fix table, a "trust this one CA instead of `verify=False`" table, and a checklist).
-- **Comprehension:** A 4 (3.75/5; solid on the mechanism, weak on the practical questions). B 3 (3/5; strong on the practical questions, nothing on key exchange or metadata).
 
-**Verdict**
-B wins on what the user actually needs. A is the better pure explanation of how HTTPS works. But the junior keeps turning verification off, and A never gives them a reason or a way to stop. B does both, and I confirmed its demonstration by running it. B's weaknesses are real, though:
-- It explains little of the handshake or key exchange.
-- Its RESPONSE.md speaks to a manager rather than to the junior.
-- It leaves a stray script, `https-demo.sh`, that nothing references.
+| Criterion | A | B |
+|---|---|---|
+| Technical accuracy | 5: handshake, forward secrecy, what HTTPS doesn't hide, all correct | 5: same core content plus correct per-tool fixes; demo and lab confirmed by running them |
+| Changes the verification habit | 2: one sentence ("encryption alone doesn't help if you're encrypting to the wrong party"); never mentions `verify=False` or what to do instead | 5: a demo showing the token being stolen, a playbook for each error, and a scanner for CI; it makes the case that an attack gives the same error as a misconfiguration |
+| Comprehension test | 4: 4 of 5; the corporate-network question wasn't covered | 5: 5 of 5, including the right corporate fix |
+
+B is much longer, and I didn't score it higher for that. It wins because it is the only one that answers the question behind the request (what to do instead of turning checks off), and its claims held up when I ran them.
 
 ```json
-{"winner": "B", "confidence": "medium", "scores": {"A": {"technical_accuracy": 5, "behaviour_change": 2, "comprehension": 4}, "B": {"technical_accuracy": 4, "behaviour_change": 5, "comprehension": 3}}, "summary": "A best explains how HTTPS works but ignores the verify=False habit; B's lab (ran: 15/15, shows a stolen bearer token) and fix tables target the habit directly, though it leaves out handshake and key exchange."}
+{"winner": "B", "confidence": "high", "scores": {"A": {"technical_accuracy": 5, "behaviour_change": 2, "comprehension": 4}, "B": {"technical_accuracy": 5, "behaviour_change": 5, "comprehension": 5}}, "summary": "Both are accurate, but only B tackles the disable-verification habit; its demo and lab ran as claimed (selftest 10/10) and it scored 5/5 on comprehension vs A's 4/5."}
 ```

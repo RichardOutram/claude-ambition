@@ -1,0 +1,13 @@
+requests.get(url, verify="/etc/ssl/certs/corp-bundle.pem")
+requests.get(url, verify=True)
+new https.Agent({ rejectUnauthorized: true, ca: fs.readFileSync('ca.pem') })
+export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/corp-ca.pem
+&tls.Config{RootCAs: pool}
+curl --cacert corp-ca.pem https://api.example.com
+curl -kv is a bad idea, we never do it   tls-insecure-ok: documentation line
+git config http.sslCAInfo /etc/ssl/certs/corp-ca.pem
+postgres://u:p@db/app?sslmode=verify-full
+curl https://example.com/my-k
+skip_verify=False
+curl -sSL https://example.com/install.sh -o install.sh
+aiohttp.TCPConnector(ssl=ssl_ctx)

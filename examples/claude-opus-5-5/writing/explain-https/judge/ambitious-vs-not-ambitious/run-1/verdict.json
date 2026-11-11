@@ -12,8 +12,8 @@
       "A": "not-ambitious",
       "B": "ambitious",
       "winner": "ambitious",
-      "confidence": "medium",
-      "summary": "A best explains how HTTPS works but ignores the verify=False habit; B's lab (ran: 15/15, shows a stolen bearer token) and fix tables target the habit directly, though it leaves out handshake and key exchange.",
+      "confidence": "high",
+      "summary": "Both are accurate, but only B tackles the disable-verification habit; its demo and lab ran as claimed (selftest 10/10) and it scored 5/5 on comprehension vs A's 4/5.",
       "scores": {
         "A": {
           "technical_accuracy": 5,
@@ -21,33 +21,45 @@
           "comprehension": 4
         },
         "B": {
-          "technical_accuracy": 4,
+          "technical_accuracy": 5,
           "behaviour_change": 5,
-          "comprehension": 3
+          "comprehension": 5
         }
       },
-      "cost_usd": 0.355011855
+      "cost_usd": 0.42870509999999995
     },
     {
       "order": 2,
       "A": "ambitious",
       "B": "not-ambitious",
       "winner": "ambitious",
-      "confidence": "medium",
-      "summary": "B explains the HTTPS mechanics better, but only A addresses the habit of disabling verification, with a passing 15/15 lab that shows the token theft and a fix for each error.",
+      "confidence": "high",
+      "summary": "Both are accurate, but only A tackles the verify=False habit (working MITM demo, per-error fixes, lab whose selftest passes 10/10); B's reader couldn't answer the two practical-fix questions.",
       "scores": {
         "A": {
-          "technical_accuracy": 4,
+          "technical_accuracy": 5,
           "changes_behaviour": 5,
-          "comprehension_test": 3
+          "comprehension_test": 5
         },
         "B": {
           "technical_accuracy": 5,
           "changes_behaviour": 2,
-          "comprehension_test": 3.5
+          "comprehension_test": 3
         }
       },
-      "cost_usd": 0.5106298
+      "cost_usd": 0.7004198
     }
-  ]
+  ],
+  "worth": {
+    "cheaper": "not-ambitious",
+    "dearer": "ambitious",
+    "cost_multiple": 38.1,
+    "time_multiple": 56.4,
+    "uplift": "major",
+    "worth_it": "yes",
+    "reason": "Only the dearer response addresses the junior's verify=False habit, with a working MITM demo, fixes for each error including corporate CAs, and a CI scanner, all confirmed by running them, for about $4 and 14 minutes.",
+    "use_when": "The explanation is meant to change a risky habit or unblock real errors, especially when mentoring a team where a runnable demo and CI guardrail will be reused.",
+    "skip_when": "The user only wants a conceptual overview of HTTPS, for an interview or general curiosity, with no specific practice to correct.",
+    "cost_usd": 0.061345800000000006
+  }
 }

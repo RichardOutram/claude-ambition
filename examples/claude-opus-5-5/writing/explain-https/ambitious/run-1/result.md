@@ -1,42 +1,50 @@
-I've written a guide for your junior developer, plus a lab they run themselves that shows an attacker reading their credentials once certificate verification is off. Everything is in `cert-lab/`.
+I wrote the guide on how HTTPS works, `HTTPS-for-developers.md`, and a hands-on `lab/` where the junior fixes 5 real certificate errors without turning verification off. Both are built around one idea: encryption is only worth something if you know who is on the other end, and verification is what tells you.
 
-**You asked for → it became:** you asked for an explanation of HTTPS for a junior developer. It became a way to stop the habit itself: they see the attack happen on their own machine, then use a table that takes each error message to its cause and the proper fix.
-
-**What's in `cert-lab/`:**
-- **`cert-lab.py`** runs a real TLS handshake in memory, so it needs only Python and `openssl`, with no network. It covers seven cases. For six common errors, it shows the failure and then the fix working:
-  - missing intermediate certificate
-  - expired certificate
-  - wrong clock
-  - hostname or IP mismatch
-  - company-internal CA
-  - self-signed dev certificate
-
-  In the seventh, an attacker makes their own certificate for the same hostname. With verification on, the connection is refused. With it off, the connection succeeds and the attacker reads `Authorization: Bearer sk_live_DO_NOT_LEAK` in plain text.
-- **`GUIDE.md`**, in this order:
-  - why encryption without authentication is worthless;
-  - the attack output from the lab;
-  - why "it's only dev / internal" doesn't hold;
-  - a table from error message to cause to proper fix;
-  - "trust only this one CA" commands for curl, Python, Node, Go, Java and system-wide, each next to the flag not to use;
-  - `openssl s_client` diagnosis steps;
-  - a checklist to go through before ever typing `verify=False`.
-- **`node-check.mjs`** checks the Node.js claims in the guide.
+**You asked for → it became:**
+- **You asked:** "Explain how HTTPS works." Sections 2–4 of the guide cover it in full: what HTTPS guarantees, the TLS 1.3 handshake step by step (including where verification happens), certificates, the chain of trust and trust stores.
+- **It became:** material for a junior who keeps disabling verification, so they stop and fix errors properly instead.
+  - **Hook:** `mitm_demo.py`. With verification off, a fake attacker silently steals an API token and swaps the bank account in the reply. With it on, the request is never sent.
+  - **Error playbook:** for missing intermediate, self-signed, wrong hostname, expired and corporate proxy, the cause, how to diagnose it and the proper fix. It quotes the error messages exactly as Python, curl and Node print them, and shows how to trust an extra CA in Node, Python, pip, curl, git, Java, Go, Docker and on each OS.
+  - **A 60-second triage flowchart:** which check failed, then which cause.
+  - **The lab:** `check.py` tests every scenario through Python, curl and Node. A server signed by an "attacker" CA must stay blocked; if it ever connects, every fix counts for nothing.
+- **Key finding:** in the lab, the attacker's certificate gives exactly the same error as the corporate proxy and the missing intermediate: `unable to get local issuer certificate`. So when you turn verification off, you can't know whether you're working around a config bug or being attacked. The guide is built around this.
 
 **Outside check:**
-- `cert-lab.py`: **15 of 15 checks behaved as expected.** One check failed on the first run, but my expectation was wrong, not the lab: the attacker's error is `self signed certificate in certificate chain`. That's the same message developers see behind corporate TLS-inspecting proxies, so the guide now covers both cases.
-- `node-check.mjs`: all five Node error codes in the guide matched, and passing the CA through the `ca` option worked. It also turned up the most persuasive line for a junior: with `rejectUnauthorized: false`, Node reported `NOT authorized (SELF_SIGNED_CERT_IN_CHAIN)` and connected anyway. In other words, Node spotted the attack and was told to ignore it.
+- **Independent judge:** an independent judge agent solved the lab using only the guide and hints, without reading the solutions, and confirmed the attacker check and the demo work. Its verdict was pass with issues. It found:
+  - **Scanner misses:** the guardrail script missed `curl -sk` and Postgres `sslmode=require`.
+  - **Loophole:** scenario 5 could be passed with a server-side fix, skipping the client-side lesson.
+  - **Outdated fact:** the certificate-lifetime statement was out of date for 2026. Since March 2026 the maximum is 200 days.
+  - **Smaller inaccuracies:** browser trust stores, sending the root certificate, and the Java trust-store path.
+- **After fixing all of them:** `lab/tools/selftest.sh` passes all 10 checks.
+  - **Errors reproduce:** every error appears for real in all three clients.
+  - **Cheats are caught:** trusting the attacker CA trips the check, and a server-side "fix" of the corporate proxy is reported as `WRONG FIX`.
+  - **Reference fixes work:** they fix 5 of 5.
+  - **The demo works:** the token leaks with verification off and is blocked with it on.
+  - **The scanner holds:** it flags all 31 insecure samples, with no false positives on 13 safe ones.
+- **Not re-run:** I didn't send the fixed version back to the judge.
 
-**Not verified:**
-- **The `NODE_EXTRA_CA_CERTS` row:** the test run needed a permission approval I didn't push for.
-- **The rows for `requests`, Go, Java and `keytool`:** none of these are installed here, so those rows are from documentation, not tested.
-- **A real handshake with a public site:** network access was blocked.
-- **TLS 1.3:** the system Python uses an old LibreSSL that negotiated TLS 1.2. Certificate verification behaves the same in 1.2 and 1.3.
+**Stretch:** the aim was proving every claim by running it, across three languages, with cheats caught automatically. It falls short in four places:
+- **Two stacks unchecked:** there are no Java or Go clients in the lab, so those instructions are researched rather than run.
+- **TLS 1.3 not demonstrable:** macOS's built-in Python only speaks TLS 1.2, so the TLS 1.3 handshake is explained but can't be shown live.
+- **Browser behaviour not demonstrable:** "works in the browser, fails in my code" depends on browsers fetching missing intermediates, which the lab can't reproduce.
+- **No real junior has tried it:** the judge stood in for one.
 
-**Stretch:** I set the target as "the guide proves every claim it makes, in more than one language." It got there for Python and Node, and stopped at the unverified rows above.
+**Locked in:**
+- **Rerun the lab:** `cd lab && ./setup.sh`, then `python3 servers.py` in one terminal and `python3 check.py -v` in another.
+- **After editing:** run `tools/selftest.sh` with the servers running (it should show 10 passes), then `./setup.sh` to reset the lab for learners.
+- **Guardrail:** `lab/tools/find-insecure.sh` scans any repo for disabled verification and exits non-zero, so it can go in CI or a pre-commit hook.
+- **Maintenance notes:** `CLAUDE.md` says how to re-check everything and when to refresh the quoted error messages.
+- **State:** the lab is reset to its broken starting state and the servers are stopped.
 
-**To rerun:** `cd cert-lab && python3 cert-lab.py`. It exits non-zero if any check behaves unexpectedly, so it can also run in CI. For the Node checks, run `node node-check.mjs <certs-dir>`, using the work directory that `cert-lab.py` prints.
+**For you to decide:** whether to hand the junior the guide first or the lab first. I'd start with the 20-second demo (`python3 lab/mitm_demo.py`) and ask them to run `find-insecure.sh` on their own repo.
 
-**For you to decide:**
-- Do you want the "trust this CA" table cut down to your team's actual stack?
-- Do you want a section on your company's proxy, if you have one (where to get its root CA)?
-- A lint rule that flags `verify=False`, `rejectUnauthorized: false` and `-k` in code review would stop the habit coming back. Want me to add one?
+Files are in the working directory:
+- `HTTPS-for-developers.md`
+- `CLAUDE.md`
+- `lab/README.md`
+- `lab/setup.sh`
+- `lab/servers.py`
+- `lab/check.py`
+- `lab/mitm_demo.py`
+- `lab/solutions.sh`
+- `lab/tools/find-insecure.sh`
