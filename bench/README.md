@@ -7,7 +7,7 @@ python3 bench/ab.py list                                  # examples and fixture
 python3 bench/ab.py run design/bakery-landing             # all three arms, one run each
 python3 bench/ab.py run planning --runs 3 --parallel 3    # a whole category, three runs per arm
 python3 bench/ab.py judge design/bakery-landing           # blind pairwise judging
-python3 bench/ab.py report                                # examples/<model>/REPORT.md
+python3 bench/ab.py report                                # examples/RESULTS.md, the site in docs/, examples/<model>/REPORT.md
 ```
 
 Examples are defined in [`examples/PROMPTS.md`](../examples/PROMPTS.md). Add one by adding a `### category/name` block with **Prompt**, **Brief** and **Check**.
@@ -34,6 +34,34 @@ Examples are defined in [`examples/PROMPTS.md`](../examples/PROMPTS.md). Add one
   - Each pair is judged twice with the labels swapped. If the two verdicts disagree, the result is a tie.
 - **Repeats.** Use `--runs 3` for anything you publish. One run can be luck.
 
+## Was it worth the cost?
+
+Quality and cost are judged separately, in that order, so the price can't colour the quality verdict.
+
+1. The blind judge decides which output is better, without seeing costs.
+2. Afterwards, a fresh session reads the two blind reports plus each arm's cost, model time and number of user messages. It works out what the dearer output delivers in practice, what it costs (money, waiting, effort answering questions), and gives:
+   - `uplift`: none, minor, material or major
+   - `worth_it`: yes, marginal or no
+   - `use_when` and `skip_when`: where this pays off for tasks like it, and where it doesn't.
+
+This is a judgment, not a measurement. It is grounded in the blind judge's evidence and the exact cost multiples, which are recorded beside it in `verdict.json` (`cost_multiple`, `time_multiple`). Read it as a reasoned recommendation. Running `judge` on an already-judged pair adds the worth step without re-judging.
+
+## Pages and screenshots
+
+A browser can't start inside Claude Code's macOS sandbox, so no arm can screenshot its own page. Instead, the harness measures every HTML page an arm produced after the run, outside the sandbox and the same way for every arm, into `run-<n>/checks/`:
+
+- a Lighthouse audit (mobile, emulated at 375px): category scores, key metrics and failed accessibility audits
+- a full-page mobile screenshot at 375px, and a desktop screenshot at 1280px
+
+The judge gets these as `_checks/` beside each output. This needs Chrome and `npx`. Headless Chrome won't lay out narrower than 500px, which is why the mobile shot comes from Lighthouse's device emulation.
+
+## Results page and site
+
+`report` writes:
+
+- [`examples/RESULTS.md`](../examples/RESULTS.md): the summary table, plus per-example verdicts, worth, and use-when/skip-when
+- `docs/`: the GitHub Pages site (Settings → Pages → deploy from `main`, folder `/docs`). It's static HTML, generated in full on every build, with the site's own CSS and JS in `bench/site/`. Never edit `docs/` by hand.
+
 Known limit: the ambitious output can still be recognisable from its structure, for example a restated goal or a named outside check. The swapped-order judging and the objective checks are the defence against that.
 
 ## Clean runs (recommended for published examples)
@@ -50,7 +78,8 @@ echo 'CLAUDE_CODE_OAUTH_TOKEN=<token>' > bench/.env
 ## Safety
 
 - Runs auto-accept file edits.
-- Bash runs inside Claude Code's OS sandbox, so writes are confined to the run's temp folder.
+- Every Bash command is allowed, but only inside Claude Code's OS sandbox, so writes are confined to the run's temp folder. `allowUnsandboxedCommands: false` removes the escape hatch: no command can retry outside the sandbox. Package caches (npm, pip) point into the workspace so installs work.
+- Any denied tool call is recorded in `metrics.json` (`permission_denials`).
 - Network access is limited to package registries and GitHub. On macOS, sandboxed commands may also start and reach local servers (`allowLocalBinding`), so outside checks can spin up test servers. Those commands can then also reach other services on your localhost.
 - `--max-turns` caps each session.
 - Nothing runs in this repo's folder.
@@ -65,12 +94,15 @@ examples/<model>/<category>/<name>/
     output/            files it produced
     transcript.md      readable history, including tool calls
     transcript/        raw session + subagent transcripts (scrubbed)
-    metrics.json       exact cost, tokens per model, turns, time, versions, isolation mode
+    metrics.json       exact cost, tokens per model, turns, time, versions, isolation mode, permission denials
     metrics.txt        the same one-glance format as /be-ambitious
+    checks/            screenshots and Lighthouse for any HTML pages (made by the harness)
   judge/<x>-vs-<y>/run-<n>/
     order-1-judge.md   the judge's full reasoning (which arm was A is noted at the top)
     order-2-judge.md
-    verdict.json       final winner: an agreed winner, or a tie
+    worth.md           the cost-worth reasoning (made after the blind verdict)
+    verdict.json       final winner (an agreed winner, or a tie), scores, objective checks, worth
+  spec.json            the prompt, brief and check this example ran with
 ```
 
 Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced and tokens are redacted.
@@ -87,4 +119,4 @@ Examples marked *(fixture: …)* need files in `examples/fixtures/<category>/<na
 
 ## Prerequisites for some checks
 
-The electronics examples need `ngspice`, and the Arduino one also needs `arduino-cli`. The design examples benefit from Chrome being installed for Lighthouse. Install them with Homebrew before judging those examples.
+The electronics examples need `ngspice`, and the Arduino one also needs `arduino-cli`. Pages need Chrome and Node (`npx`) for the screenshots and Lighthouse. Install them with Homebrew before judging those examples.

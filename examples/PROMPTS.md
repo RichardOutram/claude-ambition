@@ -1,6 +1,6 @@
 # Example prompts
 
-Local only (gitignored). Each example has three parts:
+The examples the bench runs. Each has three parts:
 
 - **Prompt:** exactly what a user would type. Both runs get this, word for word.
 - **Brief:** what the user knows but didn't type. The client agent answers `/be-ambitious`'s interview from it, and the optional `briefed` run gets it appended.

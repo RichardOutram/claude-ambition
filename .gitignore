@@ -4,3 +4,4 @@ bench/.env
 bench/.home/
 bench/.client/
 __pycache__/
+bench/.cache/

@@ -150,7 +150,10 @@ To analyse any past session: `python3 skills/be-ambitious/scripts/ambition-metri
 
 ## Does it actually help?
 
-[`bench/`](bench/) is an A/B harness. It runs each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) three ways (plain, plain plus context, and `/be-ambitious`) on the same model under identical conditions. It saves outputs, transcripts and exact costs, then a blind judge picks the better result. The results are in [`examples/`](examples/).
+[`bench/`](bench/) is an A/B harness. It runs each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) three ways (plain, plain plus context, and `/be-ambitious`) on the same model under identical conditions. It saves outputs, transcripts and exact costs, then a blind judge picks the better result. A separate step then sees the costs and decides whether the improvement was worth paying for.
+
+- **[Results table](examples/RESULTS.md):** per example, who won, the cost and time of each arm, whether the extra cost was worth it, and when to use it or skip it.
+- **[Results site](https://richardoutram.github.io/claude-ambition/):** the same results with the outputs side by side, screenshots and live previews of any pages produced, and the full judge reports.
 
 ```sh
 python3 bench/ab.py run design/bakery-landing && python3 bench/ab.py judge design/bakery-landing
