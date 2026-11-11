@@ -39,6 +39,7 @@ The last three only happen if you ask for them. Models also have habits that wor
 | `/be-ambitious <task>` | skill | **The front door.** Works out whether you want a plan or a build, interviews you for the real goal, runs the whole sequence and reports what changed. |
 | `ambition-method` | skill (Claude only) | **The method itself:** the defaults it counters, the seven moves, operating rules and reference notes. It loads whenever ambition is in play and can be preloaded into any agent. |
 | `/ambition` … `/ambition-g-lock` | commands | The seven moves as separate steps, for when you want to drive by hand. |
+| `ambition-direct` | agent | Makes the first version straight from your request, with only the core of the method. It's the cheap preview, and the floor every later step must beat. |
 | `ambition-runner` | agent (Opus) | Does the work one step at a time under an orchestrator, with the method preloaded. |
 | `ambition-client` | agent | Stands in for you: answers the runner's questions from a written brief, and never invents answers. |
 | `ambition-judge` | agent (Opus) | The outside judge. It sees only the goal, the acceptance criteria and the output, never the reasoning. It runs real checks and cannot edit the work. |
@@ -66,14 +67,15 @@ The last three only happen if you ask for them. Models also have habits that wor
 ```
 
 - **Plan or build is detected for you.** Asking for a plan, design or strategy, or being in plan mode, produces an ambitious plan. That plan names its outside check and a stretch option, and stops for your approval. Asking for work produces the full build. `--plan` and `--build` override the detection.
-- **It interviews you first.** That is up to four questions, one at a time. Your answers set the bar, so "make it good" gets you good, while a specific, hard target gets something closer to it.
+- **A cheap first version first.** Before any question, it makes a first version straight from your request, then stops and asks: stop here, or push it further? It names what pushing on would add and roughly what it would cost. If the first version is all you wanted, you've paid for one quick pass.
+- **Then it interviews you.** If you push on, that is up to four questions, one at a time. Your answers set the bar, so "make it good" gets you good, while a specific, hard target gets something closer to it. The final is built on the first version and has to beat it.
 - **It always says what changed.** You'll see "you asked for X, I'm aiming at Y, because Z" before any work starts, and you can veto it.
 - **Small tasks get a light pass.** A typo fix won't trigger a seven-step run.
 
 | Flag | Effect |
 |---|---|
 | `--plan` / `--build` | Force the route |
-| `--auto` | No interview. Claude answers from the repo and context, lists every assumption, and stops only on high-stakes unknowns. |
+| `--auto` | No checkpoint and no interview. Claude pushes on, answers from the repo and context, lists every assumption, and stops only on high-stakes unknowns. |
 | `--delegate` | Orchestrated run using the runner, client and judge agents (below) |
 | `--brief <file>` | The brief the client agent answers from |
 | `--review me` / `--review claude` | Pause after every step for notes from you, or from the orchestrator |
@@ -150,14 +152,12 @@ To analyse any past session: `python3 skills/be-ambitious/scripts/ambition-metri
 
 ## Does it actually help?
 
-[`bench/`](bench/) is an A/B harness. It runs each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) three ways (plain, plain plus context, and `/be-ambitious`) on the same model under identical conditions. It saves outputs, transcripts and exact costs, then a blind judge picks the better result. A separate step then sees the costs and decides whether the improvement was worth paying for.
+[`bench/`](bench/) tests that. Each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) is run plainly once, as the baseline, then through `/be-ambitious`, word for word, on the same model in the same fresh container with a real browser. The plugin's cheap first version must already match the baseline, and the final must beat it, by enough to justify its extra cost. We judge by looking: the harness captures every version the same way (frames over time, a loop-seam check, console errors, screenshots and Lighthouse), and we compare them side by side and live.
 
-- **[Results table](examples/RESULTS.md):** per example, who won, the cost and time of each arm, whether the extra cost was worth it, and when to use it or skip it.
-- **[Results site](https://richardoutram.github.io/claude-ambition/):** the same results with the outputs side by side, screenshots and live previews of any pages produced, and the full judge reports.
+- **[Results site](https://richardoutram.github.io/claude-ambition/):** baseline, first version and final side by side, each live, with cost and time per turn and our review.
+- **[Results table](examples/RESULTS.md):** per example, the verdict, the gate, and the cost and time of the baseline, the preview and the full run.
 
-```sh
-python3 bench/ab.py run design/bakery-landing && python3 bench/ab.py judge design/bakery-landing
-```
+Only runs of the current plugin are kept as examples.
 
 ## Manual install (without the plugin system)
 

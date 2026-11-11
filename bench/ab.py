@@ -2,16 +2,19 @@
 """A/B harness for claude-ambition: same prompt, same model, same conditions, with and without the plugin.
 
   python3 bench/ab.py list
-  python3 bench/ab.py run   <slug|category|all> [--runs N] [--arms a,b,c] [--model ID] [--dry-run]
-  python3 bench/ab.py judge <slug|category|all> [--pairs ambitious:not-ambitious,...]
+  python3 bench/ab.py run     <slug> --arms not-ambitious   # the plain baseline, once per example
+  python3 bench/ab.py run     <slug> --arms ambitious       # one /be-ambitious run of the same prompt
+  python3 bench/ab.py review  <slug>                        # evidence for the side-by-side review
+  python3 bench/ab.py verdict <slug> --run N --gate pass --result win --note "..."
   python3 bench/ab.py report
 
 Arms:
-  not-ambitious  the prompt, exactly as written
+  not-ambitious  the prompt, exactly as written: the baseline
   ambitious      /be-ambitious <prompt>, the same prompt with the plugin
-  briefed        (legacy, not run by default) the prompt plus the brief
 
-If any arm asks a question, the same brief-only client answers it and the session resumes.
+Each run works in a throwaway container with a real browser. If a run asks a question, a stand-in user
+approves restatements, pushes on at the checkpoint, and otherwise says "use your best judgement".
+Nothing is judged automatically: `review` gathers the evidence and we record the verdict.
 Results go to examples/<model>/<category>/<name>/<arm>/run-<n>/. `report` writes examples/RESULTS.md
 and the GitHub Pages site in docs/. See bench/README.md.
 """
@@ -19,9 +22,9 @@ import argparse
 import base64
 import functools
 import http.server
+import hashlib
 import json
 import os
-import random
 import re
 import shutil
 import subprocess
@@ -44,14 +47,13 @@ HOME = str(Path.home())
 
 REPO_URL = "https://github.com/RichardOutram/claude-ambition"
 SITE_URL = "https://richardoutram.github.io/claude-ambition/"
-ARMS = ("not-ambitious", "briefed", "ambitious")
-DEFAULT_PAIRS = "ambitious:not-ambitious"
+ARMS = ("not-ambitious", "ambitious")
 DEFAULT_ARMS = "not-ambitious,ambitious"  # same prompt, with and without the plugin
 CATEGORIES = {"dev": "development", "data": "data-analysis", "design": "design",
               "plan": "planning", "elec": "electronics", "write": "writing"}
 
-# Identical for every arm, the client and the judge. Edits are auto-accepted. Every Bash command is
-# allowed, but only inside the OS sandbox (writes confined to the run folder, network allowlisted):
+# --host mode only (debugging the harness, never results). Identical for every arm. Edits are auto-accepted.
+# Every Bash command is allowed, but only inside the OS sandbox (writes confined to the run folder, network allowlisted):
 # allowUnsandboxedCommands=False removes the escape hatch, so nothing can retry outside it.
 SETTINGS = {
     "permissions": {"defaultMode": "acceptEdits", "allow": ["Bash", "WebSearch", "WebFetch"]},
@@ -65,87 +67,31 @@ SETTINGS = {
     },
 }
 
-CLIENT_PROMPT = """You stand in for a user in a test. Below are the user's original request, their private brief, and the assistant's latest message.
+# Runs work inside a throwaway container by default: a normal machine where Claude can install
+# things and drive a real browser, as it would on a user's computer, with nothing of yours inside.
+DOCKER_IMAGE = "claude-ambition-bench:2.1.322"
+DOCKERFILE = BENCH / "docker"
+DOCKER_SETTINGS = {"permissions": {"defaultMode": "acceptEdits", "allow": ["Bash", "WebSearch", "WebFetch"]}}
+PLUGIN_PARTS = (".claude-plugin", "agents", "commands", "skills")
+
+CLIENT_PROMPT = """You stand in for a user in a test. Below are the user's original request and the assistant's latest message. The user has nothing to add to the request: every arm of the test gets exactly the same information.
 
 Decide whether the assistant's message is waiting on the user before it can continue: a question, a request to confirm or approve, or a choice to make.
 - If it asks a genuine clarifying question about the goal, audience, purpose, constraints or preferences, answer it, even if it has already delivered something.
 - If it is only offering optional extras, or asking for approval to go further than a plan, advice or explanation it has already delivered, reply with exactly: DONE
 - If it is not waiting on the user at all, reply with exactly: DONE
-- Otherwise, reply as the user in 1 to 4 plain sentences, using only the brief. If you're asked to confirm a restatement or plan that doesn't contradict the brief, approve it and say to proceed and finish the work. If the brief doesn't cover something, say you don't mind and it should use its best judgment.
+- If it offers a choice between stopping here and pushing the work further, reply with exactly: Push it further.
+- If it asks you to confirm a restatement or plan, approve it and say to proceed and finish the work.
+- If it asks any other question, reply with exactly: I don't mind. Use your best judgement, and please finish the work without stopping.
 Never do the work, review it, or suggest approaches.
 
 <request>
 {prompt}
 </request>
 
-<brief>
-{brief}
-</brief>
-
 <assistant_message>
 {message}
 </assistant_message>"""
-
-JUDGE_PROMPT = """You are judging two responses to the same request. They are labelled A and B. You don't know how either was produced. Judge only the work.
-
-<request>
-{prompt}
-</request>
-
-<user_context>
-Context the user had (they may or may not have stated it): {brief}
-</user_context>
-
-<how_to_judge>
-{check}
-</how_to_judge>
-
-Each response's final message is in A/RESPONSE.md and B/RESPONSE.md, with any files it produced beside it. If the check needs ground truth, it is in hidden/. Neither response ever saw it.{measured}
-
-1. Run every objective check you can, the same way on both. Record the commands and results.
-2. Score each criterion in the check from 1 to 5 for A and for B, with one line of evidence each.
-3. Choose A, B or TIE. Don't reward length, formatting or a confident tone. Reward what actually meets the request and the user's real goal, as shown by your checks.
-
-End with a fenced json block exactly like this:
-```json
-{{"winner": "A|B|TIE", "confidence": "low|medium|high", "scores": {{"A": {{"<criterion>": 0}}, "B": {{"<criterion>": 0}}}}, "checks": [{{"check": "<objective check>", "A": "<result>", "B": "<result>"}}], "summary": "<one line>"}}
-```"""
-
-MEASURED = """
-
-Some responses have a _checks/ folder. The test harness made it after the work finished, the same way for every response: Lighthouse scores (mobile) in checks.json, and screenshots of each page: mobile (375px wide, full page) and desktop (1280px viewport). Look at the screenshots; don't take a page's quality from its code alone. A browser can't run in your environment, so use these instead of launching one."""
-
-WORTH_PROMPT = """A blind judge compared two responses to the same request twice, with the labels swapped. Its reports are below. You also see what each response cost to produce, which the judge did not. Decide whether the dearer response's improvement is worth its extra cost and waiting time to this user.
-
-<request>
-{prompt}
-</request>
-
-<user_context>
-{brief}
-</user_context>
-
-<costs>
-Cheaper response: ${c_cost:.2f}, {c_min:.1f} min of model time, {c_ex} message(s) from the user.
-Dearer response: ${d_cost:.2f} ({cx:.0f}x the cost), {d_min:.1f} min ({tx:.0f}x the time), {d_ex} message(s) from the user.
-</costs>
-
-<blind_result>
-{result}
-</blind_result>
-
-{reports}
-
-Work it out:
-1. Name what the dearer response delivers that the cheaper one doesn't, and what that is worth in practice to this user: time saved, risk avoided, a better decision or outcome. Count only improvements the reports back with evidence.
-2. Name what it costs: the extra money, the extra waiting, and any extra effort from the user (answering questions, more to read or run).
-3. Weigh them for this user. A big multiple of a small sum can still be cheap, and a small sum is still waste if nothing changes for the user.
-
-End with a fenced json block exactly like this:
-```json
-{{"uplift": "none|minor|material|major", "worth_it": "yes|marginal|no", "reason": "<one sentence>", "use_when": "<when the dearer approach pays off for tasks like this>", "skip_when": "<when it doesn't>"}}
-```"""
-
 
 # ---------- specs ----------
 
@@ -242,6 +188,51 @@ def base_args(model, effort, max_turns, settings):
     return args
 
 
+def ensure_image():
+    if subprocess.run(["docker", "image", "inspect", DOCKER_IMAGE], capture_output=True).returncode:
+        subprocess.run(["docker", "build", "-t", DOCKER_IMAGE, str(DOCKERFILE)], check=True)
+
+
+def plugin_version():
+    """Which plugin a run used: the commit, whether the plugin files had uncommitted changes, and a hash of
+    the plugin's own files, so a page can tell when a run no longer reflects the current plugin."""
+    h = hashlib.sha256()
+    for part in PLUGIN_PARTS:
+        for f in sorted((REPO / part).rglob("*")):
+            if f.is_file() and f.name != ".DS_Store" and "__pycache__" not in f.parts:
+                h.update(f.relative_to(REPO).as_posix().encode() + b"\0" + f.read_bytes())
+    git = lambda *a: subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True).stdout.strip()  # noqa: E731
+    return {"commit": git("rev-parse", "--short", "HEAD"), "dirty": bool(git("status", "--porcelain", "--", *PLUGIN_PARTS)),
+            "hash": h.hexdigest()[:12]}
+
+
+def staged_plugin():
+    """Only the plugin itself goes into the container, never the bench, examples or baselines."""
+    dest = BENCH / ".cache" / "plugin"
+    shutil.rmtree(dest, ignore_errors=True)
+    for part in PLUGIN_PARTS:
+        shutil.copytree(REPO / part, dest / part, ignore=shutil.ignore_patterns(".DS_Store", "__pycache__"))
+    return dest
+
+
+def in_docker(args, ws, env, plugin=None):
+    """Wrap claude args to run in a fresh container: workspace at /work, the bench config at /cfg."""
+    settings = BENCH / ".client" / "docker-settings.json"
+    settings.write_text(json.dumps(DOCKER_SETTINGS, indent=2))
+    inner = list(args)
+    inner[inner.index("--settings") + 1] = "/settings.json"
+    if plugin:
+        inner[inner.index("--plugin-dir") + 1] = "/plugin"
+    cmd = ["docker", "run", "--rm", "-i", "--init", "--shm-size=1g",
+           "-v", f"{ws}:/work", "-v", f"{config_dir(env)}:/cfg", "-v", f"{settings}:/settings.json:ro"]
+    if plugin:
+        cmd += ["-v", f"{plugin}:/plugin:ro"]
+    for k in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY"):
+        if env.get(k):
+            cmd += ["-e", k]
+    return cmd + [DOCKER_IMAGE] + inner
+
+
 def claude(args, cwd, env, prompt, timeout=3600):
     try:
         p = subprocess.run(args, cwd=cwd, env=env, input=prompt, capture_output=True, text=True, timeout=timeout)
@@ -276,6 +267,8 @@ def scrub(text, workspace, env, emails=True):
         text = text.replace(s, "<redacted>")
     for w in {str(workspace), str(Path(workspace).resolve()), str(workspace).replace("/private/", "/", 1)}:
         text = text.replace(w, "<workspace>")
+    text = re.sub(r"(?<![\w.-])/work(?=[/\"'\s`]|$)", "<workspace>", text)
+    text = text.replace("/home/pwuser", "~")
     text = text.replace(HOME, "~")
     return EMAIL.sub("<email>", text) if emails else text
 
@@ -332,15 +325,13 @@ def client_answer(spec, message, env, settings):
     ws = BENCH / ".client"
     ws.mkdir(exist_ok=True)
     args = base_args("sonnet", "low", 1, settings) + ["--tools", ""]
-    res = claude(args, ws, env, CLIENT_PROMPT.format(prompt=spec["prompt"], brief=spec["brief"], message=message[-8000:]), 600)
+    res = claude(args, ws, env, CLIENT_PROMPT.format(prompt=spec["prompt"], message=message[-8000:]), 600)
     return (res.get("result") or "DONE").strip(), res.get("total_cost_usd") or 0
 
 
 def arm_prompt(spec, arm):
     if arm == "ambitious":
         return f"/be-ambitious --no-metrics {spec['prompt']}"
-    if arm == "briefed":
-        return f"{spec['prompt']}\n\n{spec['brief']}"
     return spec["prompt"]
 
 
@@ -350,20 +341,34 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
         return f"skip {spec['slug']}: needs fixture ({spec['fixture']}) at examples/fixtures/{spec['slug']}/public/"
     sid = str(uuid.uuid4())
     args = base_args(a.model, a.effort, a.max_turns, settings)
+    plugin = None
     if arm == "ambitious":
-        args += ["--plugin-dir", str(REPO)]
+        plugin = staged_plugin() if a.docker else REPO
+        args += ["--plugin-dir", str(plugin)]
     if a.dry_run:
         return f"[dry-run] {run.relative_to(REPO)}\n  {' '.join(args + ['--session-id', sid])}\n  prompt: {arm_prompt(spec, arm)!r}"
 
     out = scratch()
     if public:
         shutil.copytree(public, out, dirs_exist_ok=True)
+    # The run works outside the repo (parent CLAUDE.md files would leak bench context into it),
+    # but a `live` link in its example folder lets you watch it build in place.
+    run.mkdir(parents=True, exist_ok=True)
+    live = run / "live"
+    live.unlink(missing_ok=True)
+    live.symlink_to(out, target_is_directory=True)
+    print(f"live: {live}  ->  {out}", flush=True)
     started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    messages, results, client_cost = [arm_prompt(spec, arm)], [], 0.0
+    t0 = time.monotonic()
+    messages, results, client_cost, exchanges = [arm_prompt(spec, arm)], [], 0.0, []
     for turn in range(a.max_exchanges + 1):
         flag = ["--session-id", sid] if turn == 0 else ["--resume", sid]
-        res = claude(args + flag, out, workspace_env(env, out), messages[-1])
+        call = in_docker(args + flag, out, env, plugin if arm == "ambitious" else None) if a.docker else args + flag
+        res = claude(call, out, env if a.docker else workspace_env(env, out), messages[-1])
         results.append(res)
+        exchanges.append({"n": turn + 1, "minutes": round((time.monotonic() - t0) / 60, 2), "cost_usd": round(res.get("total_cost_usd") or 0, 4)})
+        print(f"  [{spec['slug']} {arm} {run.name}] exchange {turn + 1} done at {round((time.monotonic() - t0) / 60, 1)} min, "
+              f"${res.get('total_cost_usd') or 0:.2f}{' ERROR ' + str(res.get('result'))[:200] if res.get('is_error') else ''}", flush=True)
         if res.get("is_error") and not res.get("session_id") or turn == a.max_exchanges:
             break
         answer, cost = client_answer(spec, res.get("result") or "", env, settings)
@@ -372,6 +377,8 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
             break
         messages.append(answer)
 
+    wall_end = time.monotonic()
+    live.unlink(missing_ok=True)
     shutil.copytree(out, run / "output", dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git", "node_modules", ".venv", "__pycache__", ".cc-writes", ".cache"))
     shutil.rmtree(out, ignore_errors=True)
 
@@ -398,27 +405,31 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
                 if isinstance(v, (int, float)) and k not in ("contextWindow", "maxOutputTokens"):
                     acc[k] = acc.get(k, 0) + v
     metrics = {
-        "slug": spec["slug"], "arm": arm, "model": a.model, "effort": a.effort, "isolation": isolation,
+        "slug": spec["slug"], "arm": arm, "model": a.model, "effort": a.effort, "isolation": "docker" if a.docker else isolation,
         "started": started, "session_id": sid, "exchanges": len(messages),
         "cost_usd": round(sum(r.get("total_cost_usd") or 0 for r in results), 4),
         "client_cost_usd": round(client_cost, 4),
+        # Wall clock, including the stand-in user's replies. The JSON's own duration_ms undercounts
+        # runs with several exchanges and subagents, so it's kept only for reference.
+        "wall_ms": round((wall_end - t0) * 1000),
         "duration_ms": sum(r.get("duration_ms") or 0 for r in results),
         "num_turns": sum(r.get("num_turns") or 0 for r in results),
         "errors": [r.get("result", "")[:300] for r in results if r.get("is_error")],
         "permission_denials": [{"tool": d.get("tool_name"), "input": scrub(json.dumps(d.get("tool_input", {}))[:300], out, env)}
                                for r in results for d in (r.get("permission_denials") or [])],
         "by_model": models,
-        "plugin_commit": subprocess.run(["git", "-C", str(REPO), "rev-parse", "--short", "HEAD"],
-                                        capture_output=True, text=True).stdout.strip(),
+        "exchange_log": exchanges,  # per turn: cumulative minutes at its end, and that turn's cost
+        "plugin": plugin_version(),
+        "plugin_commit": plugin_version()["commit"],
         "claude_version": subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip(),
     }
     (run / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     if (tdir / "session.jsonl").exists():
         txt = subprocess.run([sys.executable, str(METRICS), str(tdir / "session.jsonl")], capture_output=True, text=True).stdout
-        (run / "metrics.txt").write_text(f"cost ${metrics['cost_usd']} · {metrics['duration_ms'] / 1000:.0f}s · "
+        (run / "metrics.txt").write_text(f"cost ${metrics['cost_usd']} · {metrics['wall_ms'] / 1000:.0f}s · "
                                          f"{metrics['num_turns']} turns · {metrics['exchanges']} exchanges\n{txt}", encoding="utf-8")
     measure(run)
-    return f"done {run.relative_to(REPO)} · ${metrics['cost_usd']} · {metrics['duration_ms'] / 1000:.0f}s"
+    return f"done {run.relative_to(REPO)} · ${metrics['cost_usd']} · {metrics['wall_ms'] / 1000:.0f}s"
 
 
 # ---------- measuring (outside the sandbox, identical for every arm) ----------
@@ -441,10 +452,15 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
         pass
 
 
-def html_pages(output):
-    pages = [p for p in output.rglob("*.html") if not SKIP_DIRS & set(p.relative_to(output).parts)]
-    pages.sort(key=lambda p: (p.name != "index.html", len(p.relative_to(output).parts), str(p)))
-    return pages[:4]
+def html_pages(output, limit=4):
+    """The pages worth showing: the deliverable first, then the plugin's first version. Other working copies
+    under .ambition/ (judge copies, variants) are skipped."""
+    def keep(rel):
+        return not SKIP_DIRS & set(rel.parts) and (rel.parts[0] != ".ambition" or rel.parts[1:2] == ("direct",))
+    pages = [p for p in output.rglob("*.html") if keep(p.relative_to(output))]
+    pages.sort(key=lambda p: (p.relative_to(output).parts[0] == ".ambition", p.name != "index.html",
+                              len(p.relative_to(output).parts), str(p)))
+    return pages[:limit]
 
 
 def lighthouse(url, dest):
@@ -517,6 +533,8 @@ def cmd_run(a):
         print("ab: no CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY, so using your normal config. Both arms stay "
               "identical, but your CLAUDE.md and user-level commands load. See bench/README.md for clean runs.")
     settings = settings_file()
+    if a.docker and not a.dry_run:
+        ensure_image()
     jobs = []
     for s in select(load_specs(), a.target):
         if not a.dry_run:
@@ -538,215 +556,255 @@ def cmd_run(a):
             print(work(j), flush=True)
 
 
-# ---------- judging ----------
+# ---------- figures ----------
 
-def strip_markers(text):
-    return re.sub(r"(?i)/?be-ambitious|ambition[-\w]*", "the process", text)
-
-
-def judge_pair(spec, x, y, n, a, env, settings):
-    base = EXAMPLES / a.model / spec["category"] / spec["name"]
-    runs = {arm: base / arm / f"run-{n}" for arm in (x, y)}
-    if not all((r / "result.md").exists() for r in runs.values()):
-        return None
-    pair_dir = base / "judge" / f"{x}-vs-{y}" / f"run-{n}"
-    if (pair_dir / "verdict.json").exists():
-        out = json.loads((pair_dir / "verdict.json").read_text())
-        if "worth" not in out:
-            out["worth"] = judge_worth(spec, out, runs, pair_dir, a, env, settings)
-            (pair_dir / "verdict.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
-        return out
-    _, hidden = fixture_dirs(spec)
-    for r in runs.values():
-        measure(r)
-    orders = [(x, y), (y, x)]
-    random.shuffle(orders)
-    verdicts = []
-    for k, (arm_a, arm_b) in enumerate(orders, 1):
-        ws = scratch()
-        for label, arm in (("A", arm_a), ("B", arm_b)):
-            shutil.copytree(runs[arm] / "output", ws / label, dirs_exist_ok=True)
-            (ws / label / "RESPONSE.md").write_text(strip_markers((runs[arm] / "result.md").read_text()), encoding="utf-8")
-            if (runs[arm] / "checks").exists():
-                shutil.copytree(runs[arm] / "checks", ws / label / "_checks", dirs_exist_ok=True)
-        if hidden:
-            shutil.copytree(hidden, ws / "hidden", dirs_exist_ok=True)
-        measured = MEASURED if any((r / "checks").exists() for r in runs.values()) else ""
-        prompt = JUDGE_PROMPT.format(prompt=spec["prompt"], brief=spec["brief"], check=spec["check"], measured=measured)
-        res = claude(base_args(a.model, a.effort, a.max_turns, settings), ws, workspace_env(env, ws), prompt)
-        text = res.get("result") or ""
-        (pair_dir / f"order-{k}-judge.md").parent.mkdir(parents=True, exist_ok=True)
-        (pair_dir / f"order-{k}-judge.md").write_text(
-            f"A = {arm_a}, B = {arm_b} (the judge did not know this)\n\n" + scrub(text, ws, env, emails=False), encoding="utf-8")
-        shutil.rmtree(ws, ignore_errors=True)
-        m = re.findall(r"```json\s*(\{.*?\})\s*```", text, re.S)
-        try:
-            v = json.loads(m[-1]) if m else {}
-        except ValueError:
-            v = {}
-        winner = {"A": arm_a, "B": arm_b}.get(str(v.get("winner", "")).upper().strip(), "tie")
-        verdicts.append({"order": k, "A": arm_a, "B": arm_b, "winner": winner, "confidence": v.get("confidence"),
-                         "summary": v.get("summary"), "scores": v.get("scores"), "checks": v.get("checks"),
-                         "cost_usd": res.get("total_cost_usd")})
-    final = verdicts[0]["winner"] if verdicts[0]["winner"] == verdicts[1]["winner"] else "tie"
-    out = {"slug": spec["slug"], "pair": [x, y], "run": n, "winner": final, "orders": verdicts}
-    out["worth"] = judge_worth(spec, out, runs, pair_dir, a, env, settings)
-    pair_dir.mkdir(parents=True, exist_ok=True)
-    (pair_dir / "verdict.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
-    return out
+def wall_minutes(run, m):
+    """Wall-clock minutes: recorded by the harness, else from transcript timestamps (older runs)."""
+    if m.get("wall_ms"):
+        return m["wall_ms"] / 60000
+    stamps = []
+    session = run / "transcript" / "session.jsonl"
+    if session.exists():
+        for line in session.read_text(encoding="utf-8").splitlines():
+            t = re.search(r'"timestamp":\s*"([^"]+)"', line)
+            if t:
+                stamps.append(t[1])
+    if len(stamps) > 1:
+        from datetime import datetime
+        parse = lambda x: datetime.fromisoformat(x.replace("Z", "+00:00"))  # noqa: E731
+        return (parse(max(stamps)) - parse(min(stamps))).total_seconds() / 60
+    return m["duration_ms"] / 60000
 
 
 def run_figures(run):
     m = json.loads((run / "metrics.json").read_text())
-    return {"cost_usd": m["cost_usd"], "minutes": m["duration_ms"] / 60000, "exchanges": m["exchanges"],
+    return {"cost_usd": m["cost_usd"], "minutes": wall_minutes(run, m), "exchanges": m["exchanges"],
             "turns": m["num_turns"], "output_tokens": sum(u.get("outputTokens", 0) for u in m["by_model"].values())}
 
 
-def judge_worth(spec, verdict, runs, pair_dir, a, env, settings):
-    """Second, separate step: only after the blind verdict is fixed does a fresh session see the costs and
-    decide whether the improvement justified them. Quality is never judged with costs in view."""
-    fig = {arm: run_figures(r) for arm, r in runs.items()}
-    cheap, dear = sorted(runs, key=lambda arm: fig[arm]["cost_usd"])
-    c, d = fig[cheap], fig[dear]
-    reports = []
-    for o in verdict["orders"]:
-        text = (pair_dir / f"order-{o['order']}-judge.md").read_text().split("\n\n", 1)[-1]  # drop the line naming the arms
-        label = {o["A"]: "A", o["B"]: "B"}
-        reports.append(f"<report>\nIn this report, {label[cheap]} is the cheaper response and {label[dear]} is the dearer one.\n\n{text}\n</report>")
-    result = {cheap: "The cheaper response won both orders.", dear: "The dearer response won both orders."}.get(
-        verdict["winner"], "Tie: the two orders disagreed, or both called it a tie.")
-    prompt = WORTH_PROMPT.format(prompt=spec["prompt"], brief=spec["brief"], c_cost=c["cost_usd"], c_min=c["minutes"],
-                                 c_ex=c["exchanges"], d_cost=d["cost_usd"], d_min=d["minutes"], d_ex=d["exchanges"],
-                                 cx=d["cost_usd"] / max(c["cost_usd"], 1e-6), tx=d["minutes"] / max(c["minutes"], 1e-6),
-                                 result=result, reports="\n\n".join(reports))
-    ws = scratch()
-    res = claude(base_args(a.model, a.effort, 1, settings) + ["--tools", ""], ws, env, prompt, 900)
-    shutil.rmtree(ws, ignore_errors=True)
-    text = res.get("result") or ""
-    pair_dir.mkdir(parents=True, exist_ok=True)
-    (pair_dir / "worth.md").write_text(f"cheaper = {cheap}, dearer = {dear}\n\n" + scrub(text, ws, env, emails=False), encoding="utf-8")
-    m = re.findall(r"```json\s*(\{.*?\})\s*```", text, re.S)
-    try:
-        v = json.loads(m[-1]) if m else {}
-    except ValueError:
-        v = {}
-    return {"cheaper": cheap, "dearer": dear, "cost_multiple": round(d["cost_usd"] / max(c["cost_usd"], 1e-6), 1),
-            "time_multiple": round(d["minutes"] / max(c["minutes"], 1e-6), 1), **{k: v.get(k) for k in
-            ("uplift", "worth_it", "reason", "use_when", "skip_when")}, "cost_usd": res.get("total_cost_usd")}
+# ---------- review: evidence for the side-by-side, the same way for every version ----------
+
+REVIEW_JS = BENCH / "review" / "capture.mjs"
+REVIEW_NODE = BENCH / ".cache" / "review-node"
+SUBJECT_NAME = {"baseline": "Baseline", "first": "First version", "final": "Final"}
 
 
-def cmd_judge(a):
-    env, _ = load_env()
-    settings = settings_file()
+def subjects(run, arm):
+    """The versions a reviewer compares. The baseline run has one; an ambitious run has its first version
+    (made in turn 1, before the checkpoint) and its final. Values are page paths inside output/."""
+    output = run / "output"
+    pages = [pg.relative_to(output).as_posix() for pg in html_pages(output, limit=50)] if output.exists() else []
+    if arm == "not-ambitious":
+        return {"baseline": pages[0]} if pages else {}
+    out = {}
+    first = [pg for pg in pages if pg.startswith(".ambition/direct/")]
+    final = [pg for pg in pages if not pg.startswith(".ambition/")]
+    if first:
+        out["first"] = first[0]
+    if final:
+        out["final"] = final[0]
+    return out
+
+
+def ensure_review_node():
+    if not (REVIEW_NODE / "node_modules" / "playwright").exists():
+        REVIEW_NODE.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["docker", "run", "--rm", "-v", f"{REVIEW_NODE}:/node", "-w", "/node", DOCKER_IMAGE, "bash", "-lc",
+                        "npm init -y >/dev/null && npm i --silent playwright@1.52.0 pngjs@7.0.0"], check=True)
+
+
+def contact_sheet(folder, view, cap):
+    """One image showing the whole loop: every captured frame, left to right, top to bottom."""
+    from PIL import Image
+    frames = [folder / f["file"] for f in cap["views"][view]["frames"]]
+    if not frames:
+        return None
+    w, h = (480, 300) if view == "desktop" else (180, 390)
+    cols = 4 if view == "desktop" else 6
+    rows = (len(frames) + cols - 1) // cols
+    sheet = Image.new("RGB", (cols * w, rows * h), "black")
+    for i, f in enumerate(frames):
+        sheet.paste(Image.open(f).convert("RGB").resize((w, h)), ((i % cols) * w, (i // cols) * h))
+    name = f"sheet-{view}.jpg"
+    sheet.save(folder / name, quality=82)
+    return name
+
+
+def review_subject(run, key, page, seconds):
+    folder = run / "review" / key
+    if (folder / "capture.json").exists():
+        return json.loads((folder / "capture.json").read_text())
+    folder.mkdir(parents=True, exist_ok=True)
+    p = subprocess.run(["docker", "run", "--rm", "-v", f"{run / 'output'}:/site:ro", "-v", f"{folder}:/out",
+                        "-v", f"{REVIEW_JS.parent}:/review:ro", "-v", f"{REVIEW_NODE}:/node:ro", DOCKER_IMAGE,
+                        "node", "/review/capture.mjs", "/site", page, "/out", str(seconds)],
+                       capture_output=True, text=True, timeout=1800)
+    if not (folder / "capture.json").exists():
+        print(f"  review failed for {run.relative_to(REPO)} {key}: {(p.stderr or p.stdout)[-600:]}", file=sys.stderr)
+        return None
+    cap = json.loads((folder / "capture.json").read_text())
+    from PIL import Image
+    for view in cap["views"].values():  # keep the published frames small
+        for f in view["frames"]:
+            png = folder / f["file"]
+            f["file"] = png.with_suffix(".webp").name
+            Image.open(png).save(folder / f["file"], quality=80)
+            png.unlink()
+    cap["page"], cap["subject"] = page, key
+    for view in cap["views"]:
+        cap["views"][view]["sheet"] = contact_sheet(folder, view, cap)
+    (folder / "capture.json").write_text(json.dumps(cap, indent=2), encoding="utf-8")
+    return cap
+
+
+def seam_text(v):
+    import site_builder
+    return site_builder.seam_words(v)[0]
+
+
+def cmd_review(a):
+    ensure_image()
+    ensure_review_node()
     for spec in select(load_specs(), a.target):
-        for pair in a.pairs.split(","):
-            x, y = pair.split(":")
-            n = 1
-            while (EXAMPLES / a.model / spec["category"] / spec["name"] / x / f"run-{n}").exists():
-                v = judge_pair(spec, x, y, n, a, env, settings) if a.run in (None, n) else None
-                if v:
-                    print(f"{spec['slug']} {x} vs {y} run-{n}: {v['winner']}", flush=True)
-                n += 1
+        ex = EXAMPLES / a.model / spec["category"] / spec["name"]
+        said = re.search(r"(\d+)\s*-?\s*second", spec["prompt"])
+        seconds = int(said.group(1)) if said else a.seconds
+        jobs, runs = [], []
+        for arm in ARMS:
+            for run in sorted(ex.glob(f"{arm}/run-*")):
+                if a.run and arm == "ambitious" and run.name != f"run-{a.run}" or not (run / "metrics.json").exists():
+                    continue
+                runs.append(run)
+                jobs += [(run, key, page) for key, page in subjects(run, arm).items()]
+        # Every version at once, plus Lighthouse on the host: each capture is one container, CPU-bound.
+        with ThreadPoolExecutor(max_workers=len(jobs) + 1 or 1) as pool:
+            measured = pool.submit(lambda: [measure(r) for r in runs])
+            caps = list(pool.map(lambda j: review_subject(j[0], j[1], j[2], seconds), jobs))
+            measured.result()
+        for (run, key, page), cap in zip(jobs, caps):
+            if cap:
+                views = "; ".join(f"{n}: {seam_text(v)}, {len(v['errors'])} console errors" for n, v in cap["views"].items())
+                print(f"{run.relative_to(REPO)} · {SUBJECT_NAME[key]} ({page}) · {views}")
+
+
+def cmd_verdict(a):
+    """Records our decision for one ambitious run. Nothing in the bench decides this automatically."""
+    spec = select(load_specs(), a.target)[0]
+    run = EXAMPLES / a.model / spec["category"] / spec["name"] / "ambitious" / f"run-{a.run}"
+    if not (run / "metrics.json").exists():
+        sys.exit(f"ab: no run at {run.relative_to(REPO)}")
+    verdict = {"gate": a.gate, "result": a.result, "preview_worth": a.preview, "push_worth": a.push,
+               "summary": a.note, "decided_by": a.by, "date": time.strftime("%Y-%m-%d"),
+               "plugin": json.loads((run / "metrics.json").read_text()).get("plugin")}
+    (run / "verdict.json").write_text(json.dumps(verdict, indent=2), encoding="utf-8")
+    if a.notes:
+        shutil.copy2(a.notes, run / "review.md")
+    print(f"wrote {(run / 'verdict.json').relative_to(REPO)}")
 
 
 # ---------- reporting ----------
-
-ARM_LABEL = {"not-ambitious": "plain prompt", "briefed": "briefed prompt", "ambitious": "/be-ambitious"}
-
-
-def collect():
-    """Everything the results page and the site show, read from examples/<model>/<category>/<name>/."""
-    specs = {s["slug"]: s for s in load_specs().values()}
-    out = []
-    for ex in sorted(EXAMPLES.glob("*/*/*")):
-        arms = {arm: sorted(ex.glob(f"{arm}/run-*/metrics.json")) for arm in ARMS}
-        if not ex.is_dir() or not any(arms.values()):
-            continue
-        first = json.loads(next(m for ms in arms.values() for m in ms).read_text())
-        if not (ex / "spec.json").exists() and first["slug"] in specs:
-            save_spec(specs[first["slug"]], ex.parent.parent.name)
-        spec = json.loads((ex / "spec.json").read_text()) if (ex / "spec.json").exists() else {}
-        runs = {arm: [{"dir": m.parent, "n": int(m.parent.name.split("-")[1]), "metrics": json.loads(m.read_text()),
-                       **run_figures(m.parent)} for m in ms] for arm, ms in arms.items() if ms}
-        pairs = {}
-        for vf in sorted(ex.glob("judge/*/run-*/verdict.json")):
-            v = json.loads(vf.read_text())
-            v["dir"] = vf.parent
-            pairs.setdefault(vf.parent.parent.name, []).append(v)
-        out.append({"dir": ex, "model": ex.parent.parent.name, "category": ex.parent.name, "name": ex.name,
-                    "slug": first["slug"], "spec": spec, "runs": runs, "pairs": pairs})
-    return out
-
 
 def mean(xs):
     xs = list(xs)
     return sum(xs) / len(xs) if xs else 0
 
 
-def outcome(verdicts, arm="ambitious"):
-    """'Won 1 of 1 (high/high)', 'Won 2, tied 1 of 3'."""
-    if not verdicts:
-        return "not judged"
-    n = len(verdicts)
-    won = sum(v["winner"] == arm for v in verdicts)
-    tied = sum(v["winner"] == "tie" for v in verdicts)
-    parts = [f"won {won}" if won else "", f"lost {n - won - tied}" if n - won - tied else "", f"tied {tied}" if tied else ""]
-    text = ", ".join(p for p in parts if p).capitalize() + f" of {n}"
-    if n == 1:
-        text += " (" + "/".join(str(o.get("confidence") or "?") for o in verdicts[0]["orders"]) + " confidence)"
-    return text
+def restatement(run):
+    """The run's own restatement block (You asked for / Genre bar / Aiming at ...), if it wrote one."""
+    t = run / "transcript.md"
+    if not t.exists():
+        return ""
+    m = re.search(r"```[a-z]*\n(You asked for:.*?)```", t.read_text(encoding="utf-8"), re.S)
+    return m.group(1).strip() if m else ""
 
 
-def worth_text(verdicts):
-    ws = [v["worth"] for v in verdicts if v.get("worth", {}).get("worth_it")]
-    if not ws:
-        return "not assessed"
-    if len(ws) == 1:
-        return f"{ws[0]['worth_it'].capitalize()} ({ws[0]['uplift']} uplift, {ws[0]['cost_multiple']:g}x cost)"
-    counts = {}
-    for w in ws:
-        counts[w["worth_it"]] = counts.get(w["worth_it"], 0) + 1
-    return ", ".join(f"{k} {c}" for k, c in sorted(counts.items(), key=lambda kv: -kv[1]))
+def load_run(run, arm, current):
+    m = json.loads((run / "metrics.json").read_text())
+    plugin = m.get("plugin") or {"commit": m.get("plugin_commit"), "dirty": None, "hash": None}
+    reviews = {}
+    for key in subjects(run, arm):
+        cf = run / "review" / key / "capture.json"
+        if cf.exists():
+            reviews[key] = json.loads(cf.read_text())
+    cj = run / "checks" / "checks.json"
+    return {"dir": run, "n": int(run.name.split("-")[1]), "arm": arm, "metrics": m, **run_figures(run),
+            "exchange_log": m.get("exchange_log") or [], "plugin": plugin,
+            "outdated": arm == "ambitious" and plugin.get("hash") != current,
+            "subjects": subjects(run, arm), "reviews": reviews,
+            "checks": json.loads(cj.read_text()) if cj.exists() else [],
+            "verdict": json.loads((run / "verdict.json").read_text()) if (run / "verdict.json").exists() else None,
+            "restatement": restatement(run) if arm == "ambitious" else ""}
+
+
+def collect():
+    """Everything the results page and the site show, read from examples/<model>/<category>/<name>/."""
+    specs = {s["slug"]: s for s in load_specs().values()}
+    current = plugin_version()["hash"]
+    out = []
+    for ex in sorted(EXAMPLES.glob("*/*/*")):
+        if not ex.is_dir():
+            continue
+        runs = {arm: [load_run(m.parent, arm, current) for m in sorted(ex.glob(f"{arm}/run-*/metrics.json"),
+                                                                       key=lambda m: int(m.parent.name.split("-")[1]))]
+                for arm in ARMS}
+        if not any(runs.values()):
+            continue
+        slug = (runs["ambitious"] or runs["not-ambitious"])[0]["metrics"]["slug"]
+        if not (ex / "spec.json").exists() and slug in specs:
+            save_spec(specs[slug], ex.parent.parent.name)
+        spec = json.loads((ex / "spec.json").read_text()) if (ex / "spec.json").exists() else {}
+        out.append({"dir": ex, "model": ex.parent.parent.name, "category": ex.parent.name, "name": ex.name,
+                    "slug": slug, "spec": spec, "baseline": (runs["not-ambitious"] or [None])[-1],
+                    "runs": runs["ambitious"][::-1], "plugin_now": current})
+    return out
+
+
+def preview_figures(r):
+    """Turn 1 of an ambitious run is the cheap preview (first version and checkpoint)."""
+    log = r["exchange_log"]
+    return (log[0]["cost_usd"], log[0]["minutes"]) if log else (None, None)
+
+
+RESULT_WORD = {"win": "Beats the baseline", "tie": "Ties the baseline", "loss": "Loses to the baseline"}
 
 
 def results_markdown(data):
     lines = ["# Results", "",
-             "Every example runs three ways on the same model, under identical conditions: the **plain prompt**, a "
-             "**briefed prompt** (the prompt plus the context the user had in their head), and **`/be-ambitious`**. "
-             "A blind judge compares `/be-ambitious` against each, twice with the labels swapped. A disagreement "
-             "counts as a tie. Only then does a separate step see the costs and decide whether the improvement was "
-             "worth paying for. [How the bench works](../bench/README.md).", "",
-             f"Browse the outputs, screenshots and judge reports on the [results site]({SITE_URL}).", ""]
+             "Each example has one **baseline**: the prompt exactly as a user would type it, on the same model, in "
+             "the same container with a real browser. The plugin passes an example only when a single "
+             "`/be-ambitious` run of the *same prompt* beats it. Turn 1 of that run makes a first version and stops "
+             "at a checkpoint; it must already be at least as good as the baseline (the gate). Nothing is judged "
+             "automatically: we review frames, screenshots and the live pages side by side, and record the verdict. "
+             "Runs made with an older plugin are marked outdated. [How the bench works](../bench/README.md).", "",
+             f"Visual results, with every page live: [results site]({SITE_URL}).", ""]
     for model in sorted({e["model"] for e in data}):
-        rows = [e for e in data if e["model"] == model]
-        lines += [f"## {model}", "",
-                  "| Example | Runs | vs plain prompt | vs briefed prompt | Cost per run (plain · briefed · ambitious) | "
-                  "Minutes (plain · ambitious) | Worth the extra cost? (vs plain) | Worth it vs briefed? |",
-                  "|---|---|---|---|---|---|---|---|"]
-        for e in rows:
-            r = e["runs"]
-            cost = " · ".join(f"${mean(x['cost_usd'] for x in r[arm]):.2f}" if arm in r else "–" for arm in ARMS)
-            mins = " · ".join(f"{mean(x['minutes'] for x in r[arm]):.1f}" if arm in r else "–" for arm in ("not-ambitious", "ambitious"))
-            plain, briefed = e["pairs"].get("ambitious-vs-not-ambitious", []), e["pairs"].get("ambitious-vs-briefed", [])
-            lines.append(f"| [{e['slug']}](#{e['slug'].replace('/', '').lower()}) | {max(len(x) for x in r.values())} | "
-                         f"{outcome(plain)} | {outcome(briefed)} | {cost} | {mins} | {worth_text(plain)} | {worth_text(briefed)} |")
+        lines += [f"## {model}", "", "| Example | Verdict | Gate (turn 1) | Baseline | Preview (turn 1) | Full run | Plugin |",
+                  "|---|---|---|---|---|---|---|"]
+        for e in (x for x in data if x["model"] == model):
+            b = e["baseline"]
+            base = f"${b['cost_usd']:.2f} · {b['minutes']:.1f} min" if b else "–"
+            if not e["runs"]:
+                lines.append(f"| {e['slug']} | no plugin run yet | – | {base} | – | – | – |")
+                continue
+            r = e["runs"][0]
+            v = r["verdict"] or {}
+            pc, pm = preview_figures(r)
+            prev = f"${pc:.2f} · {pm:.1f} min" if pc is not None else "–"
+            full = f"${r['cost_usd']:.2f} · {r['minutes']:.1f} min"
+            if b:
+                full += f" ({r['cost_usd'] / b['cost_usd']:.1f}× cost)"
+            plug = (r["plugin"].get("commit") or "?") + (" · outdated" if r["outdated"] else "")
+            lines.append(f"| {e['slug']} | {RESULT_WORD.get(v.get('result'), 'not reviewed')} | {v.get('gate', '–')} | "
+                         f"{base} | {prev} | {full} | {plug} |")
         lines.append("")
-        for e in rows:
+        for e in (x for x in data if x["model"] == model):
             rel = e["dir"].relative_to(EXAMPLES).as_posix()
             lines += [f"### {e['slug']}", "", f"> {e['spec'].get('prompt', '')}", ""]
-            for pair, label in (("ambitious-vs-not-ambitious", "plain prompt"), ("ambitious-vs-briefed", "briefed prompt")):
-                for v in e["pairs"].get(pair, []):
-                    w = v.get("worth") or {}
-                    o = next((o for o in v["orders"] if o.get("summary")), None)
-                    summary = f"Judge, with A = {ARM_LABEL[o['A']]} and B = {ARM_LABEL[o['B']]}: {o['summary']}" if o else ""
-                    lines += [f"**vs {label}, run {v['run']}:** {outcome([v])}. {summary}", ""]
-                    if w.get("worth_it"):
-                        lines += [f"- **Worth it:** {w['worth_it']} ({w['uplift']} uplift for {w['cost_multiple']:g}x the cost "
-                                  f"and {w['time_multiple']:g}x the time). {w.get('reason') or ''}",
-                                  f"- **Use it when:** {w.get('use_when') or '–'}",
-                                  f"- **Skip it when:** {w.get('skip_when') or '–'}", ""]
-            lines += [f"[Outputs and judge reports]({rel}/) · [Visual view]({SITE_URL}{rel}/)", ""]
-        lines += [f"Single runs can be luck. Treat any example with one run as an illustration, not a measurement.", ""]
+            for r in e["runs"]:
+                v = r["verdict"]
+                if v:
+                    lines += [f"**Run {r['n']}:** {RESULT_WORD.get(v['result'], v['result'])}, gate {v['gate']}. {v.get('summary') or ''}", ""]
+            lines += [f"[Files]({rel}/) · [Visual view]({SITE_URL}{rel}/)", ""]
     return "\n".join(lines)
 
 
@@ -757,34 +815,6 @@ def cmd_report(a):
     import site_builder
     site_builder.build(data, REPO / "docs", SITE_URL, REPO_URL)
     print(f"wrote examples/RESULTS.md and docs/ ({len(data)} examples)")
-    root = EXAMPLES / a.model
-    rows, wins = {}, {}
-    for mf in sorted(root.glob("*/*/*/run-*/metrics.json")):
-        m = json.loads(mf.read_text())
-        r = rows.setdefault((m["slug"], m["arm"]), {"runs": 0, "cost": 0, "ms": 0, "turns": 0, "out": 0})
-        r["runs"] += 1
-        r["cost"] += m["cost_usd"]
-        r["ms"] += m["duration_ms"]
-        r["turns"] += m["num_turns"]
-        r["out"] += sum(u.get("outputTokens", 0) for u in m["by_model"].values())
-    for vf in sorted(root.glob("*/*/judge/*/run-*/verdict.json")):
-        v = json.loads(vf.read_text())
-        w = wins.setdefault((v["slug"], " vs ".join(v["pair"])), {"runs": 0})
-        w["runs"] += 1
-        w[v["winner"]] = w.get(v["winner"], 0) + 1
-    lines = [f"# A/B report · {a.model}\n", "## Cost per run (average)\n",
-             "| example | arm | runs | cost $ | output tokens | turns | minutes |", "|---|---|---|---|---|---|---|"]
-    for (slug, arm), r in sorted(rows.items()):
-        k = r["runs"]
-        lines.append(f"| {slug} | {arm} | {k} | {r['cost'] / k:.2f} | {r['out'] / k:,.0f} | {r['turns'] / k:.0f} | {r['ms'] / k / 60000:.1f} |")
-    lines += ["\n## Blind judge results\n", "| example | pair | runs | wins | ties |", "|---|---|---|---|---|"]
-    for (slug, pair), w in sorted(wins.items()):
-        arms_ = pair.split(" vs ")
-        lines.append(f"| {slug} | {pair} | {w['runs']} | {' · '.join(f'{x} {w.get(x, 0)}' for x in arms_)} | {w.get('tie', 0)} |")
-    report = root / "REPORT.md"
-    root.mkdir(parents=True, exist_ok=True)
-    report.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(report.read_text())
 
 
 def cmd_list(_a):
@@ -800,24 +830,35 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
-    for name in ("run", "judge", "report"):
+    for name in ("run", "review", "verdict", "report"):
         sp = sub.add_parser(name)
         if name != "report":
             sp.add_argument("target")
         sp.add_argument("--model", default="claude-opus-5-5")
-        sp.add_argument("--effort", default=None)
-        sp.add_argument("--max-turns", type=int, default=80)
         if name == "run":
+            sp.add_argument("--effort", default=None)
+            sp.add_argument("--max-turns", type=int, default=80)
             sp.add_argument("--runs", type=int, default=1)
             sp.add_argument("--arms", default=DEFAULT_ARMS)
             sp.add_argument("--max-exchanges", type=int, default=6)
             sp.add_argument("--parallel", type=int, default=1)
             sp.add_argument("--dry-run", action="store_true")
-        if name == "judge":
-            sp.add_argument("--pairs", default=DEFAULT_PAIRS)
-            sp.add_argument("--run", type=int, default=None, help="judge only this run number")
+            sp.add_argument("--host", dest="docker", action="store_false",
+                            help="run on this machine in the Claude Code sandbox instead of a container (no browser)")
+        if name == "review":
+            sp.add_argument("--run", type=int, default=None, help="only this ambitious run (the baseline is always included)")
+            sp.add_argument("--seconds", type=int, default=10, help="how long to capture, when the prompt doesn't say")
+        if name == "verdict":
+            sp.add_argument("--run", type=int, required=True)
+            sp.add_argument("--gate", choices=("pass", "fail"), required=True, help="was the turn-1 first version at least as good as the baseline?")
+            sp.add_argument("--result", choices=("win", "tie", "loss"), required=True, help="the final against the baseline")
+            sp.add_argument("--preview", choices=("yes", "no", "na"), default="na", help="was the turn-1 preview worth its cost?")
+            sp.add_argument("--push", choices=("yes", "no", "na"), default="na", help="was pushing on worth its extra cost?")
+            sp.add_argument("--note", required=True, help="one or two sentences: why")
+            sp.add_argument("--notes", default=None, help="a Markdown file with the full side-by-side review")
+            sp.add_argument("--by", default="user", help="who made the call")
     a = p.parse_args()
-    {"list": cmd_list, "run": cmd_run, "judge": cmd_judge, "report": cmd_report}[a.cmd](a)
+    {"list": cmd_list, "run": cmd_run, "review": cmd_review, "verdict": cmd_verdict, "report": cmd_report}[a.cmd](a)
 
 
 if __name__ == "__main__":

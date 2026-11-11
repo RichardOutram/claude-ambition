@@ -2,13 +2,22 @@
 
 The examples the bench runs. Each has three parts:
 
-- **Prompt:** exactly what a user would type. Both runs get this, word for word.
-- **Brief:** what the user knows but didn't type. The client agent answers `/be-ambitious`'s interview from it, and the optional `briefed` run gets it appended.
-- **Check:** how the judge decides. Objective checks come first, then a rubric.
+- **Prompt:** exactly what a user would type. Both runs get this, word for word. It always names the deliverable's form (a single web page, a Markdown file, a script), so both runs make the same kind of thing and get reviewed the same way.
+- **Brief:** what the user knows but didn't type. It's context for us when reviewing. The stand-in user never sees it, so both runs get exactly the same information.
+- **Check:** what we look at when we review. Objective checks come first, then a rubric.
 
-Prompts are deliberately ordinary, the way people actually ask. A planted or measurable ground truth is what makes a judgment fair.
+Prompts are deliberately ordinary, the way people actually ask.
 
 Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
+
+---
+
+## Three.js
+
+### threejs/neon-implosion
+**Prompt:** Create a vivid neon art solar system particle implosion, a 10 second looping animation in three.js, as a single web page.
+**Brief:** It's for a loop on a portfolio site and social posts. It should look striking full screen on a laptop and a phone.
+**Check:** Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how vivid and striking it is, whether it clearly reads as a solar system imploding into particles, and craft (colour, glow, motion, timing).
 
 ---
 

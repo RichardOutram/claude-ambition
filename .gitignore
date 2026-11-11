@@ -1,7 +1,8 @@
-CLAUDE.md
+/CLAUDE.md
 .DS_Store
 bench/.env
 bench/.home/
 bench/.client/
 __pycache__/
 bench/.cache/
+/examples/**/live
