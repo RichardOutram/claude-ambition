@@ -1,0 +1,4 @@
+cost $0.4539 · 141s · 4 turns · 1 exchanges
+Metrics (cost: /cost, or total_cost_usd in headless JSON)
+total   in 8 · out 14.6k (think 5.6k) · cache read 90.4k · write 18.0k · hit 83% · 4 calls
+model   opus-5-5: in 8 · out 14.6k (think 5.6k) · cache read 90.4k · write 18.0k · hit 83% · 4 calls

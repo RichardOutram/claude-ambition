@@ -1,4 +1,0 @@
-V	270209194813Z		1000	unknown	/CN=localhost
-V	270209194813Z		1001	unknown	/CN=localhost
-V	270209194813Z		1002	unknown	/CN=staging.lab.test
-V	210101000000Z		1003	unknown	/CN=localhost

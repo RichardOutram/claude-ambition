@@ -273,9 +273,15 @@ def scrub(text, workspace, env, emails=True):
     return EMAIL.sub("<email>", text) if emails else text
 
 
+IMAGE_DATA = re.compile(r'("data"\s*:\s*")[A-Za-z0-9+/=]{500,}(")')
+
+
 def copy_scrubbed(src, dst, workspace, env):
+    """Saves a transcript, scrubbed. Images the run looked at are replaced by a note: they're the bulk of
+    the file, and the review captures its own frames."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(scrub(src.read_text(encoding="utf-8", errors="replace"), workspace, env), encoding="utf-8")
+    text = IMAGE_DATA.sub(r"\1[image omitted]\2", src.read_text(encoding="utf-8", errors="replace"))
+    dst.write_text(scrub(text, workspace, env), encoding="utf-8")
 
 
 def render_transcript(jsonl, title):
@@ -367,6 +373,7 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
         res = claude(call, out, env if a.docker else workspace_env(env, out), messages[-1])
         results.append(res)
         exchanges.append({"n": turn + 1, "minutes": round((time.monotonic() - t0) / 60, 2), "cost_usd": round(res.get("total_cost_usd") or 0, 4)})
+        snapshot_turn(out, run, turn + 1)
         print(f"  [{spec['slug']} {arm} {run.name}] exchange {turn + 1} done at {round((time.monotonic() - t0) / 60, 1)} min, "
               f"${res.get('total_cost_usd') or 0:.2f}{' ERROR ' + str(res.get('result'))[:200] if res.get('is_error') else ''}", flush=True)
         if res.get("is_error") and not res.get("session_id") or turn == a.max_exchanges:
@@ -379,7 +386,7 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
 
     wall_end = time.monotonic()
     live.unlink(missing_ok=True)
-    shutil.copytree(out, run / "output", dirs_exist_ok=True, ignore=shutil.ignore_patterns(".git", "node_modules", ".venv", "__pycache__", ".cc-writes", ".cache"))
+    save_work(out, run / "output")
     shutil.rmtree(out, ignore_errors=True)
 
     # prompt.md: every message the user side sent
@@ -396,9 +403,11 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
             copy_scrubbed(sub, tdir / "session" / "subagents" / sub.name, out, env)
         (run / "transcript.md").write_text(render_transcript(tdir / "session.jsonl", f"{spec['slug']} · {arm}"), encoding="utf-8")
 
-    # metrics: exact figures from the headless JSON, summed over resumed turns, plus the plugin's format
+    # metrics: exact figures from the headless JSON, plus the plugin's format. A resumed session reports
+    # its cost and usage cumulatively, so the last exchange's figures are the run's totals; summing them
+    # would count early turns again for every later one.
     models = {}
-    for r in results:
+    for r in results[-1:]:
         for model, u in (r.get("modelUsage") or {}).items():
             acc = models.setdefault(model, {})
             for k, v in u.items():
@@ -407,7 +416,7 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     metrics = {
         "slug": spec["slug"], "arm": arm, "model": a.model, "effort": a.effort, "isolation": "docker" if a.docker else isolation,
         "started": started, "session_id": sid, "exchanges": len(messages),
-        "cost_usd": round(sum(r.get("total_cost_usd") or 0 for r in results), 4),
+        "cost_usd": round(results[-1].get("total_cost_usd") or 0, 4),
         "client_cost_usd": round(client_cost, 4),
         # Wall clock, including the stand-in user's replies. The JSON's own duration_ms undercounts
         # runs with several exchanges and subagents, so it's kept only for reference.
@@ -613,6 +622,51 @@ def ensure_review_node():
                         "npm init -y >/dev/null && npm i --silent playwright@1.52.0 pngjs@7.0.0"], check=True)
 
 
+WORK_SKIP = ("_tools", "shots", "frames", "judgeview", ".DS_Store", ".cc-writes")  # a run's own screenshots and tooling
+IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+
+
+def save_work(src, dest):
+    """Copies what a run made, for publishing: the work, not its scaffolding. Leaves out dependencies,
+    screenshot and tooling folders, and images inside .ambition/ (the plugin's working area, where the
+    judge and the run keep their looks at the work). The same rule applies to every arm."""
+    src = Path(src)
+    def ignore(d, names):
+        rel = Path(d).resolve().relative_to(src.resolve())
+        working = rel.parts[:1] == (".ambition",)
+        return {n for n in names if n in SKIP_DIRS or n in WORK_SKIP or working and Path(n).suffix.lower() in IMAGE_EXT}
+    shutil.copytree(src, dest, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True, ignore=ignore)
+
+
+def snapshot_turn(ws, run, n):
+    """Saves the work as it stood at the end of turn n into run/turns/turn-<n>/, so the example can show the
+    progression. Skipped when nothing changed since the last saved turn, or when there's no page to show."""
+    dest = run / "turns" / f"turn-{n}"
+    shutil.rmtree(dest, ignore_errors=True)
+    save_work(ws, dest)
+    def digest(d):
+        h = hashlib.sha256()
+        for f in sorted(p for p in d.rglob("*") if p.is_file()):
+            h.update(f.relative_to(d).as_posix().encode()); h.update(f.read_bytes())
+        return h.hexdigest()
+    earlier = sorted((run / "turns").glob("turn-*"), key=lambda d: int(d.name.split("-")[1]))
+    earlier = [d for d in earlier if int(d.name.split("-")[1]) < n]
+    if not html_pages(dest, limit=1) or earlier and digest(earlier[-1]) == digest(dest):
+        shutil.rmtree(dest)
+        return None
+    return dest
+
+
+def turn_subjects(run):
+    """{turn number: page} for each saved turn. The page is the deliverable, or the first version before one exists."""
+    out = {}
+    for d in (run / "turns").glob("turn-*") if (run / "turns").exists() else []:
+        pages = html_pages(d, limit=1)
+        if pages:
+            out[int(d.name.split("-")[1])] = pages[0].relative_to(d).as_posix()
+    return dict(sorted(out.items()))
+
+
 def contact_sheet(folder, view, cap):
     """One image showing the whole loop: every captured frame, left to right, top to bottom."""
     from PIL import Image
@@ -630,12 +684,12 @@ def contact_sheet(folder, view, cap):
     return name
 
 
-def review_subject(run, key, page, seconds):
+def review_subject(run, key, page, seconds, site=None):
     folder = run / "review" / key
     if (folder / "capture.json").exists():
         return json.loads((folder / "capture.json").read_text())
     folder.mkdir(parents=True, exist_ok=True)
-    p = subprocess.run(["docker", "run", "--rm", "-v", f"{run / 'output'}:/site:ro", "-v", f"{folder}:/out",
+    p = subprocess.run(["docker", "run", "--rm", "-v", f"{site or run / 'output'}:/site:ro", "-v", f"{folder}:/out",
                         "-v", f"{REVIEW_JS.parent}:/review:ro", "-v", f"{REVIEW_NODE}:/node:ro", DOCKER_IMAGE,
                         "node", "/review/capture.mjs", "/site", page, "/out", str(seconds)],
                        capture_output=True, text=True, timeout=1800)
@@ -669,20 +723,33 @@ def cmd_review(a):
         ex = EXAMPLES / a.model / spec["category"] / spec["name"]
         said = re.search(r"(\d+)\s*-?\s*second", spec["prompt"])
         seconds = int(said.group(1)) if said else a.seconds
-        jobs, runs = [], []
+        jobs, runs, reuse = [], [], []
         for arm in ARMS:
             for run in sorted(ex.glob(f"{arm}/run-*")):
                 if a.run and arm == "ambitious" and run.name != f"run-{a.run}" or not (run / "metrics.json").exists():
                     continue
                 runs.append(run)
-                jobs += [(run, key, page) for key, page in subjects(run, arm).items()]
-        # Every version at once, plus Lighthouse on the host: each capture is one container, CPU-bound.
-        with ThreadPoolExecutor(max_workers=len(jobs) + 1 or 1) as pool:
+                subj = subjects(run, arm)
+                jobs += [(run, key, page, None) for key, page in subj.items()]
+                for n, page in turn_subjects(run).items():
+                    # a turn that left the first version or the final as it is reuses that capture
+                    body = (run / "turns" / f"turn-{n}" / page).read_bytes()
+                    same = [k for k, pg in subj.items() if (run / "output" / pg).read_bytes() == body]
+                    if same:
+                        reuse.append((run / "review" / same[0], run / "review" / f"turn-{n}"))
+                    else:
+                        jobs.append((run, f"turn-{n}", page, run / "turns" / f"turn-{n}"))
+        # Two captures at a time, plus Lighthouse on the host: each capture is a CPU-bound container.
+        with ThreadPoolExecutor(max_workers=3) as pool:
             measured = pool.submit(lambda: [measure(r) for r in runs])
-            caps = list(pool.map(lambda j: review_subject(j[0], j[1], j[2], seconds), jobs))
+            caps = list(pool.map(lambda j: review_subject(j[0], j[1], j[2], seconds, j[3]), jobs))
             measured.result()
-        for (run, key, page), cap in zip(jobs, caps):
-            if cap:
+        for src, dst in reuse:
+            if (src / "capture.json").exists():
+                shutil.rmtree(dst, ignore_errors=True)
+                shutil.copytree(src, dst)
+        for (run, key, page, _), cap in zip(jobs, caps):
+            if cap and key in SUBJECT_NAME:
                 views = "; ".join(f"{n}: {seam_text(v)}, {len(v['errors'])} console errors" for n, v in cap["views"].items())
                 print(f"{run.relative_to(REPO)} · {SUBJECT_NAME[key]} ({page}) · {views}")
 
@@ -733,7 +800,10 @@ def load_run(run, arm, current):
             "subjects": subjects(run, arm), "reviews": reviews,
             "checks": json.loads(cj.read_text()) if cj.exists() else [],
             "verdict": json.loads((run / "verdict.json").read_text()) if (run / "verdict.json").exists() else None,
-            "restatement": restatement(run) if arm == "ambitious" else ""}
+            "restatement": restatement(run) if arm == "ambitious" else "",
+            # the work at the end of each turn that changed it: page, and its capture once reviewed
+            "turns": [{"n": n, "page": page, "capture": json.loads(cf.read_text()) if (cf := run / "review" / f"turn-{n}" / "capture.json").exists() else None}
+                      for n, page in turn_subjects(run).items()]}
 
 
 def collect():

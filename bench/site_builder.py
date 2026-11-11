@@ -115,7 +115,7 @@ def copy_example(ex, dest):
         for name in KEEP:
             if (r["dir"] / name).exists():
                 shutil.copy2(r["dir"] / name, target / name)
-        for sub in ("output", "checks", "review"):
+        for sub in ("output", "checks", "review", "turns"):
             if (r["dir"] / sub).exists():
                 shutil.copytree(r["dir"] / sub, target / sub, ignore=ignore)
 
@@ -216,11 +216,11 @@ def timeline(ex, r):
     """How the run spent its money: turn 1 is the preview and checkpoint, later turns are pushing on."""
     b = ex["baseline"]
     log = r["exchange_log"]
-    rows, prev = [], 0.0
+    rows, prev, spent = [], 0.0, 0.0  # the log is cumulative; each bar is what that turn added
     for i, t in enumerate(log):
-        label = "Turn 1 · first version + checkpoint" if i == 0 else f"Turn {t['n']} · pushing on"
-        rows.append((label, t["cost_usd"], "first" if i == 0 else "ambitious", t["minutes"] - prev))
-        prev = t["minutes"]
+        label = "Turn 1 · first version + checkpoint" if i == 0 else f"Turn {t['n']}"
+        rows.append((label, t["cost_usd"] - spent, "first" if i == 0 else "ambitious", t["minutes"] - prev))
+        prev, spent = t["minutes"], t["cost_usd"]
     if not rows:
         rows.append(("Whole run", r["cost_usd"], "ambitious", r["minutes"]))
     if b:
@@ -234,6 +234,39 @@ def timeline(ex, r):
             mult += f' The preview alone: <b>{log[0]["cost_usd"] / b["cost_usd"]:.1f}×</b> and <b>{log[0]["minutes"] / b["minutes"]:.1f}×</b>.'
         mult += "</p>"
     return f'<div class="grid2"><div class="card"><h3>Cost by turn</h3>{cost}</div><div class="card"><h3>Time by turn</h3>{mins}</div></div>{mult}'
+
+
+def progression(r):
+    """The work as it stood at the end of each turn that changed it, so you can see what each turn bought."""
+    if not r["turns"]:
+        return ""
+    run_rel = f"{r['arm']}/run-{r['n']}"
+    log = {t["n"]: t for t in r["exchange_log"]}
+    last = r["turns"][-1]["n"]
+    cards = []
+    for t in r["turns"]:
+        n, cap = t["n"], t["capture"]
+        name = "First version · checkpoint" if n == 1 else "Final" if n == last else f"Turn {n}"
+        spent = log.get(n)
+        figs = f"{money(spent['cost_usd'])} · {spent['minutes']:.1f} min so far" if spent else ""
+        media, facts = "", ""
+        if cap:
+            d = cap["views"].get("desktop", {})
+            src = d.get("sheet") if d.get("moving") else (d.get("frames") or [{}])[0].get("file")
+            if src:
+                media = f'<a href="{run_rel}/review/turn-{n}/{e(src)}"><img loading="lazy" src="{run_rel}/review/turn-{n}/{e(src)}" alt="{e(name)}: frames across the loop"></a>'
+            words, tone = seam_words(d)
+            errs = sum(len(v.get("errors") or []) for v in cap["views"].values())
+            facts = badge(words, tone) + (badge(f"{errs} console error{'s' if errs != 1 else ''}", "bad") if errs else "")
+        cards.append(f"""<article class="turn">
+  <header><b>{e(name)}</b><span>{e(figs)}</span></header>
+  <div class="subject-media">{media or '<p class="hint">Not captured yet.</p>'}</div>
+  <div class="facts">{facts}</div>
+  <p class="open"><a href="{run_rel}/turns/turn-{n}/{e(t["page"])}" target="_blank" rel="noopener">Open turn {n} live ↗</a></p>
+</article>""")
+    return f"""<h3 class="label">How it got there</h3>
+<p class="hint">The work at the end of each turn that changed it, with what had been spent by then. Turns that only talked are left out.</p>
+<div class="turns">{"".join(cards)}</div>"""
 
 
 def verdict_banner(r):
@@ -298,6 +331,7 @@ def example_page(ex, root, repo):
   {verdict_banner(r)}
   {trio(ex, r)}
   {review}
+  {progression(r)}
   <h3 class="label">Where the time and money went</h3>
   {timeline(ex, r)}
   {method}

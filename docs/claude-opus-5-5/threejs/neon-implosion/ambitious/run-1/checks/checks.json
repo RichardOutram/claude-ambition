@@ -1,0 +1,46 @@
+[
+  {
+    "page": "final/index.html",
+    "screenshots": {
+      "mobile": "final_index-mobile.webp",
+      "desktop": "final_index-desktop.png"
+    },
+    "lighthouse": {
+      "scores": {
+        "performance": null,
+        "accessibility": 100,
+        "best-practices": 96,
+        "seo": 90
+      },
+      "metrics": {
+        "largest-contentful-paint": null,
+        "cumulative-layout-shift": "0",
+        "total-blocking-time": null,
+        "total-byte-weight": "Total size was 287\u00a0KiB"
+      },
+      "failed_accessibility_audits": []
+    }
+  },
+  {
+    "page": ".ambition/direct/index.html",
+    "screenshots": {
+      "mobile": ".ambition_direct_index-mobile.webp",
+      "desktop": ".ambition_direct_index-desktop.png"
+    },
+    "lighthouse": {
+      "scores": {
+        "performance": null,
+        "accessibility": 100,
+        "best-practices": 96,
+        "seo": 90
+      },
+      "metrics": {
+        "largest-contentful-paint": null,
+        "cumulative-layout-shift": "0",
+        "total-blocking-time": null,
+        "total-byte-weight": "Total size was 285\u00a0KiB"
+      },
+      "failed_accessibility_audits": []
+    }
+  }
+]

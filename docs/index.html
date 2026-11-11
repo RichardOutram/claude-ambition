@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>claude-ambition results</title>
-<meta name="description" content="Blind A/B results for the ambition plugin for Claude Code.">
+<meta name="description" content="Results for the ambition plugin for Claude Code, against a plain-prompt baseline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
@@ -20,28 +20,29 @@
 </div></header>
 <main class="wrap">
 <section class="hero">
-  <p class="eyebrow">An open A/B test of the <a href="https://github.com/RichardOutram/claude-ambition">ambition plugin</a> for Claude Code</p>
-  <h1>Does asking for more get you more, and is it worth paying for?</h1>
-  <p class="lede">Each example is one ordinary request, run three ways on the same model under identical conditions. A blind judge picks the better work. Only then does a separate step look at the bill and decide whether the difference was worth it.</p>
+  <p class="eyebrow">An open test of the <a href="https://github.com/RichardOutram/claude-ambition">ambition plugin</a> for Claude Code</p>
+  <h1>Does <code>/be-ambitious</code> beat the same prompt typed plainly?</h1>
+  <p class="lede">Each example is one ordinary request, run plainly once as the baseline, then through the plugin. The plugin's cheap first version has to match the baseline before it may push on, and the final has to beat it. Every version is live on its page.</p>
 </section>
 <section id="results"><h2>Results</h2>
-<div class="table-wrap"><table class="results"><thead><tr><th>Example</th><th>Runs</th><th>vs plain prompt</th><th>vs briefed prompt</th><th>Cost per run<span class="sub">plain · briefed · ambitious</span></th><th>Minutes<span class="sub">plain · ambitious</span></th><th>Worth the extra cost?<span class="sub">vs plain</span></th><th>Worth it?<span class="sub">vs briefed</span></th></tr></thead>
-<tbody><tr><td><a href="claude-opus-5-5/writing/explain-https/index.html">write/explain-https</a><span class="sub">claude-opus-5-5</span></td><td>1</td>
-<td><span class="badge good">Won</span><span class="sub">high/high confidence</span></td><td><span class="badge good">Won</span><span class="sub">high/medium confidence</span></td><td class="num">$0.109 · $0.126 · $4.15</td><td class="num">0.3 · 14.4</td>
-<td><span class="badge good">Yes</span><span class="sub">major uplift · 38.1× cost</span></td><td><span class="badge good">Yes</span><span class="sub">material uplift · 32.9× cost</span></td></tr></tbody></table></div>
-<p class="hint">One run can be luck. Examples with a single run are illustrations, not measurements.</p>
+<div class="table-wrap"><table class="results"><thead><tr><th>Example</th><th>Verdict</th><th>Gate<span class="sub">turn 1 ≥ baseline</span></th><th>Baseline</th><th>Preview<span class="sub">turn 1</span></th><th>Full run</th><th>Plugin</th></tr></thead>
+<tbody><tr><td><a href="claude-opus-5-5/threejs/neon-implosion/index.html">threejs/neon-implosion</a><span class="sub">claude-opus-5-5</span></td>
+<td><span class="badge muted">Not reviewed</span></td><td>–</td><td class="num">$0.454 · 2.4 min</td><td class="num">$1.54 · 10.6 min</td><td class="num">$4.65 · 37.8 min<span class="sub">10.2× the baseline's cost</span></td><td>6128ee8</td></tr></tbody></table></div>
+<p class="hint">One run per example. These are illustrations of the current plugin, not measurements.</p>
 </section>
-<section><h2>Examples</h2><div class="ex-grid"><a class="ex-card" href="claude-opus-5-5/writing/explain-https/index.html">
-  <div class="ex-visual"><blockquote>“Explain how HTTPS works.”</blockquote></div>
-  <div class="ex-body"><p class="eyebrow">writing</p><h3>Explain how HTTPS works.</h3>
-  <p>The explanation is meant to change a risky habit or unblock real errors, especially when mentoring a team where a runnable demo and CI guardrail will be reused.</p><div class="badges"><span class="badge good">Won</span><span class="sub">high/high confidence</span><span class="badge good">Yes</span><span class="sub">major uplift · 38.1× cost</span></div></div>
+<section><h2>Examples</h2><div class="ex-grid"><a class="ex-card" href="claude-opus-5-5/threejs/neon-implosion/index.html">
+  <div class="ex-visual"><img loading="lazy" src="claude-opus-5-5/threejs/neon-implosion/ambitious/run-1/review/final/desktop-t03.webp" alt=""></div>
+  <div class="ex-body"><p class="eyebrow">threejs</p><h3>Create a vivid neon art solar system particle implosion, a 10 second looping animation in three.js, as a single web page.</h3>
+  <p></p><div class="badges"><span class="badge muted">Not reviewed</span></div></div>
 </a></div></section>
 <section id="method" class="method"><h2>How it's tested</h2>
 <ol class="steps">
-  <li><b>Three arms.</b> The <span class="dot not-ambitious"></span>plain prompt as typed; a <span class="dot briefed"></span>briefed prompt that adds what the user knew but didn't say; and <span class="dot ambitious"></span><code>/be-ambitious</code>. The briefed arm is the control: it shows whether the method adds anything beyond extracting more context.</li>
-  <li><b>Identical conditions.</b> Same model, settings, tools, sandbox and turn limit. Each run starts in an empty folder outside the repo. If any arm asks a question, the same stand-in user answers it from the brief.</li>
-  <li><b>A blind judge.</b> A fresh session sees only the request, the context, the check and two outputs labelled A and B. It runs objective checks, then scores a rubric. Each pair is judged twice with the labels swapped, and a disagreement is a tie.</li>
-  <li><b>Then the bill.</b> A separate session reads the blind reports plus the cost and time of each output, and decides whether the improvement was worth it for this user: yes, marginal or no, with when to use it and when to skip it.</li>
+  <li><b>A baseline.</b> The prompt exactly as a user would type it, once per example. It's the bar.</li>
+  <li><b>The same prompt, with the plugin.</b> <code>/be-ambitious</code> gets the same words. Both run in a fresh throwaway container with a real browser, the same model and the same limits, so each can look at its own work the way Claude can on your machine.</li>
+  <li><b>The gate.</b> Turn 1 makes a first version and stops at a checkpoint: stop here, or push on. That first version must already be at least as good as the baseline, or the run fails.</li>
+  <li><b>Pushing on.</b> The stand-in user always pushes on and otherwise says "use your best judgement", so both sides get the same information.</li>
+  <li><b>Our review, not an auto judge.</b> The harness captures each version the same way: frames across the whole loop, a seam check, console errors, screenshots and Lighthouse. We compare them side by side, open them live, and record the verdict.</li>
+  <li><b>Only the current plugin counts.</b> Each run records the plugin it used. Runs from an older plugin are marked outdated.</li>
 </ol>
 <p class="hint">Code: <a href="https://github.com/RichardOutram/claude-ambition/tree/main/bench">bench/</a> · Raw results: <a href="https://github.com/RichardOutram/claude-ambition/blob/main/examples/RESULTS.md">examples/RESULTS.md</a></p>
 </section>

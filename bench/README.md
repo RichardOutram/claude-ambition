@@ -28,11 +28,11 @@ Examples are defined in [`examples/PROMPTS.md`](../examples/PROMPTS.md).
 - **Identical conditions.** Both arms get the same model, effort, tools, turn limit, settings and container image. Each run gets a fresh throwaway container (`bench/docker/`) with a fresh empty folder as `/work`. The ambitious arm also gets the plugin's own parts, read-only, and nothing else. No run can see the bench, the prompts, the baseline or another arm's output.
 - **Runs can see their work.** The image has Chromium (Playwright), Node, Python and git, and every Bash command is allowed, so a run can install packages, serve its page and screenshot it, the way Claude can on your machine. A bench where runs can't look at their work isn't testing Claude as people use it. The container is the boundary; there's no Claude Code sandbox inside it.
 - **The same stand-in user.** After every turn, a client (Sonnet, no tools) decides whether the reply is waiting on the user. It knows only the prompt, never the brief. It approves restatements, answers the checkpoint with "Push it further.", and answers anything else with "I don't mind. Use your best judgement, and please finish the work without stopping." Both arms get exactly the same information.
-- **Real time.** Minutes are wall-clock time, including the stand-in's replies (`wall_ms`). `exchange_log` records the cumulative minutes and cost at the end of each turn, so turn 1 is the preview's cost. The headless JSON's own `duration_ms` and `num_turns` undercount runs with several exchanges and subagents.
+- **Real time and real cost.** Minutes are wall-clock time, including the stand-in's replies (`wall_ms`). `exchange_log` records the cumulative minutes and cost at the end of each turn, so turn 1 is the preview's cost. A resumed session reports its cost and usage cumulatively, so a run's totals are its last turn's figures. The headless JSON's own `duration_ms` and `num_turns` undercount runs with several exchanges and subagents.
 
 ## Review evidence
 
-`review` captures every version the same way: the baseline, and for each ambitious run its first version (`.ambition/direct/`) and its final. Into `run-<n>/review/<baseline|first|final>/`:
+`review` captures every version the same way: the baseline, each ambitious run's first version (`.ambition/direct/`) and final, and the work at the end of each saved turn. Into `run-<n>/review/<baseline|first|final|turn-N>/`. Two captures run at a time, and a turn that left the first version or the final unchanged reuses that capture:
 
 - **Frames across time.** Inside the container, `review/capture.mjs` opens the page at desktop (1280×800) and phone (390×844 @2x) sizes and takes a frame every second. Time is virtual and stepped at 30 fps, so frame t=4 really is 4 seconds in, however slow software rendering is. The length comes from the prompt ("10 second") or `--seconds`.
 - **A seam check.** For anything that moves, the last frame is compared with the first, against a typical step between frames. A seamless loop ends where it began.
@@ -72,6 +72,7 @@ examples/<model>/<category>/<name>/
     prompt.md          every message sent from the user side (the prompt and the stand-in's replies)
     result.md          Claude's final reply
     output/            the files it produced (for ambitious runs, .ambition/direct/ is the first version)
+    turns/turn-<n>/    the work as it stood at the end of each turn that changed it
     transcript.md      readable history, including tool calls
     transcript/        raw session and subagent transcripts (scrubbed)
     metrics.json       cost, tokens per model, time, exchange_log, plugin version, isolation, permission denials
@@ -82,7 +83,7 @@ examples/<model>/<category>/<name>/
     review.md          our side-by-side review, if written
 ```
 
-Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced and tokens are redacted.
+Saved work leaves out dependencies, screenshot and tooling folders, and images inside `.ambition/` (where the run and its judge keep their looks at the work), for every arm alike. Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced, tokens are redacted, and images the run looked at are replaced by a note.
 
 ## Fixtures
 
