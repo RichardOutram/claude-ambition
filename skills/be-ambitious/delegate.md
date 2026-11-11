@@ -14,7 +14,7 @@ You are the orchestrator. Three agents do the work. When installed as a plugin, 
    ```
 3. When the runner ends with `QUESTION:`, send it to the client and pass the answer back. If the client replies `NOT IN BRIEF`, you decide: ask the user, make a labelled assumption, or tell the runner to choose and flag it.
 4. When the runner ends with `STEP DONE`, collect the reviewer's notes according to `--review`, then send the next step.
-5. **Judge step:** spawn `ambition-judge` with only the goal, the acceptance criteria and where the output lives. Never pass the runner's reasoning. Relay its verdict to the runner, and repeat until it passes or you hit 3 rounds.
+5. **Judge step:** spawn `ambition-judge` with only the goal, the genre bar, the acceptance criteria, and where the final and the direct version live (unlabelled). Never pass the runner's reasoning. Relay its verdict to the runner, and repeat until it passes or you hit 3 rounds.
 6. **Persistence.** If the runner calls a target impossible or stops short, reply once that it is solvable and to keep going from a different angle. Accept the shortfall only after that.
 7. **Framing.** Give stretch targets to the runner as ordinary requirements, not as moonshots. A target that is presented as normal gets attempted as normal.
 8. Continue each agent by messaging it, so it keeps its context. Don't spawn new ones mid-run.

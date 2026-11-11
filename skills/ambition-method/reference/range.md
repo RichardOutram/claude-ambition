@@ -12,9 +12,11 @@ This technique comes from Tom Kelley and Jonathan Littman's *The Art of Innovati
 
 Write the verb form first. Then ask which fields are best at each verb.
 
+Keep the genre's own verbs in the list *(ours)*. A landing page still has to make people want what it sells, an essay still has to be a pleasure to read, and an API still has to feel obvious to its caller. Verbs find methods. They don't change what the deliverable is.
+
 ## Assemble the crew
 
-Pick 3–5 fields that do those verbs differently, plus at least one whose job is to break the result. The essay's crew for the review deck:
+Pick 3–5 fields that do those verbs differently, plus at least one whose job is to break the result. Always include the genre's own best practitioner *(ours)*: an art director for a page, an editor for prose, a seasoned maintainer for code. Without them, the crew optimises everything except the thing itself. The essay's crew for the review deck:
 
 - **Production quality:** an analyst, a journalist and an editor.
 - **If it will be presented:** a motion designer and an audio designer.

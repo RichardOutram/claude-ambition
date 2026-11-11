@@ -8,8 +8,8 @@
 
 Arms:
   not-ambitious  the prompt, exactly as written
-  briefed        the prompt plus the brief (controls for "it only won because it got more information")
-  ambitious      /be-ambitious <prompt>
+  ambitious      /be-ambitious <prompt>, the same prompt with the plugin
+  briefed        (legacy, not run by default) the prompt plus the brief
 
 If any arm asks a question, the same brief-only client answers it and the session resumes.
 Results go to examples/<model>/<category>/<name>/<arm>/run-<n>/. `report` writes examples/RESULTS.md
@@ -45,7 +45,8 @@ HOME = str(Path.home())
 REPO_URL = "https://github.com/RichardOutram/claude-ambition"
 SITE_URL = "https://richardoutram.github.io/claude-ambition/"
 ARMS = ("not-ambitious", "briefed", "ambitious")
-DEFAULT_PAIRS = "ambitious:not-ambitious,ambitious:briefed"
+DEFAULT_PAIRS = "ambitious:not-ambitious"
+DEFAULT_ARMS = "not-ambitious,ambitious"  # same prompt, with and without the plugin
 CATEGORIES = {"dev": "development", "data": "data-analysis", "design": "design",
               "plan": "planning", "elec": "electronics", "write": "writing"}
 
@@ -322,10 +323,9 @@ def save_spec(spec, model):
 
 
 def next_run_dir(arm_dir):
-    n = 1
-    while (arm_dir / f"run-{n}").exists():
-        n += 1
-    return arm_dir / f"run-{n}"
+    """Always after the highest existing run, so a new run never fills a gap left by a deleted one."""
+    taken = [int(d.name.split("-")[1]) for d in arm_dir.glob("run-*") if d.name.split("-")[1].isdigit()]
+    return arm_dir / f"run-{max(taken, default=0) + 1}"
 
 
 def client_answer(spec, message, env, settings):
@@ -431,7 +431,9 @@ LIGHTHOUSE = "lighthouse@12.2.1"
 VIEWPORTS = {"desktop": (1280, 800)}
 MOBILE = ["--screenEmulation.mobile=true", "--screenEmulation.width=375", "--screenEmulation.height=812",
           "--screenEmulation.deviceScaleFactor=2"]
-SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".claude"}
+# Tool output (test reports, coverage) is not a page the user asked for.
+SKIP_DIRS = {".git", "node_modules", ".venv", "__pycache__", ".claude", ".cache", "test-results", "playwright-report",
+             "coverage", "lighthouse-report", "dist-test"}
 
 
 class _QuietHandler(http.server.SimpleHTTPRequestHandler):
@@ -641,7 +643,7 @@ def cmd_judge(a):
             x, y = pair.split(":")
             n = 1
             while (EXAMPLES / a.model / spec["category"] / spec["name"] / x / f"run-{n}").exists():
-                v = judge_pair(spec, x, y, n, a, env, settings)
+                v = judge_pair(spec, x, y, n, a, env, settings) if a.run in (None, n) else None
                 if v:
                     print(f"{spec['slug']} {x} vs {y} run-{n}: {v['winner']}", flush=True)
                 n += 1
@@ -807,12 +809,13 @@ def main():
         sp.add_argument("--max-turns", type=int, default=80)
         if name == "run":
             sp.add_argument("--runs", type=int, default=1)
-            sp.add_argument("--arms", default=",".join(ARMS))
+            sp.add_argument("--arms", default=DEFAULT_ARMS)
             sp.add_argument("--max-exchanges", type=int, default=6)
             sp.add_argument("--parallel", type=int, default=1)
             sp.add_argument("--dry-run", action="store_true")
         if name == "judge":
             sp.add_argument("--pairs", default=DEFAULT_PAIRS)
+            sp.add_argument("--run", type=int, default=None, help="judge only this run number")
     a = p.parse_args()
     {"list": cmd_list, "run": cmd_run, "judge": cmd_judge, "report": cmd_report}[a.cmd](a)
 

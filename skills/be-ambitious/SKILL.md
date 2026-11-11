@@ -40,7 +40,7 @@ Load the `ambition-method` skill if it isn't already loaded. It defines the seve
 
 Ask up to 4 questions, **one at a time**. Use the AskUserQuestion tool when it's available, with concrete options drawn from what you can already see. Skip any question the context already answers.
 1. What is this ultimately for, and what should happen after it's done?
-2. What would make the result unmistakably excellent? Push for a specific, hard target, not "good".
+2. What would make the result unmistakably excellent, both as this kind of thing and for the goal? Push for a specific, hard target, not "good". Include the qualities that can only be judged by looking at it, reading it or using it, not just the ones you can count. When you offer options, offer both kinds.
 3. What would prove it, other than you? Name a test, a metric, real users or reference output.
 4. What access, data or tools are missing? Skip this if it's obvious.
 
@@ -50,10 +50,11 @@ Then restate the task at the level that serves the goal. Altitude **adds to** th
 
 ```
 You asked for:   <original>
-Still delivers:  <the original ask, in full>
+Still delivers:  <the original ask, in full, as the same kind of thing>
+Genre bar:       <what this kind of thing is judged on by its users and best practitioners, including qualities judged by perception>
 Aiming at:       <restated goal>, because <reason>
-Excellent means: <specific hard target>
-Proven by:       <outside check>
+Excellent means: <specific hard target, on the genre bar and on the goal>
+Proven by:       <outside check, including how the genre bar is judged and the comparison with the direct version>
 Needs access to: <gaps, or "nothing new">
 Mode:            plan|build · answerer · reviewer
 ```
@@ -66,16 +67,18 @@ If access is missing, getting it is the first piece of work. Ask for it, or buil
 
 Run each move from the method in order. After each one, give a short step report: **did / found / changed course**. If reviewer notes arrive, treat them as steering, not as answers.
 
+**Direct version first, on both routes.** Before the moves, make the direct version: what a top practitioner would make straight from the request, at full craft, with nothing from the method. Spend your full skill on it. It's the floor, not a throwaway draft. Save an untouched copy under `.ambition/direct/` and build the final from there or alongside it. Every later move has to beat it.
+
 **Plan route.** Planning still means touching reality. Read the code, query the data and run spikes when they would settle a question; don't settle it from the armchair.
 1. **Depth:** the four statements, then a rewritten task.
 2. **Challenge:** assumptions tested against the real material, plus any new finding.
 3. **Range:** the verb form, the fields borrowed from with the method taken from each, and what the red team found.
 4. **Stretch:** a stretch variant of the plan, with where it would likely break.
-5. **Judge:** define the outside check the build will be held to. If you can build it cheaply now, do. A plan with its acceptance test already written is a stronger plan.
+5. **Judge:** define the outside check the build will be held to. If you can build it cheaply now, do. A plan with its acceptance test already written is a stronger plan. Have the plan judged against the direct plan, unlabelled: it must be at least as clear and usable, and better on the goal.
 6. **Output the plan** with sections for: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · borrowed methods · outside check · stretch option · what will be locked in afterwards. In plan mode, present it for approval through the normal plan-approval step. Otherwise stop and ask for approval.
 
 **Build route.** Run Depth → Challenge → Range, doing the work as you go. Then:
-- **Judge:** run the outside check, preferably the `ambition-judge` agent or a real tool, and iterate until it passes. The check must cover the original ask as well as the raised goal. Meet the original ask first and keep it passing.
+- **Judge:** run the outside check, preferably the `ambition-judge` agent or a real tool, and iterate until it passes. The check must cover the original ask as well as the raised goal. Meet the original ask first and keep it passing. Give the judge the direct version and the final, unlabelled, plus the goal, the genre bar and the criteria. The final must be at least as good on the genre bar and better on the goal. If it isn't, fix it. If you can't, deliver the direct version plus the improvements that held up.
 - **Stretch:** go for the harder target and report where it broke.
 - **Lock:** script or spec, a CLAUDE.md note, and a command if the task will recur.
 
@@ -89,6 +92,7 @@ Only with `--delegate`: read [delegate.md](delegate.md) (`${CLAUDE_SKILL_DIR}/de
 
 Finish with:
 - **You asked for → it became:** one line each, plus where the original ask is delivered in full.
+- **Against the direct version:** where the final is better, anything it gave up, and what the judge said when it compared the two.
 - **Outside check:** what ran, and what it returned.
 - **Stretch:** the target, how far it got, and where it broke.
 - **Locked in:** the files created, and how to rerun.

@@ -20,6 +20,8 @@ The essay's worked example is an imagined company's quarterly business review. E
 
 Climb only as high as the user will act on. Propose the next rung and say what changes. Don't jump silently. *(ours)*
 
+The third rung is always a proposal. Deliver the artifact that was asked for, at full craft, and offer the replacement alongside it. A landing page that has become an ordering app is a silent goal change, even when the app is good. *(ours)*
+
 ## Access is part of altitude
 
 A higher-level goal usually needs infrastructure first. The essay's "keep the apps crash-free" goal only worked once the model could:

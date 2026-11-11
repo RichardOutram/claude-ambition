@@ -299,6 +299,34 @@ def run_panel(arm, r, ex, repo):
 <p class="hint">Full transcript, including every tool call: <a href="{src}">on GitHub</a>.</p>"""
 
 
+def demos(ex):
+    """The pages each run produced, up front: a screenshot that opens the live page, grouped by arm."""
+    groups = []
+    for arm in ARMS:
+        cards = []
+        for r in ex["runs"].get(arm, []):
+            cj = r["dir"] / "checks" / "checks.json"
+            pages = json.loads(cj.read_text()) if cj.exists() else []
+            if not pages:
+                continue
+            p = pages[0]
+            live = f"{arm}/run-{r['n']}/output/{p['page']}"
+            shot = p.get("screenshots", {}).get("mobile") or p.get("screenshots", {}).get("desktop")
+            img = f'<img loading="lazy" src="{arm}/run-{r["n"]}/checks/{e(shot)}" alt="Screenshot of the page from {e(ARM_NAME[arm])}, run {r["n"]}">' if shot else ""
+            sc = (p.get("lighthouse") or {}).get("scores") or {}
+            chips = " · ".join(f"{k.replace('-', ' ')} {sc[k]}" for k in ("performance", "accessibility") if sc.get(k) is not None)
+            more = f" (+{len(pages) - 1} more)" if len(pages) > 1 else ""
+            cards.append(f"""<a class="demo" href="{e(live)}" target="_blank" rel="noopener">
+  <span class="demo-shot">{img}</span>
+  <span class="demo-cap"><b>{"Run " + str(r["n"]) if len(ex["runs"][arm]) > 1 else "Open the page"} ↗</b><span>{e(p["page"])}{more}</span><span>{e(chips)}</span></span>
+</a>""")
+        if cards:
+            groups.append(f'<div class="demo-group"><h2 class="label"><span class="dot {arm}"></span>{e(ARM_NAME[arm])}</h2><div class="demo-row">{"".join(cards)}</div></div>')
+    if not groups:
+        return ""
+    return f"""<div class="demos"><p class="hint">Each version built a page. Tap a screenshot to open it live, exactly as produced, and try it like a customer would.</p>{"".join(groups)}</div>"""
+
+
 def example_page(ex, root, repo):
     spec = ex["spec"]
     r = ex["runs"]
@@ -319,6 +347,7 @@ def example_page(ex, root, repo):
 <section class="hero ex">
   <p class="eyebrow">{e(ex["slug"])}</p>
   <h1>“{e(spec.get("prompt", ""))}”</h1>
+  {demos(ex)}
   <div class="context">
     <div><h2 class="label">What the user knew but didn't type</h2><p>{e(spec.get("brief", ""))}</p></div>
     <div><h2 class="label">How it was judged</h2><p>{e(spec.get("check", ""))}</p></div>
