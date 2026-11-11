@@ -51,7 +51,7 @@ echo 'CLAUDE_CODE_OAUTH_TOKEN=<token>' > bench/.env
 
 - Runs auto-accept file edits.
 - Bash runs inside Claude Code's OS sandbox, so writes are confined to the run's temp folder.
-- Network access is limited to package registries and GitHub.
+- Network access is limited to package registries and GitHub. On macOS, sandboxed commands may also start and reach local servers (`allowLocalBinding`), so outside checks can spin up test servers. Those commands can then also reach other services on your localhost.
 - `--max-turns` caps each session.
 - Nothing runs in this repo's folder.
 
