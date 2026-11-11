@@ -21,7 +21,8 @@ FIELDS = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_cre
 def find_transcript(arg):
     if arg.endswith(".jsonl") and os.path.isfile(arg):
         return arg
-    hits = glob.glob(os.path.expanduser(f"~/.claude/projects/*/{arg}.jsonl"))
+    config = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude")
+    hits = glob.glob(os.path.join(config, "projects", "*", f"{arg}.jsonl"))
     if not hits:
         sys.exit(f"ambition-metrics: no transcript found for session {arg}")
     return max(hits, key=os.path.getmtime)

@@ -15,7 +15,7 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 ## Development
 
 ### dev/photo-dedupe
-**Prompt:** Write a CLI that finds duplicate photos in a folder.
+**Prompt:** Write a CLI that finds duplicate photos in a folder. *(fixture: hidden test images for the judge only)*
 **Brief:** I have about 40k family photos across old phone backups. Many are the same photo resized, re-compressed or with stripped EXIF. Never delete anything automatically. I'm on macOS and comfortable with Python.
 **Check:** The fixture has 200 images with 37 planted duplicate groups: exact copies, resized, re-encoded at JPEG quality 60, EXIF stripped, a 2% crop, and some near-identical burst shots that are *not* duplicates. Score precision and recall per group, runtime, and whether it is safe by default. Rubric: usability, and whether it explains why each match was made.
 

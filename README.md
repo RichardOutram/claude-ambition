@@ -148,6 +148,14 @@ To analyse any past session: `python3 skills/be-ambitious/scripts/ambition-metri
 - **Start long runs with a clean context.** Every API call re-reads the whole conversation, so a run started deep in a long session costs more per step. Start `/be-ambitious` in a fresh session or after `/compact`. Alternatively use `--delegate`, so the heavy work happens in a runner with a fresh context.
 - **The lock step is what compounds.** If the result can't be reproduced cheaply, you pay for the ambition again next time.
 
+## Does it actually help?
+
+[`bench/`](bench/) is an A/B harness. It runs each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) three ways (plain, plain plus context, and `/be-ambitious`) on the same model under identical conditions. It saves outputs, transcripts and exact costs, then a blind judge picks the better result. The results are in [`examples/`](examples/).
+
+```sh
+python3 bench/ab.py run design/bakery-landing && python3 bench/ab.py judge design/bakery-landing
+```
+
 ## Manual install (without the plugin system)
 
 ```sh
