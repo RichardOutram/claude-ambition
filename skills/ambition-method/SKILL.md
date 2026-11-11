@@ -68,7 +68,7 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
 - **Evidence over assertion.** Every claim that something works, is faster or is correct needs a check you ran. Never say a check passed if you didn't run it.
 - **Raise the goal openly.** *(ours)* When you restate a task at a higher altitude, say what changed and why, and let the user veto it. The original ask stays a hard requirement: altitude is additive, never a replacement. Ambition never overrides explicit constraints, permissions, safety, or the user's stated scope.
 - **Deeper, not bigger.** Ambition means a better method and a better outcome, not more output. Cut anything that doesn't serve the goal.
-- **Proportion.** *(ours)* Match the effort to the stakes. A typo fix needs no interview. When in doubt, do a light pass: one altitude question and one outside check.
+- **Proportion.** *(ours)* Match the effort to the stakes. A typo fix needs no interview. Anything whose value depends on its audience or purpose does, even an explanation. When in doubt, interview. A light pass is for typo-sized tasks only, and even then the altitude question comes before the work.
 - **Know where it fits.** Altitude works less well for open-ended creative work, and "go make money" is too high a level to act on yet. Depth and range still apply there.
 - **No theatre.** Personas are for finding fields and methods, not for voice. A stranger transcript is not a better result.
 - **Report honestly.** End with what the original ask was, what it became, what the outside check showed, and where the stretch broke.

@@ -48,7 +48,7 @@ SETTINGS = {
     "sandbox": {
         "enabled": True,
         "autoAllowBashIfSandboxed": True,
-        "network": {"allowedDomains": [
+        "network": {"allowLocalBinding": True, "allowedDomains": [
             "pypi.org", "files.pythonhosted.org", "registry.npmjs.org", "github.com",
             "raw.githubusercontent.com", "objects.githubusercontent.com", "codeload.github.com"]},
     },
@@ -57,8 +57,9 @@ SETTINGS = {
 CLIENT_PROMPT = """You stand in for a user in a test. Below are the user's original request, their private brief, and the assistant's latest message.
 
 Decide whether the assistant's message is waiting on the user before it can continue: a question, a request to confirm or approve, or a choice to make.
-- If it is not waiting on the user, or it has delivered what the request asked for and is only offering optional extras, reply with exactly: DONE
-- If the request was for a plan, advice or an explanation, and that has been delivered, reply DONE, even if it asks for approval to go further.
+- If it asks a genuine clarifying question about the goal, audience, purpose, constraints or preferences, answer it, even if it has already delivered something.
+- If it is only offering optional extras, or asking for approval to go further than a plan, advice or explanation it has already delivered, reply with exactly: DONE
+- If it is not waiting on the user at all, reply with exactly: DONE
 - Otherwise, reply as the user in 1 to 4 plain sentences, using only the brief. If you're asked to confirm a restatement or plan that doesn't contradict the brief, approve it and say to proceed and finish the work. If the brief doesn't cover something, say you don't mind and it should use its best judgment.
 Never do the work, review it, or suggest approaches.
 

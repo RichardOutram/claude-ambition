@@ -14,7 +14,7 @@ Load the `ambition-method` skill if it isn't already loaded. It defines the seve
 
 ## 0. Read the situation
 
-**Size.** If the task is trivial (a typo, a rename, a one-line answer), say so. Do a light pass instead: ask one altitude question and run one outside check, then stop. Ambition costs effort, so spend it where the payoff is.
+**Size.** Only a genuinely trivial task gets a light pass: a typo, a rename, a one-line factual answer. Explanations, advice, writing, designs and plans are **not** trivial, because their value depends on who they are for and why, so they get the interview. In a light pass, ask your one altitude question **first** and wait for the answer. With `--auto`, answer it yourself as a labelled assumption. Then do the task and run one outside check. Ambition costs effort, so spend it where the payoff is.
 
 **Intent.** Decide whether this is a **plan** or a **build**.
 - `--plan` / `--build` override everything.
