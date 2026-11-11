@@ -1,6 +1,0 @@
-cost $4.1519 · 865s · 93 turns · 4 exchanges
-Metrics (cost: /cost, or total_cost_usd in headless JSON)
-total   in 156 · out 86.2k (think 23.5k) · cache read 4.10M · write 163.9k · hit 96% · 73 calls
-model   opus-5-5: in 156 · out 86.2k (think 23.5k) · cache read 4.10M · write 163.9k · hit 96% · 73 calls
-agent   main: in 110 · out 65.5k (think 17.8k) · cache read 3.13M · write 100.1k · hit 97% · 50 calls
-agent   ambition:ambition-judge ×1: in 46 · out 20.8k (think 5.7k) · cache read 972.2k · write 63.8k · hit 94% · 23 calls

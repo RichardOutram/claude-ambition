@@ -30,11 +30,12 @@ Left to their defaults, models do the task as typed, pick the median method and 
 
 ## The floor *(ours)*
 
-The method has to beat what a strong model makes from the plain request. A result that's worse than that is a failure, however much work went into it. The usual way to fail: effort flows to what can be measured, while the qualities the work is really judged on go unnamed and lose every trade-off. Three rules prevent it:
+The method has to beat what a strong model makes from the plain request. A result that's worse than that is a failure, however much work went into it. The usual way to fail: effort flows to what can be measured, while the qualities the work is really judged on go unnamed and lose every trade-off. Four rules prevent it:
 
 1. **Name the genre bar.** Every request names a kind of thing: a landing page, an essay, a function, a plan, a circuit. Its users and its best practitioners judge it on particular qualities, and some of them can only be judged by perceiving the thing: how it looks, reads, sounds or feels to use. Name them. They are part of the original ask, and they count as much as anything you can measure.
-2. **Make the direct version first.** Before raising anything, make what a top practitioner would make straight from the request, at full craft, with no method. Keep a copy. It is your floor and your reference.
-3. **Beat it on its own terms.** Everything afterwards is measured against the direct version. The final must be at least as good on the genre bar, and better on the goal. If a move trades genre quality for something measurable, undo that trade. If the final can't beat the direct version, deliver the direct version plus the improvements that held up.
+2. **Get the direct version first.** Before raising anything, hand the bare request, word for word, to a fresh agent (`ambition-direct`) that carries only the core of this method: make it excellent as the kind of thing asked for, shaped by who it's for, and look at it before finishing. It must already match or beat what a strong plain session makes. Keep it untouched. It is your floor and your reference.
+3. **Build on it, and beat it on its own terms.** Start the final from the direct version, not from scratch, so its craft carries through. The final must be at least as good on the genre bar, and better on the goal. If a move trades genre quality for something measurable, undo that trade. If the final can't beat the direct version, deliver the direct version plus the improvements that held up.
+4. **No look, no claim.** Qualities judged by perception are checked by perceiving: render it and look, read it through, use it. If you can't, get that access before changing them. If you still can't, report them as unchecked and leave them as the direct version had them.
 
 ## The seven moves
 

@@ -1,7 +1,0 @@
-{
-  "slug": "write/explain-https",
-  "prompt": "Explain how HTTPS works.",
-  "brief": "For a junior developer who keeps disabling certificate verification to \"make it work\".",
-  "check": "Technical accuracy is reviewed by the judge. Score whether it changes the reader's behaviour (does it address the verification habit?). Also run a 5-question comprehension test, answered by a fresh agent that has read only the explanation.",
-  "fixture": null
-}
