@@ -1,5 +1,5 @@
 {
-  "url": "neon-solar-implosion.html",
+  "url": "index.html",
   "seconds": 10,
   "views": {
     "desktop": {
@@ -51,8 +51,8 @@
       ],
       "moving": true,
       "seam": {
-        "first_vs_last": 0,
-        "median_step": 19.932
+        "first_vs_last": 0.085,
+        "median_step": 8.761
       },
       "errors": [],
       "sheet": "sheet-desktop.jpg"
@@ -106,13 +106,13 @@
       ],
       "moving": true,
       "seam": {
-        "first_vs_last": 0,
-        "median_step": 20.658
+        "first_vs_last": 0.305,
+        "median_step": 14.823
       },
       "errors": [],
       "sheet": "sheet-phone.jpg"
     }
   },
-  "page": "neon-solar-implosion.html",
+  "page": "index.html",
   "subject": "baseline"
 }

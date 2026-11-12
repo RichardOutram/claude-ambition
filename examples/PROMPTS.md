@@ -15,7 +15,7 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 ## Three.js
 
 ### threejs/neon-implosion
-**Prompt:** Create a vivid neon art solar system particle implosion, a 10 second looping animation in three.js, as a single web page.
+**Prompt:** Create a vivid pointer interactive abstract neon art solar system particle implosion, a 10 second looping animation in three.js, as a single web page.
 **Brief:** It's for a loop on a portfolio site and social posts. It should look striking full screen on a laptop and a phone.
 **Check:** Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how vivid and striking it is, whether it clearly reads as a solar system imploding into particles, and craft (colour, glow, motion, timing).
 
@@ -64,7 +64,7 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 ### design/settings-screen
 **Prompt:** Our app's settings screen is cluttered, redesign it. *(fixture: a screenshot plus a list of 34 settings)*
 **Brief:** It's a mobile note-taking app. Support tickets show people can't find export or sync settings.
-**Check:** Usability task test: the judge agent finds 5 named settings and the number of steps is counted. Also score accessibility contrast and the rationale given for grouping.
+**Check:** Usability task test: a scripted walk-through finds 5 named settings and the number of steps is counted. Also score accessibility contrast and the rationale given for grouping.
 
 ---
 

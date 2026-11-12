@@ -49,6 +49,30 @@
     );
   });
 
+  // Session replays: a Sublime Text-style window, one tab per run, played by asciinema-player.
+  // The player script loads after this one, so wait for the page to finish loading.
+  window.addEventListener("load", () => {
+    document.querySelectorAll(".term").forEach((win) => {
+      const screen = win.querySelector(".term-screen");
+      const stats = win.querySelector(".term-stats");
+      const tabs = [...win.querySelectorAll("[data-cast]")];
+      let player = null;
+      function open(tab) {
+        tabs.forEach((t) => t.setAttribute("aria-selected", String(t === tab)));
+        stats.textContent = tab.dataset.stats;
+        if (player && player.dispose) player.dispose();
+        screen.replaceChildren();
+        if (!window.AsciinemaPlayer) { screen.textContent = "The player couldn't load."; return; }
+        player = window.AsciinemaPlayer.create(tab.dataset.cast, screen, {
+          fit: "width", idleTimeLimit: 1.2, speed: 1.6, controls: true,
+          poster: "npt:0:4", terminalFontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace",
+        });
+      }
+      tabs.forEach((t) => t.addEventListener("click", () => open(t)));
+      if (tabs.length) open(tabs[0]);
+    });
+  });
+
   // File viewer
   document.querySelectorAll(".files").forEach((box) => {
     const viewer = box.querySelector(".viewer");
