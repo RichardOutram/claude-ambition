@@ -11,7 +11,7 @@
     {
       "name": "ambition",
       "source": "./",
-      "description": "/be-ambitious and the seven-step ambition sequence, with runner, client and judge agents for orchestrated runs."
+      "description": "/be-ambitious and the seven-step ambition sequence, run in order in one conversation, with a real outside check."
     }
   ]
 }

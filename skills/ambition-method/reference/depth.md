@@ -33,5 +33,6 @@ The user doesn't need to know the instruments. You usually do, so name them and 
 
 1. an existing test suite, benchmark or reference output;
 2. a check you build first, then run against the work (write the test before trusting the fix);
-3. a real run in the real environment;
-4. an independent judge agent that sees the output and the acceptance criteria, but not your reasoning.
+3. a real run in the real environment.
+
+Never another model, including another agent: a model asked to grade work tends to agree with it.

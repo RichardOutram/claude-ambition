@@ -1,7 +1,8 @@
 ---
 name: ambition-method
-description: The ambition method, after Felix Rieseberg's essay "How to be more ambitious". Covers raising altitude, depth and range, proving the result with a check that isn't the model, and locking it in. Load when running /be-ambitious or any /ambition step, when acting as an ambition runner, client or judge, or when asked to work ambitiously.
+description: The ambition method, after Felix Rieseberg's essay "How to be more ambitious". The plugin's hooks hand it to Claude when the user pushes on from /be-ambitious or runs an /ambition step, so it stays out of every other session.
 user-invocable: false
+disable-model-invocation: true
 ---
 
 # The ambition method
@@ -33,9 +34,9 @@ Left to their defaults, models do the task as typed, pick the median method and 
 The method has to beat what a strong model makes from the plain request. A result that's worse than that is a failure, however much work went into it. The usual way to fail: effort flows to what can be measured, while the qualities the work is really judged on go unnamed and lose every trade-off. Four rules prevent it:
 
 1. **Name the genre bar.** Every request names a kind of thing: a landing page, an essay, a function, a plan, a circuit. Its users and its best practitioners judge it on particular qualities, and some of them can only be judged by perceiving the thing: how it looks, reads, sounds or feels to use. Name them. They are part of the original ask, and they count as much as anything you can measure.
-2. **Get the direct version first.** Before raising anything, hand the bare request, word for word, to a fresh agent (`ambition-direct`) that carries only the core of this method: make it excellent as the kind of thing asked for, shaped by who it's for, and look at it before finishing. It must already match or beat what a strong plain session makes. Keep it untouched. It is your floor and your reference.
-3. **Build on it, and beat it on its own terms.** Start the final from the direct version, not from scratch, so its craft carries through. The final must be at least as good on the genre bar, and better on the goal. If a move trades genre quality for something measurable, undo that trade. If the final can't beat the direct version, deliver the direct version plus the improvements that held up.
-4. **No look, no claim.** Qualities judged by perception are checked by perceiving: render it and look, read it through, use it. If you can't, get that access before changing them. If you still can't, report them as unchecked and leave them as the direct version had them.
+2. **Make the first version first.** Before raising anything, do the request the way you would without this method: the plain answer a strong session gives. `/be-ambitious` makes it before this skill loads. Keep a copy untouched. It is your floor and your reference.
+3. **Build on it, and beat it on its own terms.** Start the final from the first version, not from scratch, so its craft carries through. The final must be at least as good on the genre bar, and better on the goal. If a move trades genre quality for something measurable, undo that trade. If the final can't beat the first version, deliver the first version plus the improvements that held up.
+4. **No look, no claim.** Qualities judged by perception are checked by perceiving: render it and look, read it through, use it. If you can't, get that access before changing them. If you still can't, report them as unchecked and leave them as the first version had them.
 
 ## The seven moves
 
@@ -63,7 +64,7 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
    - Restate the work as verbs, not nouns. A quarterly review isn't "a deck". It is "getting busy people to believe a story about cause and effect and decide under uncertainty in 30 minutes". Keep the genre's own verbs in the list *(ours)*: a landing page still has to make people want what it sells. The verbs find methods; the noun is still the deliverable.
    - Name 3–5 fields that do those verbs differently, plus a red team whose job is to break it. One of them is always the genre's own best practitioner *(ours)*.
    - Borrow what each one *does*. Don't play characters: do a short seller's research, don't write in a short seller's voice.
-5. **Judge: never grade your own work.** Use or build a check that isn't you: tests, a real run, a benchmark, a simulation, reference output, or an independent judge agent. A tool you can run for immediate feedback is ideal. Run it, iterate until it passes, and report what it showed. *(ours)* The check covers the genre bar, judged the way that genre is judged: render it and look at it, read it aloud, use it as a first-time user, set it beside the best real examples. It also compares the result with the direct version, unlabelled where possible. A check that measures only what's easy to measure is half a check.
+5. **Judge: never grade your own work.** Use or build a check that isn't you: tests, a real run, a benchmark, a simulation, or reference output. Never another model, including another agent. A tool you can run for immediate feedback is ideal. Run it, iterate until it passes, and report what it showed. *(ours)* The check covers the genre bar, judged the way that genre is judged: render it and look at it, read it aloud, use it as a first-time user, set it beside the best real examples. It also compares the result with the first version on the same check. A check that measures only what's easy to measure is half a check.
 6. **Stretch: an unreasonable target, treated as reasonable.**
    - Pick a specific target several times harder than the brief, for example 200ms when 5s was asked for.
    - Assume it's solvable, because someone has done something like it.
@@ -80,7 +81,7 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
 - **Proportion.** *(ours)* Match the effort to the stakes. A typo fix needs no interview. Anything whose value depends on its audience or purpose does, even an explanation. When in doubt, interview. A light pass is for typo-sized tasks only, and even then the altitude question comes before the work.
 - **Know where it fits.** Altitude works less well for open-ended creative work, and "go make money" is too high a level to act on yet. Depth and range still apply there. Where the work is judged mostly by perception, the genre bar leads and altitude only adds to it *(ours)*.
 - **No theatre.** Personas are for finding fields and methods, not for voice. A stranger transcript is not a better result.
-- **Report honestly.** End with what the original ask was, what it became, how the final compares with the direct version, what the outside check showed, and where the stretch broke.
+- **Report honestly.** End with what the original ask was, what it became, how the final compares with the first version, what the outside check showed, and where the stretch broke.
 
 ## Reference
 
