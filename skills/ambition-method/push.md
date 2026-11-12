@@ -32,7 +32,7 @@ Then restate the task at the level that serves the goal. Altitude **adds to** th
 ```
 You asked for:   <original>
 Raises all of:   <each part the request names, as the same kind of thing, and what excellent means for each>
-Genre bar:       <what this kind of thing is judged on by its users and best practitioners, including qualities judged by perception>
+Genre bar:       <what this kind of thing is judged on by its users and best practitioners, including qualities judged by perception, and why they'd choose it over the alternatives>
 Aiming at:       <restated goal>, because <reason>
 Excellent means: <specific hard target, on every part of the ask, on the genre bar and on the goal>
 Proven by:       <the outside check: what will be run or rendered and measured, and the comparison with the first version>
@@ -52,7 +52,7 @@ Plan: report each assumption with how you tested it against the real material, p
 
 ## Step 5 · Range
 
-Plan: give the verb form, the fields with the method taken from each, and what the red team found. Build: apply what you borrowed to the deliverable, and fix what the red team broke.
+Plan: give the verb form, the fields with the method taken from each, and what the red team found, harms included. Build: apply what you borrowed to the deliverable, and fix what the red team broke.
 
 ## Step 6 · Judge
 
@@ -68,7 +68,7 @@ Go for it on top of a working deliverable, and never leave the deliverable worse
 
 Then finish the run.
 
-**Plan:** output the plan, with sections for: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · decisions with directions and for/against · borrowed methods · outside check · stretch target and the fallback · what will be locked in once it's built. In plan mode, present it through the normal plan-approval step. Otherwise ask for approval.
+**Plan:** output the plan, with sections for: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · decisions with directions and for/against · borrowed methods · outside check · stretch target and the fallback · what will be locked in once it's built, ending with the open decisions. The plan stands alone for its reader: no process story, nothing it points to missing. In plan mode, present it through the normal plan-approval step. Otherwise ask for approval.
 
 **Report** with the following.
 - **You asked for → it became:** one line each, plus how each part of the original ask was raised.
