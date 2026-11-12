@@ -7,7 +7,9 @@ it's needed, so the first turn is exactly what Claude makes from a plain prompt.
           Later in a session, /be-ambitious on its own pushes the work already done.
           The first /ambition step in a session gets the method attached.
   stop    When the armed session's first turn ends, continue it once: save the result as the first version
-          and ask whether to stop there or push it further, with the method and push.md attached.
+          and ask whether to stop there or push it further, with the method and step 2's instruction attached.
+          After that, each time Claude stops with the current step copied to .ambition/steps/<n>/, continue
+          with the next step's instruction and nothing else, like a person typing the next command.
 Everything else passes straight through. Instructions travel as hook text, never as file paths: reading
 plugin files from a project needs permission.
 """
@@ -21,6 +23,11 @@ from datetime import datetime, timezone
 ROOT = os.environ.get("CLAUDE_PLUGIN_ROOT") or os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 METHOD = os.path.join(ROOT, "skills", "ambition-method")
 METRICS = os.path.join(ROOT, "scripts", "ambition-metrics.py")
+COMMANDS = os.path.join(ROOT, "commands")
+# Steps 2-8 of a push: (name, the manual command whose instruction it runs). Altitude's is push.md's own.
+STEPS = {2: ("Altitude", None), 3: ("Depth", "ambition-b-depth"), 4: ("Challenge", "ambition-c-challenge"),
+         5: ("Range", "ambition-d-range"), 6: ("Judge", "ambition-e-judge"), 7: ("Stretch", "ambition-f-stretch"),
+         8: ("Lock", "ambition-g-lock")}
 # Per-session marks. The plugin's data folder survives between calls (and between the bench's containers).
 STATE = os.path.join(os.environ.get("CLAUDE_PLUGIN_DATA") or os.path.join(tempfile.gettempdir(), "claude-ambition"), "sessions")
 FRONT = re.compile(r"/(?:[\w-]+:)?be-ambitious(?:\s+(.*))?", re.S)
@@ -71,9 +78,63 @@ def method_text():
     return "\n\n".join(parts)
 
 
+def push_parts():
+    """push.md split into its preamble, its Every step rules and {n: that step's section}."""
+    head, *rest = re.split(r"^## Step (\d) · [^\n]*$", read(os.path.join(METHOD, "push.md")), flags=re.M)
+    preamble, every = head.split("## Every step", 1)
+    return preamble.strip(), every.strip(), {int(n): body.strip() for n, body in zip(rest[::2], rest[1::2])}
+
+
+def command_text(name):
+    """A manual step's instruction as the user would get it by typing the command, minus its pointers."""
+    body = re.sub(r"\A---\n.*?\n---\n", "", read(os.path.join(COMMANDS, name + ".md")), count=1, flags=re.S)
+    skip = ("Apply to:", "Follow the ambition method.", "End with:")
+    return "\n".join(l for l in body.splitlines() if not l.startswith(skip)).strip()
+
+
+def step_text(n, session, started):
+    """Everything Claude gets for step n of a push, and nothing about the other steps."""
+    name, command = STEPS[n]
+    _, every, sections = push_parts()
+    parts = [f"Step {n} of pushing the work further: {name}. Open your first message with this line on its own, "
+             f"exactly: `▸ Step {n}/8 · {name}`. Write that line nowhere else."]
+    if command:
+        parts.append(command_text(command))
+    if n == 8:
+        parts.append(f"Then copy the deliverable as it stands to `.ambition/steps/{n}/`.")
+    parts.append(sections[n])
+    if n < 8:
+        parts.append(f"When this step is finished, copy the deliverable as it stands to `.ambition/steps/{n}/` (even "
+                     "if this step didn't change it, and never edit that copy), end with a short step report (did / "
+                     "found / changed course), and stop. The next instruction arrives then.")
+    else:
+        parts.append(f"Run started: {started}\nMetrics command for the end: python3 {METRICS} {session} --since {started}")
+    return "\n\n".join(parts) + "\n\n## Every step\n\n" + every
+
+
 def push_text(session, started):
-    return (method_text() + "\n\n---\n\n" + read(os.path.join(METHOD, "push.md"))
-            + f"\n\nRun started: {started}\nMetrics command for the end: python3 {METRICS} {session} --since {started}")
+    """The method, push.md's preamble and step 2: all Claude needs to begin pushing on."""
+    preamble = push_parts()[0]
+    return method_text() + "\n\n---\n\n" + preamble + "\n\n---\n\n" + step_text(2, session, started)
+
+
+def begin_push(session, started):
+    """Step 2 is under way: from here the Stop hook hands out the later steps."""
+    os.makedirs(STATE, exist_ok=True)
+    with open(mark(session, "step"), "w") as f:
+        f.write(f"2 {started}")
+
+
+def step_done(cwd, n, started):
+    """Step n is finished when .ambition/steps/<n>/ holds a file written during this push. Look in the project
+    folder, not the shell's current one: Claude may have cd'd into a subfolder (we lost steps 7-8 that way)."""
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
+    folder = os.path.join(root, ".ambition", "steps", str(n))
+    since = datetime.strptime(started, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp() - 1
+    for base, _, files in os.walk(folder):
+        if any(os.path.getmtime(os.path.join(base, f)) >= since for f in files):
+            return True
+    return False
 
 
 def checkpoint(session, started):
@@ -87,7 +148,7 @@ def checkpoint(session, started):
         "   - Push it further: name the two or three improvements you'd go after, and roughly what that costs "
         "against what's been spent so far.\n"
         "   Ask nothing else. Keep this brief: your reply about the work is already above.\n"
-        "3. If they push on, follow the instructions below.\n\n" + push_text(session, started)
+        "3. If they push on, do the first step below, and only that step.\n\n" + push_text(session, started)
     )
 
 
@@ -97,6 +158,7 @@ def on_prompt(data):
     if front:
         task = (front.group(1) or "").strip()
         if not task and last_prompt(data.get("transcript_path"))[0]:
+            begin_push(session, now())
             return {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit", "additionalContext": (
                 "The user wants the work already done in this conversation pushed further with the ambition "
                 "method. That work is the first version. Follow these instructions.\n\n" + push_text(session, now()))}}
@@ -120,12 +182,32 @@ def on_prompt(data):
 
 def on_stop(data):
     session = data.get("session_id")
-    if data.get("stop_hook_active") or not os.path.exists(mark(session, "armed")):
+    if os.path.exists(mark(session, "armed")) and not data.get("stop_hook_active"):
+        os.remove(mark(session, "armed"))  # once per arming
+        ts = last_prompt(data.get("transcript_path"))[1]
+        started = ts[:19] + "Z" if ts else now()
+        begin_push(session, started)  # harmless if they stop here: nothing happens until steps/2 appears
+        return {"decision": "block", "reason": checkpoint(session, started)}
+    if not os.path.exists(mark(session, "step")):
         return None
-    os.remove(mark(session, "armed"))  # once per arming
-    ts = last_prompt(data.get("transcript_path"))[1]
-    started = ts[:19] + "Z" if ts else now()
-    return {"decision": "block", "reason": checkpoint(session, started)}
+    n, started = read(mark(session, "step")).split()
+    n, cwd = int(n), data.get("cwd")
+    if step_done(cwd, n, started):
+        if n >= 8:  # the push is over: clear its marks
+            for k in ["step"] + [f"nudged-{i}" for i in STEPS]:
+                if os.path.exists(mark(session, k)):
+                    os.remove(mark(session, k))
+            return None
+        with open(mark(session, "step"), "w") as f:
+            f.write(f"{n + 1} {started}")
+        return {"decision": "block", "reason": step_text(n + 1, session, started)}
+    nudged = mark(session, f"nudged-{n}")
+    if n > 2 and not os.path.exists(nudged):  # once per step; Altitude stops for answers by design
+        open(nudged, "w").close()
+        return {"decision": "block", "reason": (
+            f"Step {n} has no copy in `.ambition/steps/{n}/` yet. If the step is finished, copy the deliverable "
+            "there and end with the step report. If you're waiting for the user, just stop.")}
+    return None
 
 
 def main():

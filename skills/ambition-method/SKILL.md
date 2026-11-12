@@ -35,7 +35,7 @@ The method has to beat what a strong model makes from the plain request. A resul
 
 1. **Name the genre bar.** Every request names a kind of thing: a landing page, an essay, a function, a plan, a circuit. Its users and its best practitioners judge it on particular qualities, and some of them can only be judged by perceiving the thing: how it looks, reads, sounds or feels to use. Name them. They are part of the original ask, and they count as much as anything you can measure.
 2. **Make the first version first.** Before raising anything, do the request the way you would without this method: the plain answer a strong session gives. `/be-ambitious` makes it before this skill loads. Keep a copy untouched. It is your floor and your reference.
-3. **Build on it, and beat it on its own terms.** Start the final from the first version, not from scratch, so its craft carries through. The final must be at least as good on the genre bar, and better on the goal. If a move trades genre quality for something measurable, undo that trade. If the final can't beat the first version, deliver the first version plus the improvements that held up.
+3. **Build on it, and beat it on its own terms.** Start the final from the first version, not from scratch, so its craft carries through. The final must be better on every part of the ask and on the goal, and worse on nothing, the genre bar included. If a move trades genre quality for something measurable, undo that trade. If the final can't beat the first version, deliver the first version plus the improvements that held up.
 4. **No look, no claim.** Qualities judged by perception are checked by perceiving: render it and look, read it through, use it. If you can't, get that access before changing them. If you still can't, report them as unchecked and leave them as the first version had them.
 
 ## The seven moves
@@ -48,7 +48,7 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
    - What, other than me, would prove it?
    - What access am I missing?
 
-   Then restate the task at the level that serves the goal. That restatement adds to the original ask, and the original is still delivered in full. The noun stays: the raised goal is what the artifact must achieve, not a different artifact. *(ours)* The ladder runs: feed in all the data → ask for decisions → question whether the artifact should exist at all. That last rung is a proposal to the user, never something you do on your own. Tell-tale sign that altitude applies: people would hold meetings about this work.
+   Then restate the task at the level that serves the goal. That restatement adds to the original ask and raises all of it: every part the request names is done at its best, not just delivered, and the goal beyond comes on top. *(ours)* The noun stays: the raised goal is what the artifact must achieve, not a different artifact. *(ours)* The ladder runs: feed in all the data → ask for decisions → question whether the artifact should exist at all. That last rung is a proposal to the user, never something you do on your own. Tell-tale sign that altitude applies: people would hold meetings about this work.
 2. **Depth: deeper, not bigger.** Before working, state four things:
    1. what a top professional would do that wasn't asked for;
    2. the rawest material they would start from;
@@ -62,11 +62,11 @@ The `/ambition*` commands and `/be-ambitious` run these in this order. Details a
    - Once you are inside the material, look for something new: a blind spot, an earlier signal, a finding you can check on data you held back.
 4. **Range: borrow methods from other fields.**
    - Restate the work as verbs, not nouns. A quarterly review isn't "a deck". It is "getting busy people to believe a story about cause and effect and decide under uncertainty in 30 minutes". Keep the genre's own verbs in the list *(ours)*: a landing page still has to make people want what it sells. The verbs find methods; the noun is still the deliverable.
-   - Name 3–5 fields that do those verbs differently, plus a red team whose job is to break it. One of them is always the genre's own best practitioner *(ours)*.
+   - Name 3–5 fields that do those verbs differently, including at least one you normally wouldn't consider, plus a red team whose job is to break it. One of them is always the genre's own best practitioner *(ours)*. Assemble them as if the result had to be extraordinary.
    - Borrow what each one *does*. Don't play characters: do a short seller's research, don't write in a short seller's voice.
 5. **Judge: never grade your own work.** Use or build a check that isn't you: tests, a real run, a benchmark, a simulation, or reference output. Never another model, including another agent. A tool you can run for immediate feedback is ideal. Run it, iterate until it passes, and report what it showed. *(ours)* The check covers the genre bar, judged the way that genre is judged: render it and look at it, read it aloud, use it as a first-time user, set it beside the best real examples. It also compares the result with the first version on the same check. A check that measures only what's easy to measure is half a check.
 6. **Stretch: an unreasonable target, treated as reasonable.**
-   - Pick a specific target several times harder than the brief, for example 200ms when 5s was asked for.
+   - Pick a specific target several times harder than the brief, for example 200ms when 5s was asked for, with a tight deadline where time matters. It becomes the target, not a side option; the brief stays the fallback.
    - Assume it's solvable, because someone has done something like it.
    - When it looks impossible, keep going and try another angle before concluding.
    - Falling short is fine. Report exactly where it broke.

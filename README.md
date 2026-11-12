@@ -37,7 +37,7 @@ The last three only happen if you ask for them. Models also have habits that wor
 
 | Piece | Type | What it does |
 |---|---|---|
-| `/be-ambitious`, then your task | skill + hooks | **The front door.** Does your task exactly as Claude normally would, then asks whether to push it further. If you do, it interviews you for the real goal, runs all seven moves in order in the same conversation, and reports what changed. |
+| `/be-ambitious`, then your task | skill + hooks | **The front door.** Does your task exactly as Claude normally would, then asks whether to push it further. If you do, it interviews you for the real goal, runs the seven moves one at a time in the same conversation, as if you'd typed each step's command, and reports what changed. |
 | `ambition-method` | method files | **The method itself:** the defaults it counters, the seven moves, operating rules and reference notes. The hooks hand it to Claude when you push on or run a step, and it stays out of every other session. |
 | `/ambition` … `/ambition-g-lock` | commands | The seven moves as separate steps, for when you want to drive by hand. |
 
@@ -72,7 +72,7 @@ migrate the billing service to the new queue
 - **Steer it in your own words when you push on.** "Push it further, use your judgement" answers the questions for you and lists the assumptions. You can also ask it to treat the task as a plan, to pause after each step for your notes, to write a log of the run, or to skip the metrics. Plan or build is otherwise detected for you, and plan mode produces an ambitious plan that stops for your approval.
 - **Push after the fact.** Ask for something the normal way, look at it, then type `/be-ambitious` on its own.
 
-**How it works:** two small hooks (`hooks/ambition.py`) do it all. A prompt hook blocks `/be-ambitious` before Claude sees it and marks the session (in the plugin's data folder). A Stop hook notices when the next turn ends and adds the checkpoint question, carrying the method and the push instructions with it. Until then, nothing of the plugin is in Claude's context, not even the method's name in the skill list. The prompt hook also hands the method over on your first `/ambition` step. In every other turn and session they do nothing. They need `python3`.
+**How it works:** two small hooks (`hooks/ambition.py`) do it all. A prompt hook blocks `/be-ambitious` before Claude sees it and marks the session (in the plugin's data folder). A Stop hook notices when the next turn ends and adds the checkpoint question, carrying the method and the first step's instruction with it. After that, each time a step ends with its copy in `.ambition/steps/<n>/`, the Stop hook hands Claude the next step's instruction and nothing else, so every step gets its full attention. Until then, nothing of the plugin is in Claude's context, not even the method's name in the skill list. The prompt hook also hands the method over on your first `/ambition` step. In every other turn and session they do nothing. They need `python3`.
 
 ### 2. Drive the steps yourself
 
