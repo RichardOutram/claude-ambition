@@ -6,3 +6,4 @@ bench/.client/
 __pycache__/
 bench/.cache/
 /examples/**/live
+/examples/archive/

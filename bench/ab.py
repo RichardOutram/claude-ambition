@@ -10,10 +10,10 @@
 
 Arms:
   not-ambitious  the prompt, exactly as written: the baseline
-  ambitious      /be-ambitious <prompt>, the same prompt with the plugin
+  ambitious      /be-ambitious (arms the session, unseen by Claude), then the same prompt with the plugin
 
 Each run works in a throwaway container with a real browser. If a run asks a question, a stand-in user
-approves restatements, pushes on at the checkpoint, and otherwise says "use your best judgement".
+(the same model, knowing only the prompt) answers as the person who typed it would, and pushes on at the checkpoint.
 Nothing is judged automatically: `review` gathers the evidence and we record the verdict.
 Results go to examples/<model>/<category>/<name>/<arm>/run-<n>/. `report` writes examples/RESULTS.md
 and the GitHub Pages site in docs/. See bench/README.md.
@@ -42,7 +42,7 @@ BENCH = REPO / "bench"
 EXAMPLES = REPO / "examples"
 PROMPTS = EXAMPLES / "PROMPTS.md"
 FIXTURES = EXAMPLES / "fixtures"
-METRICS = REPO / "skills" / "be-ambitious" / "scripts" / "ambition-metrics.py"
+METRICS = REPO / "scripts" / "ambition-metrics.py"
 HOME = str(Path.home())
 
 REPO_URL = "https://github.com/RichardOutram/claude-ambition"
@@ -69,21 +69,19 @@ SETTINGS = {
 
 # Runs work inside a throwaway container by default: a normal machine where Claude can install
 # things and drive a real browser, as it would on a user's computer, with nothing of yours inside.
-DOCKER_IMAGE = "claude-ambition-bench:2.1.322"
+DOCKER_IMAGE = "claude-ambition-bench:2.1.322-r2"  # claude version, then image revision (r2: Chromium on the PATH)
 DOCKERFILE = BENCH / "docker"
 DOCKER_SETTINGS = {"permissions": {"defaultMode": "acceptEdits", "allow": ["Bash", "WebSearch", "WebFetch"]}}
-PLUGIN_PARTS = (".claude-plugin", "agents", "commands", "skills")
+PLUGIN_PARTS = (".claude-plugin", "commands", "hooks", "scripts", "skills")
 
-CLIENT_PROMPT = """You stand in for a user in a test. Below are the user's original request and the assistant's latest message. The user has nothing to add to the request: every arm of the test gets exactly the same information.
+CLIENT_PROMPT = """You are the person who typed the request below to Claude, and you are using it the way a real user would. Below are your request and Claude's latest message. Nothing else about you or the task is written down: you know what you asked for, and you have taste and judgement. Every arm of the test gets this same stand-in.
 
-Decide whether the assistant's message is waiting on the user before it can continue: a question, a request to confirm or approve, or a choice to make.
-- If it asks a genuine clarifying question about the goal, audience, purpose, constraints or preferences, answer it, even if it has already delivered something.
-- If it is only offering optional extras, or asking for approval to go further than a plan, advice or explanation it has already delivered, reply with exactly: DONE
-- If it is not waiting on the user at all, reply with exactly: DONE
+First decide whether Claude's message is waiting on you before it can continue: a question, a request to confirm or approve, or a choice.
+- If it is not waiting on you, or is only offering optional extras after delivering what you asked for, reply with exactly: DONE
 - If it offers a choice between stopping here and pushing the work further, reply with exactly: Push it further.
-- If it asks you to confirm a restatement or plan, approve it and say to proceed and finish the work.
-- If it asks any other question, reply with exactly: I don't mind. Use your best judgement, and please finish the work without stopping.
-Never do the work, review it, or suggest approaches.
+- If it asks you questions, answer every one properly, as the person who made this request would. Think about what someone asking for exactly this would most plausibly want, and decide. Pick from its options when one fits, or say what you actually want. Be specific and give a short reason, the way a thoughtful user does. Don't defer ("you decide", "use your judgement") and don't repeat boilerplate: a real user answers.
+- If it asks you to confirm a restatement or plan, read it as that user. Approve it if it serves what you asked for; otherwise say briefly what to change. Then tell it to proceed and finish the work without stopping.
+Answer in a few sentences, in plain words. Never do the work, review the work or design the solution for it.
 
 <request>
 {prompt}
@@ -327,18 +325,16 @@ def next_run_dir(arm_dir):
     return arm_dir / f"run-{max(taken, default=0) + 1}"
 
 
-def client_answer(spec, message, env, settings):
+def client_answer(spec, message, env, settings, model, effort):
+    """The stand-in user: the same model as the run, thinking as the person who typed the prompt."""
     ws = BENCH / ".client"
     ws.mkdir(exist_ok=True)
-    args = base_args("sonnet", "low", 1, settings) + ["--tools", ""]
+    args = base_args(model, effort, 1, settings) + ["--tools", ""]
     res = claude(args, ws, env, CLIENT_PROMPT.format(prompt=spec["prompt"], message=message[-8000:]), 600)
     return (res.get("result") or "DONE").strip(), res.get("total_cost_usd") or 0
 
 
-def arm_prompt(spec, arm):
-    if arm == "ambitious":
-        return f"/be-ambitious --no-metrics {spec['prompt']}"
-    return spec["prompt"]
+ARM = "/be-ambitious"  # sent on its own first: the plugin's hook blocks it before Claude sees it and arms the session
 
 
 def run_arm(spec, arm, run, a, env, isolation, settings):
@@ -346,13 +342,14 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     if public == "missing":
         return f"skip {spec['slug']}: needs fixture ({spec['fixture']}) at examples/fixtures/{spec['slug']}/public/"
     sid = str(uuid.uuid4())
+    version = plugin_version()  # as the run starts: the plugin can change while a long run is going
     args = base_args(a.model, a.effort, a.max_turns, settings)
     plugin = None
     if arm == "ambitious":
         plugin = staged_plugin() if a.docker else REPO
         args += ["--plugin-dir", str(plugin)]
     if a.dry_run:
-        return f"[dry-run] {run.relative_to(REPO)}\n  {' '.join(args + ['--session-id', sid])}\n  prompt: {arm_prompt(spec, arm)!r}"
+        return f"[dry-run] {run.relative_to(REPO)}\n  {' '.join(args + ['--session-id', sid])}\n  prompt: {(ARM + ' then ') if arm == 'ambitious' else ''}{spec['prompt']!r}"
 
     out = scratch()
     if public:
@@ -366,9 +363,19 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     print(f"live: {live}  ->  {out}", flush=True)
     started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     t0 = time.monotonic()
-    messages, results, client_cost, exchanges = [arm_prompt(spec, arm)], [], 0.0, []
+    armed = False
+    if arm == "ambitious":
+        flag = ["--session-id", sid]
+        call = in_docker(args + flag, out, env, plugin) if a.docker else args + flag
+        res = claude(call, out, env if a.docker else workspace_env(env, out), ARM)
+        if "blocked by hook" not in (res.get("result") or ""):
+            live.unlink(missing_ok=True)
+            shutil.rmtree(out, ignore_errors=True)
+            return f"FAIL {spec['slug']} {arm}: {ARM} didn't arm the session: {str(res.get('result'))[:300]}"
+        armed = True
+    messages, results, client_cost, exchanges = [spec["prompt"]], [], 0.0, []
     for turn in range(a.max_exchanges + 1):
-        flag = ["--session-id", sid] if turn == 0 else ["--resume", sid]
+        flag = ["--resume", sid] if turn or armed else ["--session-id", sid]
         call = in_docker(args + flag, out, env, plugin if arm == "ambitious" else None) if a.docker else args + flag
         res = claude(call, out, env if a.docker else workspace_env(env, out), messages[-1])
         results.append(res)
@@ -378,7 +385,7 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
               f"${res.get('total_cost_usd') or 0:.2f}{' ERROR ' + str(res.get('result'))[:200] if res.get('is_error') else ''}", flush=True)
         if res.get("is_error") and not res.get("session_id") or turn == a.max_exchanges:
             break
-        answer, cost = client_answer(spec, res.get("result") or "", env, settings)
+        answer, cost = client_answer(spec, res.get("result") or "", env, settings, a.model, a.effort)
         client_cost += cost
         if answer.upper().startswith("DONE"):
             break
@@ -390,7 +397,7 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     shutil.rmtree(out, ignore_errors=True)
 
     # prompt.md: every message the user side sent
-    sent = "\n\n".join(f"## {'Prompt' if i == 0 else f'Client reply {i}'}\n\n{m}" for i, m in enumerate(messages))
+    sent = (f"## Before the prompt\n\n{ARM}\n\n(blocked by the plugin's hook before Claude sees it; it arms the session)\n\n" if armed else "") + "\n\n".join(f"## {'Prompt' if i == 0 else f'Client reply {i}'}\n\n{m}" for i, m in enumerate(messages))
     (run / "prompt.md").write_text(f"# {spec['slug']} · {arm}\n\n{sent}\n", encoding="utf-8")
     (run / "result.md").write_text(scrub(results[-1].get("result") or "", out, env, emails=False), encoding="utf-8")
 
@@ -402,6 +409,10 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
         for sub in (found[0].with_suffix("") / "subagents").glob("*"):
             copy_scrubbed(sub, tdir / "session" / "subagents" / sub.name, out, env)
         (run / "transcript.md").write_text(render_transcript(tdir / "session.jsonl", f"{spec['slug']} · {arm}"), encoding="utf-8")
+    if arm == "ambitious":
+        check = check_turn1(run, spec, a.model)
+        if check:
+            print(f"  turn-1 input: {'identical to the baseline (gate pass)' if check['identical'] else 'DIFFERS from the baseline (gate fail), see turn1-input.json'}", flush=True)
 
     # metrics: exact figures from the headless JSON, plus the plugin's format. A resumed session reports
     # its cost and usage cumulatively, so the last exchange's figures are the run's totals; summing them
@@ -428,8 +439,8 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
                                for r in results for d in (r.get("permission_denials") or [])],
         "by_model": models,
         "exchange_log": exchanges,  # per turn: cumulative minutes at its end, and that turn's cost
-        "plugin": plugin_version(),
-        "plugin_commit": plugin_version()["commit"],
+        "plugin": version,
+        "plugin_commit": version["commit"],
         "claude_version": subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip(),
     }
     (run / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
@@ -465,7 +476,7 @@ def html_pages(output, limit=4):
     """The pages worth showing: the deliverable first, then the plugin's first version. Other working copies
     under .ambition/ (judge copies, variants) are skipped."""
     def keep(rel):
-        return not SKIP_DIRS & set(rel.parts) and (rel.parts[0] != ".ambition" or rel.parts[1:2] == ("direct",))
+        return not SKIP_DIRS & set(rel.parts) and (rel.parts[0] != ".ambition" or rel.parts[1:2] in (("first",), ("direct",)))
     pages = [p for p in output.rglob("*.html") if keep(p.relative_to(output))]
     pages.sort(key=lambda p: (p.relative_to(output).parts[0] == ".ambition", p.name != "index.html",
                               len(p.relative_to(output).parts), str(p)))
@@ -606,7 +617,7 @@ def subjects(run, arm):
     if arm == "not-ambitious":
         return {"baseline": pages[0]} if pages else {}
     out = {}
-    first = [pg for pg in pages if pg.startswith(".ambition/direct/")]
+    first = [pg for pg in pages if pg.startswith((".ambition/first/", ".ambition/direct/"))]  # direct/: older runs
     final = [pg for pg in pages if not pg.startswith(".ambition/")]
     if first:
         out["first"] = first[0]
@@ -664,6 +675,83 @@ def turn_subjects(run):
         pages = html_pages(d, limit=1)
         if pages:
             out[int(d.name.split("-")[1])] = pages[0].relative_to(d).as_posix()
+    return dict(sorted(out.items()))
+
+
+# A turn is a step of the method. Turn 1 is the plain first version (up to the checkpoint); push.md has the
+# model open every later step with a fixed marker line and copy the work to .ambition/steps/<n>/ at its end.
+STEP_MARK = re.compile(r"^\W{0,3}Step (\d)/8 · ([^\n]+?)\s*$", re.M)
+STEP_NAMES = {1: "First version", 2: "Altitude", 3: "Depth", 4: "Challenge", 5: "Range", 6: "Judge", 7: "Stretch", 8: "Lock"}
+# Relative token prices (input, output, cache write, cache read); the same ratios across current Claude models.
+TOKEN_WEIGHT = {"input_tokens": 1.0, "output_tokens": 5.0, "cache_creation_input_tokens": 1.25, "cache_read_input_tokens": 0.1}
+
+
+def _ts(s):
+    from datetime import datetime
+    return datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+
+
+def step_log(run, m):
+    """[{n, name, minutes, cost_usd}] at the end of each step, cumulative, read from the run's transcript.
+    Step 1 is turn 1 as the harness measured it. After that, time is split by the step markers' timestamps and
+    cost by the tokens each step's API calls used, both scaled so the last step ends at the run's totals.
+    Empty when the run wrote no markers (runs made before them): the site then falls back to exchanges."""
+    session = run / "transcript" / "session.jsonl"
+    log = m.get("exchange_log") or []
+    if not log or not session.exists():
+        return []
+    push, marks, calls, last = None, {}, {}, None
+    for line in session.read_text(encoding="utf-8").splitlines():
+        try:
+            d = json.loads(line)
+        except ValueError:
+            continue
+        ts = d.get("timestamp")
+        if not ts:
+            continue
+        msg = d.get("message") or {}
+        c = msg.get("content")
+        if d.get("type") == "user" and not d.get("isMeta") and push is None:
+            text = c if isinstance(c, str) else " ".join(b.get("text", "") for b in c or [] if b.get("type") == "text")
+            if text.strip().lower().startswith("push it further"):
+                push = _ts(ts)
+        if d.get("type") == "assistant":
+            last = _ts(ts)
+            if push is None:
+                continue
+            u = msg.get("usage") or {}
+            calls[msg.get("id") or ts] = (_ts(ts), sum(w * (u.get(k) or 0) for k, w in TOKEN_WEIGHT.items()))
+            for b in c if isinstance(c, list) else []:
+                if b.get("type") == "text":
+                    for mk in STEP_MARK.finditer(b.get("text", "")):
+                        marks.setdefault(int(mk.group(1)), _ts(ts))
+    starts = sorted((n, t) for n, t in marks.items() if n >= 3)
+    if push is None or not starts or last is None or last <= push:
+        return []
+    m1, c1 = log[0]["minutes"], log[0]["cost_usd"]
+    total_min, total_cost = m.get("minutes") or log[-1]["minutes"], m.get("cost_usd") or log[-1]["cost_usd"]
+    units = sum(w for _, w in calls.values()) or 1.0
+    def at(t):
+        spent = sum(w for ct, w in calls.values() if ct < t)
+        return (round(m1 + (total_min - m1) * (t - push) / (last - push), 2),
+                round(c1 + (total_cost - c1) * spent / units, 4))
+    rows = [{"n": 1, "name": STEP_NAMES[1], "minutes": m1, "cost_usd": c1}]
+    ends = [(starts[i - 1][0] if i else 2, t) for i, (_, t) in enumerate(starts)] + [(starts[-1][0], None)]
+    for n, t in ends:
+        mins, cost = at(t) if t else (round(total_min, 2), round(total_cost, 4))
+        rows.append({"n": n, "name": STEP_NAMES.get(n, f"Step {n}"), "minutes": mins, "cost_usd": cost})
+    return rows
+
+
+def step_subjects(run):
+    """{step number: page} for each step the run copied to .ambition/steps/<n>/."""
+    root = run / "output" / ".ambition" / "steps"
+    out = {}
+    for d in root.iterdir() if root.exists() else []:
+        if d.is_dir() and d.name.isdigit():
+            pages = html_pages(d, limit=1)
+            if pages:
+                out[int(d.name)] = pages[0].relative_to(d).as_posix()
     return dict(sorted(out.items()))
 
 
@@ -739,6 +827,15 @@ def cmd_review(a):
                         reuse.append((run / "review" / same[0], run / "review" / f"turn-{n}"))
                     else:
                         jobs.append((run, f"turn-{n}", page, run / "turns" / f"turn-{n}"))
+                steps = run / "output" / ".ambition" / "steps"
+                for n, page in step_subjects(run).items():
+                    # a step that left the work as the first version or the final reuses that capture
+                    body = (steps / str(n) / page).read_bytes()
+                    same = [k for k, pg in subj.items() if (run / "output" / pg).read_bytes() == body]
+                    if same:
+                        reuse.append((run / "review" / same[0], run / "review" / f"step-{n}"))
+                    else:
+                        jobs.append((run, f"step-{n}", page, steps / str(n)))
         # Two captures at a time, plus Lighthouse on the host: each capture is a CPU-bound container.
         with ThreadPoolExecutor(max_workers=3) as pool:
             measured = pool.submit(lambda: [measure(r) for r in runs])
@@ -754,13 +851,57 @@ def cmd_review(a):
                 print(f"{run.relative_to(REPO)} · {SUBJECT_NAME[key]} ({page}) · {views}")
 
 
+DATE_LINE = re.compile(r"Today's date is \d{4}-\d{2}-\d{2}\.?")
+
+
+def turn1_input(session):
+    """What the model was sent in the run's first API call, from the saved (scrubbed) transcript: the request
+    shape (system prompt and tools), the parameters, and every message block, with only the date normalised."""
+    shape, params, blobs = None, None, []
+    for line in Path(session).read_text(encoding="utf-8").splitlines():
+        d = json.loads(line)
+        if d.get("type") == "api-request-shape" and shape is None:
+            shape = d.get("shapeHash")
+        elif d.get("type") == "api-request-blob":
+            blobs.append(DATE_LINE.sub("<date>", json.dumps(d.get("message"), sort_keys=True)))
+        elif d.get("type") == "api-request":
+            params = d.get("params")
+            break  # the first call: everything it was sent is above this line
+    return {"shape": shape, "params": params, "messages": sorted(blobs)}
+
+
+def check_turn1(run, spec, model):
+    """The gate: turn 1 of the ambitious run must be sent exactly what the baseline was sent. Writes
+    turn1-input.json with the verdict and, if they differ, a diff of what differs."""
+    base = EXAMPLES / model / spec["category"] / spec["name"] / "not-ambitious" / "run-1" / "transcript" / "session.jsonl"
+    mine = run / "transcript" / "session.jsonl"
+    if not base.exists() or not mine.exists():
+        return None
+    a, b = turn1_input(base), turn1_input(mine)
+    result = {"identical": a == b, "against": base.relative_to(REPO).as_posix(),
+              "same_shape": a["shape"] == b["shape"], "same_params": a["params"] == b["params"],
+              "same_messages": a["messages"] == b["messages"]}
+    if not result["identical"]:
+        import difflib
+        result["diff"] = list(difflib.unified_diff("\n".join(a["messages"]).split("\\n"), "\n".join(b["messages"]).split("\\n"),
+                                                   "baseline", "ambitious", lineterm="", n=1))[:400]
+    (run / "turn1-input.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
+    return result
+
+
 def cmd_verdict(a):
     """Records our decision for one ambitious run. Nothing in the bench decides this automatically."""
     spec = select(load_specs(), a.target)[0]
     run = EXAMPLES / a.model / spec["category"] / spec["name"] / "ambitious" / f"run-{a.run}"
     if not (run / "metrics.json").exists():
         sys.exit(f"ab: no run at {run.relative_to(REPO)}")
-    verdict = {"gate": a.gate, "result": a.result, "preview_worth": a.preview, "push_worth": a.push,
+    gate = a.gate
+    if not gate:
+        check = json.loads((run / "turn1-input.json").read_text()) if (run / "turn1-input.json").exists() else None
+        if check is None:
+            sys.exit("ab: no turn1-input.json for this run; pass --gate after checking turn 1's input by hand")
+        gate = "pass" if check["identical"] else "fail"
+    verdict = {"gate": gate, "result": a.result, "preview_worth": a.preview, "push_worth": a.push,
                "summary": a.note, "decided_by": a.by, "date": time.strftime("%Y-%m-%d"),
                "plugin": json.loads((run / "metrics.json").read_text()).get("plugin")}
     (run / "verdict.json").write_text(json.dumps(verdict, indent=2), encoding="utf-8")
@@ -803,7 +944,11 @@ def load_run(run, arm, current):
             "restatement": restatement(run) if arm == "ambitious" else "",
             # the work at the end of each turn that changed it: page, and its capture once reviewed
             "turns": [{"n": n, "page": page, "capture": json.loads(cf.read_text()) if (cf := run / "review" / f"turn-{n}" / "capture.json").exists() else None}
-                      for n, page in turn_subjects(run).items()]}
+                      for n, page in turn_subjects(run).items()],
+            # each step of the method: when it ended, what it cost, and its copy of the work once reviewed
+            "steps": step_log(run, {**m, **run_figures(run)}),
+            "step_pages": {n: {"page": page, "capture": json.loads(cf.read_text()) if (cf := run / "review" / f"step-{n}" / "capture.json").exists() else None}
+                           for n, page in step_subjects(run).items()}}
 
 
 def collect():
@@ -812,7 +957,7 @@ def collect():
     current = plugin_version()["hash"]
     out = []
     for ex in sorted(EXAMPLES.glob("*/*/*")):
-        if not ex.is_dir():
+        if not ex.is_dir() or ex.relative_to(EXAMPLES).parts[0] == "archive":
             continue
         runs = {arm: [load_run(m.parent, arm, current) for m in sorted(ex.glob(f"{arm}/run-*/metrics.json"),
                                                                        key=lambda m: int(m.parent.name.split("-")[1]))]
@@ -843,7 +988,9 @@ def results_markdown(data):
              "Each example has one **baseline**: the prompt exactly as a user would type it, on the same model, in "
              "the same container with a real browser. The plugin passes an example only when a single "
              "`/be-ambitious` run of the *same prompt* beats it. Turn 1 of that run makes a first version and stops "
-             "at a checkpoint; it must already be at least as good as the baseline (the gate). Nothing is judged "
+             "at a checkpoint. The gate: turn 1 must be sent exactly what the baseline was sent (system prompt, tools, "
+             "parameters and messages, checked from the transcripts), so it's a second plain sample. The final must beat "
+             "the better of the two plain versions. Nothing else is judged "
              "automatically: we review frames, screenshots and the live pages side by side, and record the verdict. "
              "Runs made with an older plugin are marked outdated. [How the bench works](../bench/README.md).", "",
              f"Visual results, with every page live: [results site]({SITE_URL}).", ""]
@@ -906,7 +1053,7 @@ def main():
             sp.add_argument("target")
         sp.add_argument("--model", default="claude-opus-5-5")
         if name == "run":
-            sp.add_argument("--effort", default=None)
+            sp.add_argument("--effort", default="medium")  # the recommended reasoning effort, pinned so every run matches
             sp.add_argument("--max-turns", type=int, default=80)
             sp.add_argument("--runs", type=int, default=1)
             sp.add_argument("--arms", default=DEFAULT_ARMS)
@@ -920,7 +1067,7 @@ def main():
             sp.add_argument("--seconds", type=int, default=10, help="how long to capture, when the prompt doesn't say")
         if name == "verdict":
             sp.add_argument("--run", type=int, required=True)
-            sp.add_argument("--gate", choices=("pass", "fail"), required=True, help="was the turn-1 first version at least as good as the baseline?")
+            sp.add_argument("--gate", choices=("pass", "fail"), help="was turn 1 sent exactly what the baseline was? Defaults to the run's turn1-input.json")
             sp.add_argument("--result", choices=("win", "tie", "loss"), required=True, help="the final against the baseline")
             sp.add_argument("--preview", choices=("yes", "no", "na"), default="na", help="was the turn-1 preview worth its cost?")
             sp.add_argument("--push", choices=("yes", "no", "na"), default="na", help="was pushing on worth its extra cost?")

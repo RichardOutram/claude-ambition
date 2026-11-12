@@ -7,7 +7,7 @@ python3 bench/ab.py list                                                # exampl
 python3 bench/ab.py run threejs/neon-implosion --arms not-ambitious     # the baseline, once per example
 python3 bench/ab.py run threejs/neon-implosion --arms ambitious         # one plugin run, the same prompt
 python3 bench/ab.py review threejs/neon-implosion                       # frames, seam, errors, screenshots, Lighthouse
-python3 bench/ab.py verdict threejs/neon-implosion --run 1 --gate pass --result win \
+python3 bench/ab.py verdict threejs/neon-implosion --run 1 --result win \
     --preview yes --push no --note "One or two sentences on why." --notes review.md
 python3 bench/ab.py report                                              # examples/RESULTS.md and the site in docs/
 ```
@@ -17,22 +17,22 @@ Examples are defined in [`examples/PROMPTS.md`](../examples/PROMPTS.md).
 ## How the plugin is tested
 
 - **One baseline per example.** One plain run of the prompt on Opus 5.5 (`not-ambitious/run-1`), made in the container, is the fixed bar.
-- **Single plugin runs.** Each `/be-ambitious` run gets the *same prompt*, word for word. The only difference is the plugin.
-- **The first-turn gate.** `/be-ambitious` starts with a cheap first version (the `ambition-direct` agent, in `.ambition/direct/`) and stops at a checkpoint: stop here, or push it further. That first version must already be at least as good as the baseline. We watch each run at the end of turn 1, and if the first version is worse, we stop the run and it's a fail.
-- **The bar.** The final must beat the baseline. Faster and cheaper counts in the baseline's favour, so the plugin has to win on quality by enough to justify its cost. We also ask separately whether the preview was worth its cost, and whether pushing on was.
+- **Single plugin runs.** Each `/be-ambitious` run gets the *same prompt*, word for word, after the unseen arming message. The only difference is the plugin.
+- **The first-turn gate.** The ambitious arm sends `/be-ambitious` on its own first. The plugin's hook blocks it before Claude sees it and arms the session; then the arm sends the prompt exactly as the baseline does, so turn 1 is plain Claude, byte for byte the same input. Its hooks then save that work as the first version (`.ambition/first/`) and ask: stop here, or push it further. The gate is that the input really was identical: after the run, the bench compares turn 1's first API request with the baseline's, from the saved transcripts (the request shape covering the system prompt and tools, the parameters, and every message block, with only the date normalised), and writes `turn1-input.json`. A difference means the plugin leaked into turn 1, and the run fails. If they're identical, the first version is a second plain sample: how it compares with the baseline is run-to-run variation, which we record but don't hold against the plugin.
+- **The bar.** The final must beat the better of the two plain versions: the baseline and the run's own first version. Faster and cheaper counts in the baseline's favour, so the plugin has to win on quality by enough to justify its cost. We also ask separately whether the preview was worth its cost, and whether pushing on was.
 - **Judged by people.** Claude reviews harshly, side by side and live, with the genre bar first and the goal second, then cost and time. The user decides. `verdict` records that decision.
 - **Only the current plugin counts.** Every run records the plugin version it used (`plugin` in `metrics.json`: commit, uncommitted changes, and a hash of the plugin's files). The report marks runs from an older plugin as outdated. Clear outdated examples rather than keep them.
 
 ## What keeps it fair
 
-- **Identical conditions.** Both arms get the same model, effort, tools, turn limit, settings and container image. Each run gets a fresh throwaway container (`bench/docker/`) with a fresh empty folder as `/work`. The ambitious arm also gets the plugin's own parts, read-only, and nothing else. No run can see the bench, the prompts, the baseline or another arm's output.
+- **Identical conditions.** Both arms get the same model, effort (medium, the recommended setting, unless `--effort` says otherwise), tools, turn limit, settings and container image. Each run gets a fresh throwaway container (`bench/docker/`) with a fresh empty folder as `/work`. The ambitious arm also gets the plugin's own parts, read-only, and nothing else. No run can see the bench, the prompts, the baseline or another arm's output.
 - **Runs can see their work.** The image has Chromium (Playwright), Node, Python and git, and every Bash command is allowed, so a run can install packages, serve its page and screenshot it, the way Claude can on your machine. A bench where runs can't look at their work isn't testing Claude as people use it. The container is the boundary; there's no Claude Code sandbox inside it.
-- **The same stand-in user.** After every turn, a client (Sonnet, no tools) decides whether the reply is waiting on the user. It knows only the prompt, never the brief. It approves restatements, answers the checkpoint with "Push it further.", and answers anything else with "I don't mind. Use your best judgement, and please finish the work without stopping." Both arms get exactly the same information.
-- **Real time and real cost.** Minutes are wall-clock time, including the stand-in's replies (`wall_ms`). `exchange_log` records the cumulative minutes and cost at the end of each turn, so turn 1 is the preview's cost. A resumed session reports its cost and usage cumulatively, so a run's totals are its last turn's figures. The headless JSON's own `duration_ms` and `num_turns` undercount runs with several exchanges and subagents.
+- **The same stand-in user.** After every turn, a client (the run's model and effort, no tools) decides whether the reply is waiting on the user. It plays the person who typed the prompt: it answers questions properly, with its own judgement of what that person would most plausibly want, and approves or adjusts restatements. It answers the checkpoint with "Push it further." It knows only the prompt, never the brief, so both arms get exactly the same information.
+- **Real time and real cost.** Minutes are wall-clock time, including the stand-in's replies (`wall_ms`). `exchange_log` records the cumulative minutes and cost at the end of each exchange (each message sent to Claude), so the first is the preview's cost. The site reports by **turn**, where a turn is a step of the method: turn 1 is the plain first version up to the checkpoint, turn 2 is altitude (the questions, the answers and the work on them), and turns 3–8 are depth, challenge, range, judge, stretch and lock. The plugin opens each step with a marker line (`▸ Step 3/8 · Depth`); `report` splits time by the markers' timestamps and cost by each step's token use, scaled to the run's measured totals. Runs made before the markers fall back to exchanges. A resumed session reports its cost and usage cumulatively, so a run's totals are its last turn's figures. The headless JSON's own `duration_ms` and `num_turns` undercount runs with several exchanges and subagents.
 
 ## Review evidence
 
-`review` captures every version the same way: the baseline, each ambitious run's first version (`.ambition/direct/`) and final, and the work at the end of each saved turn. Into `run-<n>/review/<baseline|first|final|turn-N>/`. Two captures run at a time, and a turn that left the first version or the final unchanged reuses that capture:
+`review` captures every version the same way: the baseline, each ambitious run's first version (`.ambition/first/`) and final, and the work at the end of each step, which the plugin copies to `.ambition/steps/<n>/` (older runs: each saved exchange). Into `run-<n>/review/<baseline|first|final|step-N|turn-N>/`. Two captures run at a time, and a step that left the first version or the final unchanged reuses that capture:
 
 - **Frames across time.** Inside the container, `review/capture.mjs` opens the page at desktop (1280×800) and phone (390×844 @2x) sizes and takes a frame every second. Time is virtual and stepped at 30 fps, so frame t=4 really is 4 seconds in, however slow software rendering is. The length comes from the prompt ("10 second") or `--seconds`.
 - **A seam check.** For anything that moves, the last frame is compared with the first, against a typical step between frames. A seamless loop ends where it began.
@@ -48,7 +48,7 @@ None of this decides anything. It's what we look at, beside the live pages.
 `report` writes:
 
 - [`examples/RESULTS.md`](../examples/RESULTS.md): one row per example with the verdict, the gate, the baseline's cost and time, the preview's (turn 1), the full run's and the plugin version.
-- `docs/`: the GitHub Pages site (Settings → Pages → deploy from `main`, folder `/docs`). Each example page shows Baseline | First version | Final side by side, with frame sheets, the seam and error checks, Lighthouse, and each version live. Below that: our review, cost and time by turn, how the run restated the task, and every reply and file. It's static HTML, generated in full on every build, with the site's own CSS and JS in `bench/site/`. Never edit `docs/` by hand.
+- `docs/`: the GitHub Pages site (Settings → Pages → deploy from `main`, folder `/docs`). Each example page opens with a Sublime Text-style window of session replays under the prompt, one tab per run: `bench/cast.py` turns each saved (scrubbed) transcript into an asciicast that asciinema-player replays in Claude Code's terminal style. Below that, Baseline | First version | Final side by side, with frame sheets, the seam and error checks, Lighthouse, and each version live. Below that: our review, cost and time by turn (step of the method), the work at the end of each step, how the run restated the task, and every reply and file. It's static HTML, generated in full on every build, with the site's own CSS and JS in `bench/site/`. Never edit `docs/` by hand.
 
 ## Setup
 
@@ -71,8 +71,8 @@ examples/<model>/<category>/<name>/
   <arm>/run-<n>/
     prompt.md          every message sent from the user side (the prompt and the stand-in's replies)
     result.md          Claude's final reply
-    output/            the files it produced (for ambitious runs, .ambition/direct/ is the first version)
-    turns/turn-<n>/    the work as it stood at the end of each turn that changed it
+    output/            the files it produced (for ambitious runs, .ambition/first/ is the first version)
+    turns/turn-<n>/    the work at the end of each exchange that changed it (steps are in output/.ambition/steps/<n>/)
     transcript.md      readable history, including tool calls
     transcript/        raw session and subagent transcripts (scrubbed)
     metrics.json       cost, tokens per model, time, exchange_log, plugin version, isolation, permission denials
@@ -83,7 +83,7 @@ examples/<model>/<category>/<name>/
     review.md          our side-by-side review, if written
 ```
 
-Saved work leaves out dependencies, screenshot and tooling folders, and images inside `.ambition/` (where the run and its judge keep their looks at the work), for every arm alike. Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced, tokens are redacted, and images the run looked at are replaced by a note.
+Saved work leaves out dependencies, screenshot and tooling folders, and images inside `.ambition/` (where the run keeps its looks at the work), for every arm alike. Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced, tokens are redacted, and images the run looked at are replaced by a note.
 
 ## Fixtures
 
