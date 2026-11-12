@@ -68,7 +68,7 @@ Go for it on top of a working deliverable, and never leave the deliverable worse
 
 Then finish the run.
 
-**Plan:** output the plan, covering: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · decisions with directions and for/against · borrowed methods · outside check · stretch target and the fallback · what will be locked in once it's built, ending with the open decisions, each decision and next check with an owner and date. The plan stands alone for its reader and says each thing once, enough to act on: no process story, nothing it points to missing. In plan mode, present it through the normal plan-approval step. Otherwise ask for approval.
+**Plan:** output the plan, covering where it serves the reader: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · decisions with directions and for/against · borrowed methods · outside check · stretch target and the fallback · what will be locked in once it's built, ending with the open decisions, each decision and next check with an owner and date. The plan stands alone for its reader and says each thing once, enough to act on: no process story, nothing it points to missing. In plan mode, present it through the normal plan-approval step. Otherwise ask for approval.
 
 **Report** with the following.
 - **You asked for → it became:** one line each, plus how each part of the original ask was raised.
