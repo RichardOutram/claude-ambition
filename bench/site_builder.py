@@ -5,6 +5,7 @@ and produced web pages are previewed in sandboxed iframes. Never hand-edit docs/
 """
 import html
 import shutil
+from cast import build_cast
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -118,6 +119,9 @@ def copy_example(ex, dest):
         for sub in ("output", "checks", "review", "turns"):
             if (r["dir"] / sub).exists():
                 shutil.copytree(r["dir"] / sub, target / sub, ignore=ignore)
+        session = r["dir"] / "transcript" / "session.jsonl"
+        if session.exists():  # already scrubbed when saved
+            build_cast(session, target / "transcript.cast", f"{ex['slug']} · {r['arm']} run {r['n']}")
 
 
 def files_of(output):
@@ -216,9 +220,14 @@ def timeline(ex, r):
     """How the run spent its money: turn 1 is the preview and checkpoint, later turns are pushing on."""
     b = ex["baseline"]
     log = r["exchange_log"]
-    rows, prev, spent = [], 0.0, 0.0  # the log is cumulative; each bar is what that turn added
-    for i, t in enumerate(log):
-        label = "Turn 1 · first version + checkpoint" if i == 0 else f"Turn {t['n']}"
+    steps = r.get("steps") or []
+    unit = "step" if steps else "exchange"
+    rows, prev, spent = [], 0.0, 0.0  # both logs are cumulative; each bar is what that step added
+    for i, t in enumerate(steps or log):
+        if i == 0:
+            label = "Turn 1 · first version + checkpoint"
+        else:
+            label = f"Turn {t['n']} · {t['name']}" if steps else f"Exchange {t['n']}"
         rows.append((label, t["cost_usd"] - spent, "first" if i == 0 else "ambitious", t["minutes"] - prev))
         prev, spent = t["minutes"], t["cost_usd"]
     if not rows:
@@ -233,11 +242,57 @@ def timeline(ex, r):
         if log:
             mult += f' The preview alone: <b>{log[0]["cost_usd"] / b["cost_usd"]:.1f}×</b> and <b>{log[0]["minutes"] / b["minutes"]:.1f}×</b>.'
         mult += "</p>"
-    return f'<div class="grid2"><div class="card"><h3>Cost by turn</h3>{cost}</div><div class="card"><h3>Time by turn</h3>{mins}</div></div>{mult}'
+    note = ("" if steps or not log else '<p class="hint">This run is older than the step markers, so it\'s split by exchange '
+            '(each message to Claude), not by step of the method.</p>')
+    return (f'<div class="grid2"><div class="card"><h3>Cost by {unit}</h3>{cost}</div>'
+            f'<div class="card"><h3>Time by {unit}</h3>{mins}</div></div>{mult}{note}')
+
+
+def step_progression(r):
+    """The work at the end of each step of the method that changed it, with what had been spent by then."""
+    run_rel = f"{r['arm']}/run-{r['n']}"
+    spent = {t["n"]: t for t in r.get("steps") or []}
+    pages = {1: {"page": r["subjects"].get("first"), "capture": r["reviews"].get("first"), "dir": "output", "review": "first"}}
+    for n, sp in r["step_pages"].items():
+        pages[n] = {**sp, "dir": f"output/.ambition/steps/{n}", "review": f"step-{n}"}
+    cards, seen = [], set()
+    for n in sorted(pages):
+        pg = pages[n]
+        if not pg["page"]:
+            continue
+        cap = pg["capture"]
+        body = (r["dir"] / pg["dir"] / pg["page"]).read_bytes() if (r["dir"] / pg["dir"] / pg["page"]).exists() else b""
+        if body in seen:  # a step that only talked, or checked without changing the work
+            continue
+        seen.add(body)
+        name = f"Turn {n} · {spent[n]['name']}" if n in spent else "Turn 1 · first version" if n == 1 else f"Turn {n}"
+        sp = spent.get(n)
+        figs = f"{money(sp['cost_usd'])} · {sp['minutes']:.1f} min so far" if sp else ""
+        media, facts = "", ""
+        if cap:
+            d = cap["views"].get("desktop", {})
+            src = d.get("sheet") if d.get("moving") else (d.get("frames") or [{}])[0].get("file")
+            if src:
+                img = f"{run_rel}/review/{pg['review']}/{e(src)}"
+                media = f'<a href="{img}"><img loading="lazy" src="{img}" alt="{e(name)}: frames across the loop"></a>'
+            words, tone = seam_words(d)
+            errs = sum(len(v.get("errors") or []) for v in cap["views"].values())
+            facts = badge(words, tone) + (badge(f"{errs} console error{'s' if errs != 1 else ''}", "bad") if errs else "")
+        cards.append(f"""<article class="turn">
+  <header><b>{e(name)}</b><span>{e(figs)}</span></header>
+  <div class="subject-media">{media or '<p class="hint">Not captured yet.</p>'}</div>
+  <div class="facts">{facts}</div>
+  <p class="open"><a href="{run_rel}/{pg['dir']}/{e(pg["page"])}" target="_blank" rel="noopener">Open turn {n} live ↗</a></p>
+</article>""")
+    return f"""<h3 class="label">How it got there</h3>
+<p class="hint">A turn is a step of the method: turn 1 is the plain first version, turn 2 is altitude (the questions, the answers and the work on them), then depth, challenge, range, judge, stretch and lock. Each card is the work at the end of a turn that changed it, with what had been spent by then.</p>
+<div class="turns">{"".join(cards)}</div>"""
 
 
 def progression(r):
     """The work as it stood at the end of each turn that changed it, so you can see what each turn bought."""
+    if r.get("step_pages"):
+        return step_progression(r)
     if not r["turns"]:
         return ""
     run_rel = f"{r['arm']}/run-{r['n']}"
@@ -265,7 +320,7 @@ def progression(r):
   <p class="open"><a href="{run_rel}/turns/turn-{n}/{e(t["page"])}" target="_blank" rel="noopener">Open turn {n} live ↗</a></p>
 </article>""")
     return f"""<h3 class="label">How it got there</h3>
-<p class="hint">The work at the end of each turn that changed it, with what had been spent by then. Turns that only talked are left out.</p>
+<p class="hint">This run is older than the step markers, so these are the exchanges (each message to Claude) that changed the work, with what had been spent by then.</p>
 <div class="turns">{"".join(cards)}</div>"""
 
 
@@ -305,7 +360,7 @@ def run_panel(r, repo, ex):
 <div class="md reply" data-md="{run_rel}/result.md"></div>
 <h3 class="label">Files ({len(files)})</h3>
 <div class="files"><ul>{file_list}</ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
-<p class="hint">Full transcript, with every tool call: <a href="{src}">on GitHub</a>.</p>"""
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="{src}">on GitHub</a>.</p>"""
 
 
 def plugin_line(r, ex):
@@ -314,6 +369,28 @@ def plugin_line(r, ex):
     if r["outdated"]:
         return f'<div class="banner warn"><b>Outdated.</b> This run used {e(text)}; the plugin has changed since, so it may not reflect what you\'d get today.</div>'
     return f'<p class="hint">Made with {e(text)}, the current plugin.</p>'
+
+
+def terminal(ex):
+    """A Sublime Text-style window under the hero: one tab per run, each replaying its session."""
+    order = [r for r in ([ex["baseline"]] if ex["baseline"] else []) + ex["runs"]
+             if (r["dir"] / "transcript" / "session.jsonl").exists()]
+    if not order:
+        return ""
+    tabs = []
+    for i, r in enumerate(order):
+        rel = f"{r['arm']}/run-{r['n']}"
+        name = "baseline.session" if r["arm"] == "not-ambitious" else f"be-ambitious-{r['n']}.session"
+        stats = f"{r['minutes']:.1f} min · {money(r['cost_usd'])} · {r['exchanges']} user message{'s' if r['exchanges'] != 1 else ''}"
+        tabs.append(f'<button role="tab" class="{r["arm"]}" aria-selected="{"true" if i == 0 else "false"}" '
+                    f'data-cast="{rel}/transcript.cast" data-stats="{e(stats)}">{e(name)}</button>')
+    return f"""<section class="term-section" aria-label="Session replays">
+  <div class="term">
+    <div class="term-bar"><span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="term-tabs" role="tablist">{"".join(tabs)}</div></div>
+    <div class="term-screen"></div>
+    <div class="term-status"><span class="term-stats"></span><span>Replayed from the saved transcript · long waits shortened</span></div>
+  </div>
+</section>"""
 
 
 def example_page(ex, root, repo):
@@ -350,13 +427,17 @@ def example_page(ex, root, repo):
 <section class="hero ex">
   <p class="eyebrow">{e(ex["slug"])}</p>
   <h1>“{e(spec.get("prompt", ""))}”</h1>
-  <p class="lede">Both sides got exactly this prompt. The plugin passes only if its run beats the baseline, and its turn-1 first version must already match it.</p>
+  <p class="lede">Both sides got exactly this prompt. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats both.</p>
   <details class="context"><summary>What we look for</summary><p>{e(spec.get("check", ""))}</p></details>
 </section>
+{terminal(ex)}
 {"".join(sections)}
 <section><h2>Replies and files</h2><div class="tabs" role="tablist">{"".join(tabs)}</div>{"".join(panels)}</section>
 """
-    return head(f"{ex['slug']} · claude-ambition", root, spec.get("prompt", "")).replace("{repo}", repo) + body + foot(repo)
+    player = ('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/asciinema-player.css">\n'
+              '<script defer src="https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/asciinema-player.min.js"></script>\n</head>')
+    page = head(f"{ex['slug']} · claude-ambition", root, spec.get("prompt", "")).replace("{repo}", repo).replace("</head>", player, 1)
+    return page + body + foot(repo)
 
 
 def trio_baseline(ex):
@@ -426,7 +507,7 @@ def index_page(data, repo):
 <ol class="steps">
   <li><b>A baseline.</b> The prompt exactly as a user would type it, once per example. It's the bar.</li>
   <li><b>The same prompt, with the plugin.</b> <code>/be-ambitious</code> gets the same words. Both run in a fresh throwaway container with a real browser, the same model and the same limits, so each can look at its own work the way Claude can on your machine.</li>
-  <li><b>The gate.</b> Turn 1 makes a first version and stops at a checkpoint: stop here, or push on. That first version must already be at least as good as the baseline, or the run fails.</li>
+  <li><b>The gate.</b> Turn 1 must be sent exactly what the baseline was sent: the same system prompt, tools, parameters and message, checked from the transcripts. Then it makes a first version and stops at a checkpoint: stop here, or push on. That first version is a second plain sample, so the gap between it and the baseline shows how much plain runs vary.</li>
   <li><b>Pushing on.</b> The stand-in user always pushes on and otherwise says "use your best judgement", so both sides get the same information.</li>
   <li><b>Our review, not an auto judge.</b> The harness captures each version the same way: frames across the whole loop, a seam check, console errors, screenshots and Lighthouse. We compare them side by side, open them live, and record the verdict.</li>
   <li><b>Only the current plugin counts.</b> Each run records the plugin it used. Runs from an older plugin are marked outdated.</li>
