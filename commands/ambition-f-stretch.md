@@ -7,6 +7,6 @@ Apply to: $ARGUMENTS (if blank, the task we're on).
 
 Follow the ambition method. The plugin adds it to the conversation the first time you run a step.
 
-Pick a specific target several times harder than mine, with a tight deadline where time matters, and make it the target. Assume it's solvable, since someone has done something like it, and work out how. If it looks impossible, keep going from a different angle before concluding. Falling short is fine; tell me where it broke.
+Pick a specific target several times harder than mine, with a tight deadline where time matters, and make it the target, keeping mine as a fallback that fits. Assume it's solvable, since someone has done something like it, and work out how. If it looks impossible, keep going from a different angle before concluding. Falling short is fine; tell me where it broke.
 
 End with: Next → /ambition-g-lock

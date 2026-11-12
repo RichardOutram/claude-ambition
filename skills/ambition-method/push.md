@@ -52,23 +52,23 @@ Plan: report each assumption with how you tested it against the real material, p
 
 ## Step 5 · Range
 
-Plan: give the verb form, the fields with the method taken from each, and what the red team found, harms included. Build: apply what you borrowed to the deliverable, and fix what the red team broke.
+Plan: give the verb form, the fields with the method and direction taken from each, the edge you took, and what the red team found, harms included. Build: apply what you borrowed to the deliverable, and fix what the red team broke.
 
 ## Step 6 · Judge
 
-Meet the original ask first and keep it passing. For something visual, render frames at the sizes its audience uses and measure what matters (errors, timing, loop seams, layout, contrast), then look at them. Compare the work with the first version on the same check: it must be better on every part of the ask and on the goal, and worse on nothing, the genre bar included. If it isn't, fix it, or go back to the first version plus the improvements that held up.
+Meet the original ask first, intact, and every promise in the restatement, and keep them passing. Give the final a cold read as its reader would. For something visual, render frames at the sizes its audience uses and measure what matters (errors, timing, loop seams, layout, contrast), then look at them. Compare the work with the first version on the same check: it must be better on every part of the ask and on the goal, and worse on nothing, the genre bar included. If it isn't, fix it, or go back to the first version plus the improvements that held up.
 
 Plan: define the outside check the build will be held to, and build it now if that's cheap: a plan with its acceptance test already written is a stronger plan. The plan must be better than the first version on every part of the ask and on the goal, and at least as clear and usable.
 
 ## Step 7 · Stretch
 
-Go for it on top of a working deliverable, and never leave the deliverable worse than before this step: if an attempt doesn't hold up, keep the version from before it. Plan: raise the plan's target to the stretch and rework the plan toward it, keeping the original target as the fallback, and say where it would likely break.
+Go for it on top of a working deliverable, and never leave the deliverable worse than before this step: if an attempt doesn't hold up, keep the version from before it. Plan: raise the plan's target to the stretch and rework the plan toward it, keeping the original target as a fallback that fits, and say where it would likely break.
 
 ## Step 8 · Lock
 
 Then finish the run.
 
-**Plan:** output the plan, with sections for: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · decisions with directions and for/against · borrowed methods · outside check · stretch target and the fallback · what will be locked in once it's built, ending with the open decisions. The plan stands alone for its reader: no process story, nothing it points to missing. In plan mode, present it through the normal plan-approval step. Otherwise ask for approval.
+**Plan:** output the plan, covering: the original ask and how the plan delivers it · goal beyond the goal · target · approach and instruments · assumptions tested · decisions with directions and for/against · borrowed methods · outside check · stretch target and the fallback · what will be locked in once it's built, ending with the open decisions, each decision and next check with an owner and date. The plan stands alone for its reader and says each thing once: no process story, nothing it points to missing. In plan mode, present it through the normal plan-approval step. Otherwise ask for approval.
 
 **Report** with the following.
 - **You asked for → it became:** one line each, plus how each part of the original ask was raised.
