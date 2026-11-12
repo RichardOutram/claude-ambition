@@ -26,6 +26,7 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -74,6 +75,86 @@ DOCKERFILE = BENCH / "docker"
 DOCKER_SETTINGS = {"permissions": {"defaultMode": "acceptEdits", "allow": ["Bash", "WebSearch", "WebFetch"]}}
 PLUGIN_PARTS = (".claude-plugin", "commands", "hooks", "scripts", "skills")
 
+# The default: runs work in a throwaway macOS VM (Tart), a clone of a bench image made from a plain developer Mac
+# (tahoe-dev: Homebrew, Node, Python, git, ripgrep, Chrome) plus the pinned Claude Code. WebGL runs on the Mac's GPU
+# through Apple's paravirtual device, so a run sees and times its work as Claude on a MacBook would. Each run gets
+# its own clone, booted once and deleted afterwards; host folders appear at /work, /cfg, /plugin and /bench through
+# /etc/synthetic.conf links into the VM's shared-folder mount. See bench/vm/README.md for how the images are built.
+VM_BASE = "ambition-bench"
+VM_CLAUDE = "2.1.322"  # the Claude Code version installed in VM_BASE
+VM_KEY = Path(HOME) / ".tart" / "tahoe-dev_ed25519"
+VM_SHARE = Path(HOME) / ".cache" / "claude-ambition-vm"  # per-run settings for the VM, outside the repo
+REVIEW_NODE_MAC = BENCH / ".cache" / "review-node-mac"
+SSH_OPTS = ["-o", "StrictHostKeyChecking=no", "-o", "UserKnownHostsFile=/dev/null", "-o", "LogLevel=ERROR",
+            "-o", "ServerAliveInterval=30"]
+
+
+class VM:
+    """One throwaway clone of VM_BASE, booted headless with host folders shared at /<name>. Use as a context
+    manager: it's cloned and booted on entry, stopped and deleted on exit, whatever happened in between."""
+
+    def __init__(self, dirs, label="run"):
+        self.dirs, self.name, self.proc, self.ip = dirs, f"ambition-{label}-{uuid.uuid4().hex[:8]}", None, None
+
+    def __enter__(self):
+        subprocess.run(["tart", "clone", VM_BASE, self.name], check=True)
+        args = ["tart", "run", self.name, "--no-graphics"]
+        for name, (path, ro) in self.dirs.items():
+            args += ["--dir", f"{name}:{path}" + (":ro" if ro else "")]
+        self.proc = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        deadline = time.monotonic() + 180
+        while time.monotonic() < deadline:
+            ip = subprocess.run(["tart", "ip", self.name], capture_output=True, text=True).stdout.strip()
+            if ip and subprocess.run(["ssh", "-i", str(VM_KEY), *SSH_OPTS, "-o", "ConnectTimeout=3", f"admin@{ip}",
+                                      "test -d /work || test -d /examples"], capture_output=True).returncode == 0:
+                self.ip = ip
+                return self
+            time.sleep(2)
+        self.__exit__(None, None, None)
+        raise RuntimeError(f"VM {self.name} didn't come up")
+
+    def ssh(self, command):
+        """The ssh argv that runs `command` in a login shell in the VM (stdin passes through)."""
+        return ["ssh", "-i", str(VM_KEY), *SSH_OPTS, f"admin@{self.ip}", "zsh -lc " + shlex.quote(command)]
+
+    def __exit__(self, *_):
+        subprocess.run(["tart", "stop", self.name, "--timeout", "20"], capture_output=True)
+        if self.proc:
+            try:
+                self.proc.wait(timeout=30)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+        subprocess.run(["tart", "delete", self.name], capture_output=True)
+
+
+def in_vm(vm, args, env, plugin=None):
+    """Wrap claude args to run in the run's VM: workspace at /work, the bench config at /cfg."""
+    inner = list(args)
+    inner[inner.index("--settings") + 1] = "/bench/settings.json"
+    if plugin:
+        inner[inner.index("--plugin-dir") + 1] = "/plugin"
+    keys = " ".join(f"{k}={shlex.quote(env[k])}" for k in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY") if env.get(k))
+    return vm.ssh(f"cd /work && env CLAUDE_CONFIG_DIR=/cfg DISABLE_AUTOUPDATER=1 {keys} " + " ".join(shlex.quote(x) for x in inner))
+
+
+def vm_share():
+    """The settings the run's Claude reads, shared read-only at /bench."""
+    VM_SHARE.mkdir(parents=True, exist_ok=True)
+    (VM_SHARE / "settings.json").write_text(json.dumps(DOCKER_SETTINGS, indent=2))
+    # plan-mode examples: the permission host, so headless Claude gets the plan approval step (vm/permission-host.mjs)
+    shutil.copy2(BENCH / "vm" / "permission-host.mjs", VM_SHARE / "permission-host.mjs")
+    (VM_SHARE / "mcp.json").write_text(json.dumps({"mcpServers": {"bench": {
+        "command": "/opt/homebrew/bin/node", "args": ["/bench/permission-host.mjs"]}}}, indent=2))
+    return VM_SHARE
+
+
+PLAN_HOST = ["--mcp-config", "/bench/mcp.json", "--permission-prompt-tool", "mcp__bench__approve"]
+
+
+def ensure_vm():
+    if VM_BASE not in subprocess.run(["tart", "list", "--quiet"], capture_output=True, text=True).stdout.split():
+        sys.exit(f"ab: no {VM_BASE} VM. Build it first: see bench/vm/README.md")
+
 CLIENT_PROMPT = """You are the person who typed the request below to Claude, and you are using it the way a real user would. Below are your request and Claude's latest message. Nothing else about you or the task is written down: you know what you asked for, and you have taste and judgement. Every arm of the test gets this same stand-in.
 
 First decide whether Claude's message is waiting on you before it can continue: a question, a request to confirm or approve, or a choice.
@@ -110,6 +191,8 @@ def load_specs():
             "slug": slug, "category": CATEGORIES.get(prefix, prefix), "name": name,
             "prompt": re.sub(r"\s*\*\(fixture:[^)]*\)\*", "", raw).strip(),
             "brief": field("Brief"), "check": field("Check"),
+            # plan: the prompt goes in with plan mode on, as a user who presses shift+tab first; later turns don't
+            "mode": field("Mode").strip().lower(),
             "fixture": fixture.group(1).strip() if fixture else None,
         }
     return specs
@@ -231,6 +314,11 @@ def in_docker(args, ws, env, plugin=None):
     return cmd + [DOCKER_IMAGE] + inner
 
 
+def _with_cwd(call_env, cwd):
+    argv, env = call_env
+    return argv, cwd, env
+
+
 def claude(args, cwd, env, prompt, timeout=3600):
     try:
         p = subprocess.run(args, cwd=cwd, env=env, input=prompt, capture_output=True, text=True, timeout=timeout)
@@ -266,7 +354,8 @@ def scrub(text, workspace, env, emails=True):
     for w in {str(workspace), str(Path(workspace).resolve()), str(workspace).replace("/private/", "/", 1)}:
         text = text.replace(w, "<workspace>")
     text = re.sub(r"(?<![\w.-])/work(?=[/\"'\s`]|$)", "<workspace>", text)
-    text = text.replace("/home/pwuser", "~")
+    text = text.replace("/Volumes/My Shared Files/work", "<workspace>")
+    text = text.replace("/home/pwuser", "~").replace("/Users/admin", "~")
     text = text.replace(HOME, "~")
     return EMAIL.sub("<email>", text) if emails else text
 
@@ -316,7 +405,7 @@ def save_spec(spec, model):
     """The prompt, brief and check the example ran with, kept beside its results."""
     path = EXAMPLES / model / spec["category"] / spec["name"] / "spec.json"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({k: spec[k] for k in ("slug", "prompt", "brief", "check", "fixture")}, indent=2), encoding="utf-8")
+    path.write_text(json.dumps({k: spec[k] for k in ("slug", "prompt", "mode", "brief", "check", "fixture")}, indent=2), encoding="utf-8")
 
 
 def next_run_dir(arm_dir):
@@ -335,6 +424,10 @@ def client_answer(spec, message, env, settings, model, effort):
 
 
 ARM = "/be-ambitious"  # sent on its own first: the plugin's hook blocks it before Claude sees it and arms the session
+# The baseline's second turn: when plain Claude is done, the user asks for more in the same words the plugin arm
+# uses, with no plugin. It separates what the method adds from just asking again and spending more.
+PLAIN_PUSH = "Push it further."
+PLAIN_FIRST = Path(".plain") / "first"  # where the baseline's work from before the plain push is kept, in output/
 
 
 def run_arm(spec, arm, run, a, env, isolation, settings):
@@ -344,9 +437,13 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     sid = str(uuid.uuid4())
     version = plugin_version()  # as the run starts: the plugin can change while a long run is going
     args = base_args(a.model, a.effort, a.max_turns, settings)
+    if spec.get("mode") == "plan":  # every exchange of both arms, so the plan approval step exists as it does interactively
+        if a.where != "vm":
+            return f"skip {spec['slug']}: plan-mode examples run in the VM (the permission host lives there)"
+        args += PLAN_HOST
     plugin = None
     if arm == "ambitious":
-        plugin = staged_plugin() if a.docker else REPO
+        plugin = staged_plugin() if a.where != "host" else REPO
         args += ["--plugin-dir", str(plugin)]
     if a.dry_run:
         return f"[dry-run] {run.relative_to(REPO)}\n  {' '.join(args + ['--session-id', sid])}\n  prompt: {(ARM + ' then ') if arm == 'ambitious' else ''}{spec['prompt']!r}"
@@ -361,33 +458,68 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     live.unlink(missing_ok=True)
     live.symlink_to(out, target_is_directory=True)
     print(f"live: {live}  ->  {out}", flush=True)
+    vm = None
+    if a.where == "vm":  # one VM for the whole run, as one Mac for one chat; booting it isn't counted in its time
+        dirs = {"work": (out, False), "cfg": (config_dir(env), False), "bench": (vm_share(), True)}
+        if plugin:
+            dirs["plugin"] = (plugin, True)
+        vm = VM(dirs).__enter__()
+    try:
+        return _run_arm(spec, arm, run, a, env, isolation, settings, sid, version, args, plugin, out, live, vm)
+    finally:
+        if vm:
+            vm.__exit__(None, None, None)
+
+
+def _run_arm(spec, arm, run, a, env, isolation, settings, sid, version, args, plugin, out, live, vm):
+    def call(extra, with_plugin):
+        if a.where == "vm":
+            return in_vm(vm, args + extra, env, plugin if with_plugin else None), env
+        if a.where == "docker":
+            return in_docker(args + extra, out, env, plugin if with_plugin else None), env
+        return args + extra, workspace_env(env, out)
     started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    t0 = time.monotonic()
+    t0, t_wall0 = time.monotonic(), time.time()
     armed = False
     if arm == "ambitious":
-        flag = ["--session-id", sid]
-        call = in_docker(args + flag, out, env, plugin) if a.docker else args + flag
-        res = claude(call, out, env if a.docker else workspace_env(env, out), ARM)
+        res = claude(*_with_cwd(call(["--session-id", sid], True), out), ARM)
         if "blocked by hook" not in (res.get("result") or ""):
             live.unlink(missing_ok=True)
             shutil.rmtree(out, ignore_errors=True)
             return f"FAIL {spec['slug']} {arm}: {ARM} didn't arm the session: {str(res.get('result'))[:300]}"
         armed = True
     messages, results, client_cost, exchanges = [spec["prompt"]], [], 0.0, []
+    plain_first, pushed_after = run / ".plain-first", None
     for turn in range(a.max_exchanges + 1):
         flag = ["--resume", sid] if turn or armed else ["--session-id", sid]
-        call = in_docker(args + flag, out, env, plugin if arm == "ambitious" else None) if a.docker else args + flag
-        res = claude(call, out, env if a.docker else workspace_env(env, out), messages[-1])
+        if turn == 0 and spec.get("mode") == "plan":
+            flag += ["--permission-mode", "plan"]
+        res = claude(*_with_cwd(call(flag, arm == "ambitious"), out), messages[-1])
         results.append(res)
         exchanges.append({"n": turn + 1, "minutes": round((time.monotonic() - t0) / 60, 2), "cost_usd": round(res.get("total_cost_usd") or 0, 4)})
         snapshot_turn(out, run, turn + 1)
+        save_plans(env, run, turn + 1, t_wall0)
         print(f"  [{spec['slug']} {arm} {run.name}] exchange {turn + 1} done at {round((time.monotonic() - t0) / 60, 1)} min, "
               f"${res.get('total_cost_usd') or 0:.2f}{' ERROR ' + str(res.get('result'))[:200] if res.get('is_error') else ''}", flush=True)
         if res.get("is_error") and not res.get("session_id") or turn == a.max_exchanges:
             break
+        if arm == "ambitious" and any((out / ".ambition" / "steps" / "8").glob("*")):
+            break  # Lock's reply is the final output: the stand-in never answers it (an approval there let it build)
         answer, cost = client_answer(spec, res.get("result") or "", env, settings, a.model, a.effort)
         client_cost += cost
-        if answer.upper().startswith("DONE"):
+        push = answer.lower().startswith(PLAIN_PUSH.lower().rstrip("."))
+        done = answer.upper().startswith("DONE")
+        if push and any(m == PLAIN_PUSH for m in messages[1:]):
+            break  # one push per run, in both arms: a second would be the stand-in asking again, not the user
+        if arm == "not-ambitious" and (push or done) and not pushed_after:
+            # plain Claude is done (or offered more): keep its work as the baseline, then ask for more as a user would
+            pushed_after = turn + 1
+            shutil.rmtree(plain_first, ignore_errors=True)
+            save_work(out, plain_first)
+            answer = PLAIN_PUSH
+        elif push:
+            answer = PLAIN_PUSH
+        elif done:
             break
         messages.append(answer)
 
@@ -395,6 +527,10 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
     live.unlink(missing_ok=True)
     save_work(out, run / "output")
     shutil.rmtree(out, ignore_errors=True)
+    if plain_first.exists():  # kept on the host while the run went on, so the run never saw it
+        shutil.copytree(plain_first, run / "output" / PLAIN_FIRST, dirs_exist_ok=True)
+        shutil.rmtree(plain_first)
+    publish_plans(run, pushed_after)
 
     # prompt.md: every message the user side sent
     sent = (f"## Before the prompt\n\n{ARM}\n\n(blocked by the plugin's hook before Claude sees it; it arms the session)\n\n" if armed else "") + "\n\n".join(f"## {'Prompt' if i == 0 else f'Client reply {i}'}\n\n{m}" for i, m in enumerate(messages))
@@ -413,6 +549,7 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
         check = check_turn1(run, spec, a.model)
         if check:
             print(f"  turn-1 input: {'identical to the baseline (gate pass)' if check['identical'] else 'DIFFERS from the baseline (gate fail), see turn1-input.json'}", flush=True)
+        print(f"  steps: {step_check(run)}", flush=True)
 
     # metrics: exact figures from the headless JSON, plus the plugin's format. A resumed session reports
     # its cost and usage cumulatively, so the last exchange's figures are the run's totals; summing them
@@ -425,7 +562,8 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
                 if isinstance(v, (int, float)) and k not in ("contextWindow", "maxOutputTokens"):
                     acc[k] = acc.get(k, 0) + v
     metrics = {
-        "slug": spec["slug"], "arm": arm, "model": a.model, "effort": a.effort, "isolation": "docker" if a.docker else isolation,
+        "slug": spec["slug"], "arm": arm, "model": a.model, "effort": a.effort, "isolation": a.where if a.where != "host" else isolation,
+        "environment": {"vm": f"{VM_BASE} (macOS, Apple paravirtual GPU)", "docker": DOCKER_IMAGE}.get(a.where, "host"),
         "started": started, "session_id": sid, "exchanges": len(messages),
         "cost_usd": round(results[-1].get("total_cost_usd") or 0, 4),
         "client_cost_usd": round(client_cost, 4),
@@ -439,9 +577,10 @@ def run_arm(spec, arm, run, a, env, isolation, settings):
                                for r in results for d in (r.get("permission_denials") or [])],
         "by_model": models,
         "exchange_log": exchanges,  # per turn: cumulative minutes at its end, and that turn's cost
+        "plain_push_after": pushed_after,  # baseline: exchanges before "Push it further." (the plain answer)
         "plugin": version,
         "plugin_commit": version["commit"],
-        "claude_version": subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip(),
+        "claude_version": VM_CLAUDE if a.where == "vm" else subprocess.run(["claude", "--version"], capture_output=True, text=True).stdout.strip(),
     }
     (run / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     if (tdir / "session.jsonl").exists():
@@ -476,11 +615,26 @@ def html_pages(output, limit=4):
     """The pages worth showing: the deliverable first, then the plugin's first version. Other working copies
     under .ambition/ (judge copies, variants) are skipped."""
     def keep(rel):
-        return not SKIP_DIRS & set(rel.parts) and (rel.parts[0] != ".ambition" or rel.parts[1:2] in (("first",), ("direct",)))
+        return not SKIP_DIRS & set(rel.parts) and (rel.parts[0] not in (".ambition", ".plain") or rel.parts[1:2] in (("first",), ("direct",)))
     pages = [p for p in output.rglob("*.html") if keep(p.relative_to(output))]
-    pages.sort(key=lambda p: (p.relative_to(output).parts[0] == ".ambition", p.name != "index.html",
+    pages.sort(key=lambda p: (p.relative_to(output).parts[0] in (".ambition", ".plain"), p.name != "index.html",
                               len(p.relative_to(output).parts), str(p)))
     return pages[:limit]
+
+
+def work_pages(output, limit=4):
+    """The work to compare: its web pages, or, for a deliverable with none (a plan, an essay), its Markdown
+    documents, shortest name first so the main document leads. CLAUDE.md notes and working copies are left out."""
+    pages = html_pages(output, limit)
+    if pages:
+        return pages
+    def keep(rel):
+        return (rel.name != "CLAUDE.md" and not SKIP_DIRS & set(rel.parts)
+                and (rel.parts[0] not in (".ambition", ".plain") or rel.parts[1:2] in (("first",), ("direct",))))
+    docs = [p for p in output.rglob("*.md") if keep(p.relative_to(output))]
+    docs.sort(key=lambda p: (p.relative_to(output).parts[0] in (".ambition", ".plain"), len(p.relative_to(output).parts),
+                             len(p.stem), p.name))
+    return docs[:limit]
 
 
 def lighthouse(url, dest):
@@ -553,8 +707,12 @@ def cmd_run(a):
         print("ab: no CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY, so using your normal config. Both arms stay "
               "identical, but your CLAUDE.md and user-level commands load. See bench/README.md for clean runs.")
     settings = settings_file()
-    if a.docker and not a.dry_run:
+    if a.where == "docker" and not a.dry_run:
         ensure_image()
+    if a.where == "vm" and not a.dry_run:
+        ensure_vm()
+        if a.parallel > 1:
+            sys.exit("ab: VM runs go one at a time (macOS allows two VMs, and each needs 6 GB)")
     jobs = []
     for s in select(load_specs(), a.target):
         if not a.dry_run:
@@ -606,16 +764,21 @@ def run_figures(run):
 
 REVIEW_JS = BENCH / "review" / "capture.mjs"
 REVIEW_NODE = BENCH / ".cache" / "review-node"
-SUBJECT_NAME = {"baseline": "Baseline", "first": "First version", "final": "Final"}
+SUBJECT_NAME = {"baseline": "Baseline", "pushed": "Plain push", "first": "First version", "final": "Final"}
 
 
 def subjects(run, arm):
-    """The versions a reviewer compares. The baseline run has one; an ambitious run has its first version
-    (made in turn 1, before the checkpoint) and its final. Values are page paths inside output/."""
+    """The versions a reviewer compares. The baseline run has the plain answer and, since runs had a second
+    turn, the plain push ("Push it further." with no plugin); an ambitious run has its first version (made in
+    turn 1, before the checkpoint) and its final. Values are page paths inside output/."""
     output = run / "output"
-    pages = [pg.relative_to(output).as_posix() for pg in html_pages(output, limit=50)] if output.exists() else []
+    pages = [pg.relative_to(output).as_posix() for pg in work_pages(output, limit=50)] if output.exists() else []
     if arm == "not-ambitious":
-        return {"baseline": pages[0]} if pages else {}
+        first = [pg for pg in pages if pg.startswith(PLAIN_FIRST.as_posix() + "/")]
+        final = [pg for pg in pages if not pg.startswith(".plain/")]
+        if first:
+            return {"baseline": first[0], **({"pushed": final[0]} if final else {})}
+        return {"baseline": final[0]} if final else {}
     out = {}
     first = [pg for pg in pages if pg.startswith((".ambition/first/", ".ambition/direct/"))]  # direct/: older runs
     final = [pg for pg in pages if not pg.startswith(".ambition/")]
@@ -649,6 +812,35 @@ def save_work(src, dest):
     shutil.copytree(src, dest, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True, ignore=ignore)
 
 
+def save_plans(env, run, n, since):
+    """Plan mode writes its plan to Claude's plans folder, outside the workspace. Keeps each plan file this run
+    has written or changed by the end of exchange n in run/plans/turn-<n>/ (on the host, unseen by the run)."""
+    plans = [p for p in (config_dir(env) / "plans").glob("*.md") if p.stat().st_mtime >= since - 1]
+    if plans:
+        dest = run / "plans" / f"turn-{n}"
+        dest.mkdir(parents=True, exist_ok=True)
+        for p in plans:
+            shutil.copy2(p, dest / p.name)
+
+
+def publish_plans(run, pushed_after):
+    """In plan mode Claude keeps its plan in its plans folder, outside the workspace, and may never copy it into
+    the project. The plan is the deliverable, so it's published with the work: the last version in output/, and for
+    the baseline the version from before the plain push in output/.plain/first/. A plan file the run also wrote
+    into the project stays where it put it."""
+    turns = sorted((run / "plans").glob("turn-*"), key=lambda d: int(d.name.split("-")[1]))
+    if not turns:
+        return
+    for f in turns[-1].glob("*.md"):
+        shutil.copy2(f, run / "output" / f.name)
+    if pushed_after:
+        before = [d for d in turns if int(d.name.split("-")[1]) <= pushed_after]
+        if before:
+            (run / "output" / PLAIN_FIRST).mkdir(parents=True, exist_ok=True)
+            for f in before[-1].glob("*.md"):
+                shutil.copy2(f, run / "output" / PLAIN_FIRST / f.name)
+
+
 def snapshot_turn(ws, run, n):
     """Saves the work as it stood at the end of turn n into run/turns/turn-<n>/, so the example can show the
     progression. Skipped when nothing changed since the last saved turn, or when there's no page to show."""
@@ -672,7 +864,7 @@ def turn_subjects(run):
     """{turn number: page} for each saved turn. The page is the deliverable, or the first version before one exists."""
     out = {}
     for d in (run / "turns").glob("turn-*") if (run / "turns").exists() else []:
-        pages = html_pages(d, limit=1)
+        pages = work_pages(d, limit=1)
         if pages:
             out[int(d.name.split("-")[1])] = pages[0].relative_to(d).as_posix()
     return dict(sorted(out.items()))
@@ -743,13 +935,37 @@ def step_log(run, m):
     return rows
 
 
+def step_check(run):
+    """A tripwire for a push that skipped the one-step-at-a-time structure: the step markers Claude wrote
+    and whether its step copies differ. Copies that are all identical usually mean they were made in one go."""
+    session = run / "transcript" / "session.jsonl"
+    marks = set()
+    for line in session.read_text(encoding="utf-8").splitlines() if session.exists() else []:
+        if '"assistant"' in line and "/8 · " in line:
+            d = json.loads(line)
+            for b in (d.get("message") or {}).get("content") or []:
+                if isinstance(b, dict) and b.get("type") == "text":
+                    marks |= {int(mk.group(1)) for mk in STEP_MARK.finditer(b.get("text", ""))}
+    root = run / "output" / ".ambition" / "steps"
+    copies = {int(d.name): hashlib.sha256(b"".join(f.read_bytes() for f in sorted(d.rglob("*")) if f.is_file())).hexdigest()
+              for d in (root.iterdir() if root.exists() else []) if d.is_dir() and d.name.isdigit()}
+    if not marks and not copies:
+        return "no push"
+    problems = [f"no marker for step {', '.join(map(str, sorted(set(range(2, 9)) - marks)))}" if set(range(2, 9)) - marks else "",
+                f"no copy for step {', '.join(map(str, sorted(set(range(2, 9)) - set(copies))))}" if set(range(2, 9)) - set(copies) else "",
+                "every step copy is identical" if len(copies) > 2 and len(set(copies.values())) == 1 else ""]
+    problems = [p for p in problems if p]
+    changed = len(set(copies.values()))
+    return ("WARNING " + "; ".join(problems)) if problems else f"all 7 marked and copied, {changed} distinct versions"
+
+
 def step_subjects(run):
     """{step number: page} for each step the run copied to .ambition/steps/<n>/."""
     root = run / "output" / ".ambition" / "steps"
     out = {}
     for d in root.iterdir() if root.exists() else []:
         if d.is_dir() and d.name.isdigit():
-            pages = html_pages(d, limit=1)
+            pages = work_pages(d, limit=1)
             if pages:
                 out[int(d.name)] = pages[0].relative_to(d).as_posix()
     return dict(sorted(out.items()))
@@ -772,15 +988,20 @@ def contact_sheet(folder, view, cap):
     return name
 
 
-def review_subject(run, key, page, seconds, site=None):
+def review_subject(run, key, page, seconds, site=None, vm=None):
     folder = run / "review" / key
     if (folder / "capture.json").exists():
         return json.loads((folder / "capture.json").read_text())
     folder.mkdir(parents=True, exist_ok=True)
-    p = subprocess.run(["docker", "run", "--rm", "-v", f"{site or run / 'output'}:/site:ro", "-v", f"{folder}:/out",
-                        "-v", f"{REVIEW_JS.parent}:/review:ro", "-v", f"{REVIEW_NODE}:/node:ro", DOCKER_IMAGE,
-                        "node", "/review/capture.mjs", "/site", page, "/out", str(seconds)],
-                       capture_output=True, text=True, timeout=1800)
+    if vm:  # the review VM sees examples/ at /examples, and renders on the GPU through the installed Chrome
+        inside = lambda d: "/examples/" + Path(d).resolve().relative_to(EXAMPLES.resolve()).as_posix()  # noqa: E731
+        cmd = vm.ssh("PLAYWRIGHT=/node/node_modules/playwright-core/index.mjs CAPTURE_CHANNEL=chrome node /review/capture.mjs "
+                     + " ".join(shlex.quote(x) for x in (inside(site or run / "output"), page, inside(folder), str(seconds))))
+    else:
+        cmd = ["docker", "run", "--rm", "-v", f"{site or run / 'output'}:/site:ro", "-v", f"{folder}:/out",
+               "-v", f"{REVIEW_JS.parent}:/review:ro", "-v", f"{REVIEW_NODE}:/node:ro", DOCKER_IMAGE,
+               "node", "/review/capture.mjs", "/site", page, "/out", str(seconds)]
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
     if not (folder / "capture.json").exists():
         print(f"  review failed for {run.relative_to(REPO)} {key}: {(p.stderr or p.stdout)[-600:]}", file=sys.stderr)
         return None
@@ -805,8 +1026,20 @@ def seam_text(v):
 
 
 def cmd_review(a):
+    if a.where == "vm":
+        ensure_vm()
+        REVIEW_NODE_MAC.mkdir(parents=True, exist_ok=True)
+        dirs = {"examples": (EXAMPLES, False), "review": (REVIEW_JS.parent, True), "node": (REVIEW_NODE_MAC, False)}
+        with VM(dirs, label="review") as vm:
+            if not (REVIEW_NODE_MAC / "node_modules" / "playwright-core").exists():
+                subprocess.run(vm.ssh("cd /node && npm init -y >/dev/null && npm i --silent playwright-core@1.52.0 pngjs@7.0.0"), check=True)
+            return _review(a, vm)
     ensure_image()
     ensure_review_node()
+    return _review(a, None)
+
+
+def _review(a, vm):
     for spec in select(load_specs(), a.target):
         ex = EXAMPLES / a.model / spec["category"] / spec["name"]
         said = re.search(r"(\d+)\s*-?\s*second", spec["prompt"])
@@ -818,8 +1051,10 @@ def cmd_review(a):
                     continue
                 runs.append(run)
                 subj = subjects(run, arm)
-                jobs += [(run, key, page, None) for key, page in subj.items()]
+                jobs += [(run, key, page, None) for key, page in subj.items() if page.endswith(".html")]
                 for n, page in turn_subjects(run).items():
+                    if not page.endswith(".html"):
+                        continue  # documents are read on the site, not captured
                     # a turn that left the first version or the final as it is reuses that capture
                     body = (run / "turns" / f"turn-{n}" / page).read_bytes()
                     same = [k for k, pg in subj.items() if (run / "output" / pg).read_bytes() == body]
@@ -829,6 +1064,8 @@ def cmd_review(a):
                         jobs.append((run, f"turn-{n}", page, run / "turns" / f"turn-{n}"))
                 steps = run / "output" / ".ambition" / "steps"
                 for n, page in step_subjects(run).items():
+                    if not page.endswith(".html"):
+                        continue
                     # a step that left the work as the first version or the final reuses that capture
                     body = (steps / str(n) / page).read_bytes()
                     same = [k for k, pg in subj.items() if (run / "output" / pg).read_bytes() == body]
@@ -839,7 +1076,7 @@ def cmd_review(a):
         # Two captures at a time, plus Lighthouse on the host: each capture is a CPU-bound container.
         with ThreadPoolExecutor(max_workers=3) as pool:
             measured = pool.submit(lambda: [measure(r) for r in runs])
-            caps = list(pool.map(lambda j: review_subject(j[0], j[1], j[2], seconds, j[3]), jobs))
+            caps = list(pool.map(lambda j: review_subject(j[0], j[1], j[2], seconds, j[3], vm), jobs))
             measured.result()
         for src, dst in reuse:
             if (src / "capture.json").exists():
@@ -852,18 +1089,19 @@ def cmd_review(a):
 
 
 DATE_LINE = re.compile(r"Today's date is \d{4}-\d{2}-\d{2}\.?")
+PLAN_NAME = re.compile(r"/plans/[a-z0-9-]+\.md")  # plan mode names each session's plan file at random
 
 
 def turn1_input(session):
     """What the model was sent in the run's first API call, from the saved (scrubbed) transcript: the request
-    shape (system prompt and tools), the parameters, and every message block, with only the date normalised."""
+    shape (system prompt and tools), the parameters, and every message block, with only the date and plan mode's random plan file name normalised."""
     shape, params, blobs = None, None, []
     for line in Path(session).read_text(encoding="utf-8").splitlines():
         d = json.loads(line)
         if d.get("type") == "api-request-shape" and shape is None:
             shape = d.get("shapeHash")
         elif d.get("type") == "api-request-blob":
-            blobs.append(DATE_LINE.sub("<date>", json.dumps(d.get("message"), sort_keys=True)))
+            blobs.append(PLAN_NAME.sub("/plans/<plan>.md", DATE_LINE.sub("<date>", json.dumps(d.get("message"), sort_keys=True))))
         elif d.get("type") == "api-request":
             params = d.get("params")
             break  # the first call: everything it was sent is above this line
@@ -937,6 +1175,7 @@ def load_run(run, arm, current):
     cj = run / "checks" / "checks.json"
     return {"dir": run, "n": int(run.name.split("-")[1]), "arm": arm, "metrics": m, **run_figures(run),
             "exchange_log": m.get("exchange_log") or [], "plugin": plugin,
+            "plain": plain_figures({"metrics": m, "exchange_log": m.get("exchange_log") or [], **run_figures(run)}),
             "outdated": arm == "ambitious" and plugin.get("hash") != current,
             "subjects": subjects(run, arm), "reviews": reviews,
             "checks": json.loads(cj.read_text()) if cj.exists() else [],
@@ -974,6 +1213,12 @@ def collect():
     return out
 
 
+def plain_figures(b):
+    """Cost and minutes of the baseline's plain answer, before its plain push (all of it for older baselines)."""
+    k, log = b["metrics"].get("plain_push_after"), b["exchange_log"]
+    return (log[k - 1]["cost_usd"], log[k - 1]["minutes"]) if k and len(log) >= k else (b["cost_usd"], b["minutes"])
+
+
 def preview_figures(r):
     """Turn 1 of an ambitious run is the cheap preview (first version and checkpoint)."""
     log = r["exchange_log"]
@@ -986,22 +1231,25 @@ RESULT_WORD = {"win": "Beats the baseline", "tie": "Ties the baseline", "loss": 
 def results_markdown(data):
     lines = ["# Results", "",
              "Each example has one **baseline**: the prompt exactly as a user would type it, on the same model, in "
-             "the same container with a real browser. The plugin passes an example only when a single "
-             "`/be-ambitious` run of the *same prompt* beats it. Turn 1 of that run makes a first version and stops "
-             "at a checkpoint. The gate: turn 1 must be sent exactly what the baseline was sent (system prompt, tools, "
-             "parameters and messages, checked from the transcripts), so it's a second plain sample. The final must beat "
-             "the better of the two plain versions. Nothing else is judged "
+             "the same macOS VM with a real browser, followed in the same chat by \"Push it further.\" with no plugin "
+             "(the **plain push**). The plugin passes an example only when a single `/be-ambitious` run of the *same "
+             "prompt* beats both. Turn 1 of that run makes a first version and stops at a checkpoint, where it gets the "
+             "same \"Push it further.\". The gate: turn 1 must be sent exactly what the baseline was sent (system prompt, "
+             "tools, parameters and messages, checked from the transcripts), so it's a second plain sample. The final must "
+             "beat the baseline, the plain push and the first version. Nothing else is judged "
              "automatically: we review frames, screenshots and the live pages side by side, and record the verdict. "
              "Runs made with an older plugin are marked outdated. [How the bench works](../bench/README.md).", "",
              f"Visual results, with every page live: [results site]({SITE_URL}).", ""]
     for model in sorted({e["model"] for e in data}):
-        lines += [f"## {model}", "", "| Example | Verdict | Gate (turn 1) | Baseline | Preview (turn 1) | Full run | Plugin |",
-                  "|---|---|---|---|---|---|---|"]
+        lines += [f"## {model}", "", "| Example | Verdict | Gate (turn 1) | Baseline | Plain push | Preview (turn 1) | Full run | Plugin |",
+                  "|---|---|---|---|---|---|---|---|"]
         for e in (x for x in data if x["model"] == model):
             b = e["baseline"]
-            base = f"${b['cost_usd']:.2f} · {b['minutes']:.1f} min" if b else "–"
+            bc, bm = plain_figures(b) if b else (None, None)
+            base = f"${bc:.2f} · {bm:.1f} min" if b else "–"
+            push = f"${b['cost_usd']:.2f} · {b['minutes']:.1f} min" if b and b["metrics"].get("plain_push_after") else "–"
             if not e["runs"]:
-                lines.append(f"| {e['slug']} | no plugin run yet | – | {base} | – | – | – |")
+                lines.append(f"| {e['slug']} | no plugin run yet | – | {base} | {push} | – | – | – |")
                 continue
             r = e["runs"][0]
             v = r["verdict"] or {}
@@ -1009,10 +1257,10 @@ def results_markdown(data):
             prev = f"${pc:.2f} · {pm:.1f} min" if pc is not None else "–"
             full = f"${r['cost_usd']:.2f} · {r['minutes']:.1f} min"
             if b:
-                full += f" ({r['cost_usd'] / b['cost_usd']:.1f}× cost)"
+                full += f" ({r['cost_usd'] / bc:.1f}× cost)"
             plug = (r["plugin"].get("commit") or "?") + (" · outdated" if r["outdated"] else "")
             lines.append(f"| {e['slug']} | {RESULT_WORD.get(v.get('result'), 'not reviewed')} | {v.get('gate', '–')} | "
-                         f"{base} | {prev} | {full} | {plug} |")
+                         f"{base} | {push} | {prev} | {full} | {plug} |")
         lines.append("")
         for e in (x for x in data if x["model"] == model):
             rel = e["dir"].relative_to(EXAMPLES).as_posix()
@@ -1054,17 +1302,19 @@ def main():
         sp.add_argument("--model", default="claude-opus-5-5")
         if name == "run":
             sp.add_argument("--effort", default="medium")  # the recommended reasoning effort, pinned so every run matches
-            sp.add_argument("--max-turns", type=int, default=80)
+            sp.add_argument("--max-turns", type=int, default=300)  # per claude -p call; the push runs steps 3-8 in one call through Stop-hook continuations
             sp.add_argument("--runs", type=int, default=1)
             sp.add_argument("--arms", default=DEFAULT_ARMS)
-            sp.add_argument("--max-exchanges", type=int, default=6)
+            sp.add_argument("--max-exchanges", type=int, default=10)
             sp.add_argument("--parallel", type=int, default=1)
             sp.add_argument("--dry-run", action="store_true")
-            sp.add_argument("--host", dest="docker", action="store_false",
-                            help="run on this machine in the Claude Code sandbox instead of a container (no browser)")
+            sp.add_argument("--where", choices=("vm", "docker", "host"), default="vm",
+                            help="vm: a throwaway macOS VM with the GPU (default, for results); docker: the older Linux "
+                                 "container with software rendering; host: this machine in the sandbox, for debugging only")
         if name == "review":
             sp.add_argument("--run", type=int, default=None, help="only this ambitious run (the baseline is always included)")
             sp.add_argument("--seconds", type=int, default=10, help="how long to capture, when the prompt doesn't say")
+            sp.add_argument("--where", choices=("vm", "docker"), default="vm", help="where captures render: vm (GPU) or docker (software)")
         if name == "verdict":
             sp.add_argument("--run", type=int, required=True)
             sp.add_argument("--gate", choices=("pass", "fail"), help="was turn 1 sent exactly what the baseline was? Defaults to the run's turn1-input.json")

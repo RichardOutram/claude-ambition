@@ -16,6 +16,15 @@
       const res = await fetch(el.dataset.md);
       if (!res.ok) throw new Error(res.status);
       renderMarkdown(el, await res.text());
+      // Relative links and images in the file point next to the file, not next to this page.
+      const base = new URL(el.dataset.md, location.href);
+      el.querySelectorAll("a[href], img[src]").forEach((n) => {
+        const attr = n.tagName === "A" ? "href" : "src";
+        const v = n.getAttribute(attr);
+        if (!v || /^([a-z][a-z0-9+.-]*:|#|\/)/i.test(v)) return;
+        n.setAttribute(attr, new URL(v, base).href);
+        if (attr === "href") { n.target = "_blank"; n.rel = "noopener"; }
+      });
     } catch (err) {
       el.textContent = "Couldn't load this file.";
     }

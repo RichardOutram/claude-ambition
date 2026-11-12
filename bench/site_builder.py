@@ -10,6 +10,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 SUBJECT = {"baseline": ("Baseline", "The prompt exactly as typed, no plugin.", "not-ambitious"),
+           "pushed": ("Plain push", "The baseline, then “Push it further.” in the same chat, still no plugin.", "not-ambitious"),
            "first": ("First version", "Turn 1 of /be-ambitious: the cheap preview, before the checkpoint.", "first"),
            "final": ("Final", "/be-ambitious after pushing on.", "ambitious")}
 RESULT = {"win": ("Beats the baseline", "good"), "tie": ("Ties the baseline", "warn"), "loss": ("Loses to the baseline", "bad")}
@@ -156,6 +157,24 @@ def lighthouse_of(r, page):
     return None
 
 
+def doc_bits(r, folder_rel, page):
+    """For a document (a plan, an essay): the rendered text to read in place, and its size. Other documents
+    the version made beside it are linked with their own size (a plan-mode run can leave near-copies, so
+    sizes are never summed)."""
+    run_rel = f"{r['arm']}/run-{r['n']}"
+    path = r["dir"] / folder_rel / page
+    docs = sorted(p for p in path.parent.glob("*.md") if p.name != "CLAUDE.md") if path.exists() else []
+    words = lambda p: len(p.read_text(encoding="utf-8", errors="replace").split())
+    href = f"{run_rel}/{folder_rel}/{e(page)}"
+    media = f'<div class="md doc-preview" data-md="{href}"></div>'
+    facts = [badge(f"{words(path):,} words" if path.exists() else "missing", "muted")]
+    base = page.rsplit("/", 1)[0] + "/" if "/" in page else ""
+    for p in docs:
+        if p != path:
+            facts.append(f'<a class="badge muted" href="{run_rel}/{folder_rel}/{e(base + p.name)}" target="_blank" rel="noopener">+ {e(p.name)} · {words(p):,} words ↗</a>')
+    return media, facts
+
+
 def subject_card(r, key, cost, minutes):
     """One column of the side-by-side: what this version looks like over time, plus how to open it."""
     name, note, tone = SUBJECT[key]
@@ -164,6 +183,16 @@ def subject_card(r, key, cost, minutes):
         return ""
     run_rel = f"{r['arm']}/run-{r['n']}"
     live = f"{run_rel}/output/{e(page)}"
+    money_line = f"{money(cost)} · {minutes:.1f} min" if cost is not None else ""
+    if page.endswith(".md"):
+        media, facts = doc_bits(r, "output", page)
+        return f"""<article class="subject {tone}">
+  <header><h3><span class="dot {tone}"></span>{e(name)}</h3><span class="cost">{e(money_line)}</span></header>
+  <p class="hint">{e(note)}</p>
+  <div class="subject-media">{media}</div>
+  <div class="facts">{"".join(facts)}</div>
+  <p class="open"><a href="{live}" target="_blank" rel="noopener">Open it ↗</a> <code>{e(page)}</code></p>
+</article>"""
     cap = r["reviews"].get(key)
     media, facts = "", []
     if cap:
@@ -197,7 +226,6 @@ def subject_card(r, key, cost, minutes):
         sc = lh["lighthouse"]["scores"]
         facts.append(" ".join(f'<span class="score {"good" if (v or 0) >= 90 else "warn" if (v or 0) >= 50 else "bad"}"><b>{v}</b>{e(k.replace("-", " "))}</span>'
                               for k, v in sc.items() if v is not None))
-    money_line = f"{money(cost)} · {minutes:.1f} min" if cost is not None else ""
     return f"""<article class="subject {tone}">
   <header><h3><span class="dot {tone}"></span>{e(name)}</h3><span class="cost">{e(money_line)}</span></header>
   <p class="hint">{e(note)}</p>
@@ -208,10 +236,19 @@ def subject_card(r, key, cost, minutes):
 </article>"""
 
 
+def plain_figures(b):
+    """Cost and minutes of the baseline's plain answer, before its plain push (from ab.py's load_run)."""
+    return b["plain"]
+
+
+def baseline_cards(b):
+    return [subject_card(b, "baseline", *plain_figures(b)), subject_card(b, "pushed", b["cost_usd"], b["minutes"])]
+
+
 def trio(ex, r):
     b = ex["baseline"]
     pc, pm = (r["exchange_log"][0]["cost_usd"], r["exchange_log"][0]["minutes"]) if r["exchange_log"] else (None, None)
-    cards = [subject_card(b, "baseline", b["cost_usd"], b["minutes"]) if b else "",
+    cards = [*(baseline_cards(b) if b else []),
              subject_card(r, "first", pc, pm), subject_card(r, "final", r["cost_usd"], r["minutes"])]
     return f'<div class="trio">{"".join(c for c in cards if c)}</div>'
 
@@ -233,14 +270,20 @@ def timeline(ex, r):
     if not rows:
         rows.append(("Whole run", r["cost_usd"], "ambitious", r["minutes"]))
     if b:
-        rows.insert(0, ("Baseline · plain prompt", b["cost_usd"], "not-ambitious", b["minutes"]))
+        bc, bm = plain_figures(b)
+        if "pushed" in b["subjects"]:
+            rows.insert(0, ("Baseline + plain push", b["cost_usd"], "not-ambitious", b["minutes"]))
+        rows.insert(0, ("Baseline · plain prompt", bc, "not-ambitious", bm))
     cost = bars([(lab, c, t) for lab, c, t, _ in rows], money)
     mins = bars([(lab, m, t) for lab, _, t, m in rows], lambda v: f"{v:.1f} min")
     mult = ""
     if b:
-        mult = f'<p class="hint">Full run: <b>{r["cost_usd"] / b["cost_usd"]:.1f}×</b> the baseline\'s cost and <b>{r["minutes"] / b["minutes"]:.1f}×</b> its time.'
+        bc, bm = plain_figures(b)
+        mult = f'<p class="hint">Full run: <b>{r["cost_usd"] / bc:.1f}×</b> the baseline\'s cost and <b>{r["minutes"] / bm:.1f}×</b> its time.'
+        if "pushed" in b["subjects"]:
+            mult += f' The plain push: <b>{b["cost_usd"] / bc:.1f}×</b> and <b>{b["minutes"] / bm:.1f}×</b>.'
         if log:
-            mult += f' The preview alone: <b>{log[0]["cost_usd"] / b["cost_usd"]:.1f}×</b> and <b>{log[0]["minutes"] / b["minutes"]:.1f}×</b>.'
+            mult += f' The preview alone: <b>{log[0]["cost_usd"] / bc:.1f}×</b> and <b>{log[0]["minutes"] / bm:.1f}×</b>.'
         mult += "</p>"
     note = ("" if steps or not log else '<p class="hint">This run is older than the step markers, so it\'s split by exchange '
             '(each message to Claude), not by step of the method.</p>')
@@ -269,6 +312,9 @@ def step_progression(r):
         sp = spent.get(n)
         figs = f"{money(sp['cost_usd'])} · {sp['minutes']:.1f} min so far" if sp else ""
         media, facts = "", ""
+        if pg["page"].endswith(".md"):
+            media, fl = doc_bits(r, pg["dir"], pg["page"])
+            facts = "".join(fl)
         if cap:
             d = cap["views"].get("desktop", {})
             src = d.get("sheet") if d.get("moving") else (d.get("frames") or [{}])[0].get("file")
@@ -305,6 +351,9 @@ def progression(r):
         spent = log.get(n)
         figs = f"{money(spent['cost_usd'])} · {spent['minutes']:.1f} min so far" if spent else ""
         media, facts = "", ""
+        if pg["page"].endswith(".md"):
+            media, fl = doc_bits(r, pg["dir"], pg["page"])
+            facts = "".join(fl)
         if cap:
             d = cap["views"].get("desktop", {})
             src = d.get("sheet") if d.get("moving") else (d.get("frames") or [{}])[0].get("file")
@@ -427,7 +476,7 @@ def example_page(ex, root, repo):
 <section class="hero ex">
   <p class="eyebrow">{e(ex["slug"])}</p>
   <h1>“{e(spec.get("prompt", ""))}”</h1>
-  <p class="lede">Both sides got exactly this prompt. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats both.</p>
+  <p class="lede">Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.</p>
   <details class="context"><summary>What we look for</summary><p>{e(spec.get("check", ""))}</p></details>
 </section>
 {terminal(ex)}
@@ -442,7 +491,7 @@ def example_page(ex, root, repo):
 
 def trio_baseline(ex):
     b = ex["baseline"]
-    return f'<div class="trio">{subject_card(b, "baseline", b["cost_usd"], b["minutes"])}</div>'
+    return f'<div class="trio">{"".join(baseline_cards(b))}</div>'
 
 
 # ---------- index ----------

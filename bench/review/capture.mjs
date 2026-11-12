@@ -1,8 +1,12 @@
 // Captures what a reviewer needs to judge a page or an animation, the same way for every arm.
-// Runs inside the bench container: node capture.mjs <site-dir> <page> <out-dir> <seconds>
-// Time is virtual and stepped at 15 fps, so frame t=4s really is 4 seconds into the animation,
-// however slow the software renderer is. Writes frames, a seam score and console errors to out-dir.
-import { chromium } from "/node/node_modules/playwright/index.mjs";
+// Runs inside the bench VM or container: node capture.mjs <site-dir> <page> <out-dir> <seconds>
+// Time is virtual and stepped at 60 fps, so frame t=4s really is 4 seconds into the animation,
+// however fast or slow the renderer is. Writes frames, a seam score and console errors to out-dir.
+// The page plays one whole loop before the frames are taken, so trails and other effects that build up
+// over time have the same history at both ends of the seam check. Frame t=4s is 4 seconds into loop 2.
+// Playwright comes from /node: the full package in the container, playwright-core in the macOS VM, where the
+// installed Chrome is used (CAPTURE_CHANNEL=chrome) so WebGL runs on the GPU.
+const { chromium } = await import(process.env.PLAYWRIGHT || "/node/node_modules/playwright/index.mjs");
 import { PNG } from "/node/node_modules/pngjs/lib/png.js";
 import http from "node:http";
 import fs from "node:fs";
@@ -11,7 +15,7 @@ import path from "node:path";
 const [site, page, out, secondsArg] = process.argv.slice(2);
 const seconds = Number(secondsArg || 10);
 const STEP = 1;  // seconds between frames
-const TICK = 1000 / 15;  // virtual ms per rendered frame: small enough for per-frame physics, half the work of 30 fps
+const TICK = 1000 / 60;  // virtual ms per rendered frame: what a page sees in a real browser, so pages that adapt their quality to frame time stay at full quality
 const VIEWS = { desktop: { width: 1280, height: 800, deviceScaleFactor: 1 },
                 phone: { width: 390, height: 844, deviceScaleFactor: 1, isMobile: true, hasTouch: true } };  // 1x: layout and motion, at a quarter of the pixels; crispness is checked live
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css",
@@ -20,6 +24,8 @@ const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/ja
 
 const server = http.createServer((req, res) => {
   const file = path.join(site, decodeURIComponent(new URL(req.url, "http://x").pathname));
+  // Chrome asks for a favicon the page never named; a 404 there would count as a page error.
+  if (req.url === "/favicon.ico" && !fs.existsSync(file)) { res.writeHead(204); return res.end(); }
   if (!file.startsWith(site) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end(); }
   res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" });
   fs.createReadStream(file).pipe(res);
@@ -37,7 +43,8 @@ function diff(a, b) {
   return +(100 * changed / (x.data.length / 4)).toFixed(3);
 }
 
-const browser = await chromium.launch({ args: ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+const channel = process.env.CAPTURE_CHANNEL;
+const browser = await chromium.launch({ ...(channel ? { channel } : {}), args: ["--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
 const report = { url: page, seconds, views: {} };
 fs.mkdirSync(out, { recursive: true });
 // Both sizes at once: software rendering is CPU-bound and the container has cores to spare.
@@ -47,7 +54,7 @@ await Promise.all(Object.entries(VIEWS).map(async ([name, view]) => {
   const errors = [];
   p.on("console", m => m.type() === "error" && errors.push(m.text().slice(0, 300)));
   p.on("pageerror", e => errors.push(String(e).slice(0, 300)));
-  // Virtual time: the page's clocks read a time we step in 1/30 s increments, while real animation
+  // Virtual time: the page's clocks read a time we step in 1/60 s increments, while real animation
   // frames keep running so screenshots work. Anything that integrates per-frame deltas stays faithful.
   await p.addInitScript(TICK => {
     let vt = 0;
@@ -68,7 +75,9 @@ await Promise.all(Object.entries(VIEWS).map(async ([name, view]) => {
   await p.waitForTimeout(4000);  // real time, for modules and textures to arrive; virtual time stays at 0
   const frames = [];
   for (let t = 0; t <= seconds + 1e-9; t += STEP) {
-    await p.evaluate(ms => window.__advanceTo(ms), t * 1000);
+    // Half a tick past the second: a sample exactly on the loop boundary can land a rounding error either
+    // side of it, where some pages have a float edge a real viewer never hits.
+    await p.evaluate(ms => window.__advanceTo(ms), (seconds + t) * 1000 + TICK / 2);
     const png = await p.screenshot();
     const file = `${name}-t${String(t).padStart(2, "0")}.png`;
     fs.writeFileSync(path.join(out, file), png);
