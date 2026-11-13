@@ -110,12 +110,40 @@ To analyse any past session: `python3 scripts/ambition-metrics.py <session-id> [
 
 ## Does it actually help?
 
-[`bench/`](bench/) tests that. Each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) is run plainly once, as the baseline, then through `/be-ambitious` (sent first, unseen by Claude) with the same prompt, word for word, on the same model in the same fresh container with a real browser. The bench checks from the transcripts that the plugin's first turn was sent exactly what the baseline was sent, so it's a second plain sample, and the final must beat the better of the two plain versions, by enough to justify its extra cost. We judge by looking: the harness captures every version the same way (frames over time, a loop-seam check, console errors, screenshots and Lighthouse), and we compare them side by side and live.
+[`bench/`](bench/) tests that. Each prompt in [`examples/PROMPTS.md`](examples/PROMPTS.md) is run plainly once, as the baseline, and then gets "Push it further." in the same chat (the plain push), so we can tell what the method adds from just asking for more. The same prompt, word for word, then goes through `/be-ambitious` (sent first, unseen by Claude) on the same model, each run in a fresh macOS virtual machine with a real browser. The bench checks from the transcripts that the plugin's first turn was sent exactly what the baseline was sent, so it's a second plain sample, and the final must beat all three plain versions. No model grades the results: we look at pages in a browser (frames over time, console errors, screenshots, Lighthouse, and the pages live), read documents through and recompute their figures, and run scripts, side by side.
 
-- **[Results site](https://richardoutram.github.io/claude-ambition/):** baseline, first version and final side by side, each live, with cost and time per turn and our review.
-- **[Results table](examples/RESULTS.md):** per example, the verdict, the gate, and the cost and time of the baseline, the preview and the full run.
+- **[Results site](https://richardoutram.github.io/claude-ambition/):** the baseline, the plain push, the plugin's first version and its final side by side (pages live, documents rendered in full), what each step changed and cost, both sessions replayable, and our review.
+- **[Results table](examples/RESULTS.md):** per example, the verdict, the gate, and the cost and time of the baseline, the plain push, the preview and the full run.
 
 Only runs of the current plugin are kept as examples.
+
+### What we found so far (Sonnet 5.5, November 2026)
+
+**The plugin did not always give a better result.** We ran 10 different tasks: games, education, development, data, design, writing, planning and a 3D animation. Each was run once with the plugin, against the plain baseline and the plain "Push it further." Here is our honest read:
+
+| Task | Result | Plugin vs plain: cost · time |
+|---|---|---|
+| 3D animation (neon-implosion) | **Better.** The only version that isn't blown out to white glow | 13× · 15× |
+| Interactive lesson (bayes) | **Better.** Turned a slider demo into a real lesson | 12× · 16× |
+| Analysis (heat-pump) | **Better.** A checked, re-runnable model with sourced prices instead of a one-off estimate | 9× · 7× |
+| Marketing plan (candle) | **Better**, but long. A dated, costed plan instead of a template with blanks; at 9,200 words, it's a lot for someone with 5 hours a week | 27× · 15× |
+| Pricing page | **Slightly better.** One real pricing idea added; the plain page was already fine | 7× · 5× |
+| App prototype | **Slightly better**, mostly in screens you have to click into. Not worth 69 minutes over the plain push | 7× · 21× |
+| Photo-renaming script | **No better.** More tests, but it kept one wrong filename the plain script fixed | 21× · 36× |
+| Puzzle game | **Better**, on the second try. More polish, a taught second mechanic, and pars a solver proves; the plain version has more levels. The first run collapsed into one turn and never pushed | 4× · 0.5× |
+| App plan in plan mode (cycling-app) | **Better.** A plan a team could start building from: 37 sized tickets with acceptance criteria, and two real traps the plain plans miss (Google Play's 14-day closed test, and a home privacy zone its own simulation could undo). Its reason for riders to switch is weak, and it's three times longer | 13× · 8× |
+| Architecture doc (url-shortener) | **Better**, on the second try. It tested the cache hit rate the plain version assumed, found it far lower, and designed around that. The first run was **worse**: it planned a rewrite and left the document unchanged | 9× · 8× |
+
+Seven clear wins out of ten, two marginal wins and one no better. Most wins cost 7–27 times as much as the plain push and took 5–21 times as long. Three of the wins (url-shortener, candle and puzzle) are second attempts. The first two came after we fixed the wording that sent document tasks into planning mode, and the puzzle came after a hook fix it didn't end up needing. So they show the method working once, not reliably. Each result is a single run, so any row could go the other way on a re-run. The stand-in user who answers the plugin's questions is also a model, and its answers vary. Six of the runs were made on the plugin before the two fixes below; those fixes don't touch what those runs did (they all built, and saved their steps where the hook looked), so we kept them, and the site marks them as outdated.
+
+What we take from it:
+
+- **It helps most where "done" is open-ended.** Analysis, teaching, visuals and plans have room for a better method, sharper framing or a real check, and that is where the push paid off.
+- **It helps least where the plain answer is already right.** For a small script or a simple page, the extra steps mostly add tests, files and cost.
+- **It can fail outright.** It went into planning mode on a Markdown deliverable and left the document itself unchanged. In another run it collapsed into a single turn. A wording fix turned the first into a win on the re-run. The second ran properly on the re-run, but only because Claude saved its work where the hook already looked, so the hook fix is still untested.
+- **More is not always better.** Pushed documents grow: the candle plan went from 1,600 words to 9,200. The extra content was correct, but someone still has to read it.
+
+Use it when the task is worth 10× the spend and a better answer is possible. Don't use it by default.
 
 ## Trying a local copy
 
