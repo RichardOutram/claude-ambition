@@ -51,7 +51,8 @@ SITE_URL = "https://richardoutram.github.io/claude-ambition/"
 ARMS = ("not-ambitious", "ambitious")
 DEFAULT_ARMS = "not-ambitious,ambitious"  # same prompt, with and without the plugin
 CATEGORIES = {"dev": "development", "data": "data-analysis", "design": "design",
-              "plan": "planning", "elec": "electronics", "write": "writing"}
+              "plan": "planning", "elec": "electronics", "write": "writing",
+              "game": "games", "learn": "education"}
 
 # --host mode only (debugging the harness, never results). Identical for every arm. Edits are auto-accepted.
 # Every Bash command is allowed, but only inside the OS sandbox (writes confined to the run folder, network allowlisted):
@@ -319,7 +320,7 @@ def _with_cwd(call_env, cwd):
     return argv, cwd, env
 
 
-def claude(args, cwd, env, prompt, timeout=3600):
+def claude(args, cwd, env, prompt, timeout=4 * 3600):  # one exchange can hold the whole push (steps 2-8)
     try:
         p = subprocess.run(args, cwd=cwd, env=env, input=prompt, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -808,7 +809,8 @@ def save_work(src, dest):
     def ignore(d, names):
         rel = Path(d).resolve().relative_to(src.resolve())
         working = rel.parts[:1] == (".ambition",)
-        return {n for n in names if n in SKIP_DIRS or n in WORK_SKIP or working and Path(n).suffix.lower() in IMAGE_EXT}
+        venv = {n for n in names if (Path(d) / n / "pyvenv.cfg").exists()}  # virtualenvs are dependencies too
+        return venv | {n for n in names if n in SKIP_DIRS or n in WORK_SKIP or working and Path(n).suffix.lower() in IMAGE_EXT}
     shutil.copytree(src, dest, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True, ignore=ignore)
 
 
