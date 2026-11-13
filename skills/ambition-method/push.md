@@ -8,7 +8,7 @@ You do the work yourself, in this conversation. Don't hand it to subagents; the 
 
 **Who answers.** By default, the user. Answer questions yourself only if the user told you to use your judgement (now or when pushing on); then answer from the repo, the conversation and sensible defaults, and list each answer as a labelled assumption.
 
-**Plan or build.** If the user said plan or build, or plan mode is on, that decides it. Words like "plan", "design", "approach", "strategy", "proposal", "options" or a request for a document mean plan; imperatives like "build", "fix", "add", "make", "ship", or an approved plan to carry out, mean build. If it's unclear, make it your first question.
+**Plan or build.** If the user said plan or build, or plan mode is on, that decides it. Words like "plan", "design", "approach", "strategy", "proposal" or "options" mean plan; imperatives like "build", "fix", "add", "make", "ship", or an approved plan to carry out, mean build. When the deliverable is itself a document, improving it is the build. If it's unclear, make it your first question.
 
 ## Every step
 

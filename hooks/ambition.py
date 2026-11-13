@@ -129,12 +129,36 @@ def step_done(cwd, n, started):
     """Step n is finished when .ambition/steps/<n>/ holds a file written during this push. Look in the project
     folder, not the shell's current one: Claude may have cd'd into a subfolder (we lost steps 7-8 that way)."""
     root = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
-    folder = os.path.join(root, ".ambition", "steps", str(n))
     since = datetime.strptime(started, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp() - 1
-    for base, _, files in os.walk(folder):
-        if any(os.path.getmtime(os.path.join(base, f)) >= since for f in files):
-            return True
+    for folder in step_folders(root, n):
+        for base, _, files in os.walk(folder):
+            if any(os.path.getmtime(os.path.join(base, f)) >= since for f in files):
+                return True
     return False
+
+
+SKIP_WALK = {"node_modules", ".git", ".venv", "venv", "__pycache__", "dist", "build"}
+
+
+def step_folders(root, n, depth=3):
+    """.ambition/steps/<n>/ in the project folder, then in its subfolders up to `depth` levels down: when the
+    deliverable lives in a subfolder, Claude may keep .ambition/ beside it (a run stalled at step 2 that way)."""
+    yield os.path.join(root, ".ambition", "steps", str(n))
+    level = [root]
+    for _ in range(depth):
+        nxt = []
+        for d in level:
+            try:
+                names = os.listdir(d)
+            except OSError:
+                continue
+            for name in names:
+                path = os.path.join(d, name)
+                if name.startswith(".") or name in SKIP_WALK or not os.path.isdir(path) or os.path.islink(path):
+                    continue
+                yield os.path.join(path, ".ambition", "steps", str(n))
+                nxt.append(path)
+        level = nxt
 
 
 def checkpoint(session, started):
