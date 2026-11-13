@@ -1267,7 +1267,7 @@ def results_markdown(data):
             prev = f"${pc:.2f} · {pm:.1f} min" if pc is not None else "–"
             full = f"${r['cost_usd']:.2f} · {r['minutes']:.1f} min"
             if b:
-                full += f" ({r['cost_usd'] / bc:.1f}× cost)"
+                full += f" ({r['cost_usd'] / b['cost_usd']:.1f}× the plain push)"
             plug = (r["plugin"].get("commit") or "?") + (" · outdated" if r["outdated"] else "")
             lines.append(f"| {e['slug']} | {RESULT_WORD.get(v.get('result'), 'not reviewed')} | {v.get('gate', '–')} | "
                          f"{base} | {push} | {prev} | {full} | {plug} |")

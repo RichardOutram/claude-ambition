@@ -85,7 +85,7 @@ KINDS = """<section id="kinds" class="method"><h2>Kinds of example</h2>
   <li><b>Web pages</b> (games, design, education, prototypes, 3D animation). The harness opens every version in a real browser at desktop and phone sizes, records frames over time, checks for console errors and, for looping animations, whether the loop is seamless. We also open each page live and use it. The frames and the live pages are on each example's page.</li>
   <li><b>Documents</b> (analysis, architecture, marketing, written as Markdown). Every version is rendered on the page in full. We read them through, recompute key figures and check that the sources resolve. When a run leaves a script or check beside the document, we run it too.</li>
   <li><b>Scripts</b> (development). The pages show each version's main script in full. We run each version on the same test files, including awkward cases and its undo, and compare what it actually did, not what it says it does.</li>
-  <li><b>Plans</b> (planning). The plugin runs in plan mode, so its push ends with a plan presented for approval and nothing is built. We compare the plans as plans: whether someone could act on them, and whether they're right.</li>
+  <li><b>Plans</b> (planning). The prompt is typed with plan mode on, so the deliverable is the plan itself. Pushing on improves the plan, and may write checks, simulations or a small spike to test it, but the app is never built. We compare the plans as plans: whether someone could act on them, and whether they're right.</li>
 </ul>
 <p>Every example page also has the full session logs for both sides (replayable), the replies and files from each turn, and, for the plugin, what each step changed and what it cost.</p>
 </section>
