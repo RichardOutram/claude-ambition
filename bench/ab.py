@@ -43,6 +43,10 @@ BENCH = REPO / "bench"
 EXAMPLES = REPO / "examples"
 PROMPTS = EXAMPLES / "PROMPTS.md"
 FIXTURES = EXAMPLES / "fixtures"
+# Runs where vanilla Claude plays the user (types the prompt, answers questions, says "Push it further."), and
+# runs a person drove (ab.py drive). Same layout under each: <model>/<category>/<name>/<arm>/run-N.
+AUTOPILOT = EXAMPLES / "autopilot"
+DRIVEN_DIR = EXAMPLES / "driven"
 METRICS = REPO / "scripts" / "ambition-metrics.py"
 HOME = str(Path.home())
 
@@ -75,6 +79,9 @@ DOCKER_IMAGE = "claude-ambition-bench:2.1.322-r2"  # claude version, then image 
 DOCKERFILE = BENCH / "docker"
 DOCKER_SETTINGS = {"permissions": {"defaultMode": "acceptEdits", "allow": ["Bash", "WebSearch", "WebFetch"]}}
 PLUGIN_PARTS = (".claude-plugin", "commands", "hooks", "scripts", "skills")
+# The method itself: what decides whether a run is outdated. The process around it (hooks, push.md's step
+# plumbing, the checkpoint) can change without making earlier runs stand for a different method.
+METHOD_PARTS = ("commands", "skills/ambition-method/SKILL.md", "skills/ambition-method/reference")
 
 # The default: runs work in a throwaway macOS VM (Tart), a clone of a bench image made from a plain developer Mac
 # (tahoe-dev: Homebrew, Node, Python, git, ripgrep, Chrome) plus the pinned Claude Code. WebGL runs on the Mac's GPU
@@ -175,10 +182,41 @@ Answer in a few sentences, in plain words. Never do the work, review the work or
 
 # ---------- specs ----------
 
+def parse_walk(text):
+    """A **Walk:** line, e.g. "phone · Sign in / Log in → key ArrowRight x2 → scroll → wait 3", as the steps
+    capture.mjs follows. None when the example has no walk."""
+    text = " ".join(text.split())
+    if not text:
+        return None
+    view = "desktop"
+    m = re.match(r"(phone|desktop)\s*·\s*", text)
+    if m:
+        view, text = m.group(1), text[m.end():]
+    steps = []
+    for raw in (s.strip() for s in text.split("→")):
+        if not raw:
+            continue
+        k = re.fullmatch(r"key (\S+)(?: x(\d+))?", raw)
+        w = re.fullmatch(r"wait (\d+(?:\.\d+)?)", raw)
+        if k:
+            steps.append({"label": raw, "key": k.group(1), "times": int(k.group(2) or 1)})
+        elif w:
+            steps.append({"label": raw, "wait": float(w.group(1))})
+        elif raw == "scroll":
+            steps.append({"label": raw, "scroll": True})
+        else:  # "A / B x4": click whichever matches, up to 4 times while one is still showing (multi-screen onboarding)
+            c = re.fullmatch(r"(.+?) x(\d+)", raw)
+            alts, times = (c.group(1), int(c.group(2))) if c else (raw, 1)
+            steps.append({"label": raw, "click": [s.strip() for s in alts.split(" / ") if s.strip()], "times": times})
+    return {"view": view, "steps": steps}
+
+
 def load_specs():
-    text = PROMPTS.read_text(encoding="utf-8")
+    # examples/PROMPTS.md, plus any private idea prompts in ideas/*.md (gitignored, same format)
+    blocks = [b for f in [PROMPTS, *sorted((REPO / "ideas").glob("*.md"))]
+              for b in re.split(r"^### ", f.read_text(encoding="utf-8"), flags=re.M)[1:]]
     specs = {}
-    for block in re.split(r"^### ", text, flags=re.M)[1:]:
+    for block in blocks:
         slug = block.split("\n", 1)[0].strip()
 
         def field(name):
@@ -195,6 +233,7 @@ def load_specs():
             # plan: the prompt goes in with plan mode on, as a user who presses shift+tab first; later turns don't
             "mode": field("Mode").strip().lower(),
             "fixture": fixture.group(1).strip() if fixture else None,
+            "walk": parse_walk(field("Walk")),
         }
     return specs
 
@@ -275,17 +314,39 @@ def ensure_image():
         subprocess.run(["docker", "build", "-t", DOCKER_IMAGE, str(DOCKERFILE)], check=True)
 
 
-def plugin_version():
-    """Which plugin a run used: the commit, whether the plugin files had uncommitted changes, and a hash of
-    the plugin's own files, so a page can tell when a run no longer reflects the current plugin."""
+def _files_hash(parts):
     h = hashlib.sha256()
-    for part in PLUGIN_PARTS:
-        for f in sorted((REPO / part).rglob("*")):
+    for part in parts:
+        p = REPO / part
+        for f in sorted(p.rglob("*")) if p.is_dir() else [p]:
             if f.is_file() and f.name != ".DS_Store" and "__pycache__" not in f.parts:
                 h.update(f.relative_to(REPO).as_posix().encode() + b"\0" + f.read_bytes())
+    return h.hexdigest()[:12]
+
+
+def plugin_version():
+    """Which plugin a run used: the commit, whether the plugin files had uncommitted changes, a hash of the
+    plugin's own files, and a hash of the method alone, which is what `outdated` compares."""
     git = lambda *a: subprocess.run(["git", "-C", str(REPO), *a], capture_output=True, text=True).stdout.strip()  # noqa: E731
     return {"commit": git("rev-parse", "--short", "HEAD"), "dirty": bool(git("status", "--porcelain", "--", *PLUGIN_PARTS)),
-            "hash": h.hexdigest()[:12]}
+            "hash": _files_hash(PLUGIN_PARTS), "method": _files_hash(METHOD_PARTS)}
+
+
+@functools.cache
+def method_at(commit):
+    """The method hash at a commit, for runs recorded before `method` was: rebuilt from git, the same way."""
+    if not commit:
+        return None
+    git = lambda *a: subprocess.run(["git", "-C", str(REPO), *a], capture_output=True).stdout  # noqa: E731
+    files = [f for f in git("ls-tree", "-r", "--name-only", commit, "--", *METHOD_PARTS).decode().splitlines()
+             if not f.endswith(".DS_Store") and "__pycache__" not in f]
+    if not files:
+        return None
+    h = hashlib.sha256()
+    for part in METHOD_PARTS:  # same order as _files_hash: by part, then sorted path
+        for f in sorted(x for x in files if x == part or x.startswith(part + "/")):
+            h.update(f.encode() + b"\0" + git("show", f"{commit}:{f}"))
+    return h.hexdigest()[:12]
 
 
 def staged_plugin():
@@ -402,9 +463,9 @@ def render_transcript(jsonl, title):
 
 # ---------- running ----------
 
-def save_spec(spec, model):
+def save_spec(spec, model, root=None):
     """The prompt, brief and check the example ran with, kept beside its results."""
-    path = EXAMPLES / model / spec["category"] / spec["name"] / "spec.json"
+    path = (root or AUTOPILOT) / model / spec["category"] / spec["name"] / "spec.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({k: spec[k] for k in ("slug", "prompt", "mode", "brief", "check", "fixture")}, indent=2), encoding="utf-8")
 
@@ -727,7 +788,7 @@ def cmd_run(a):
         if not a.dry_run:
             save_spec(s, a.model)
         for arm in a.arms.split(","):
-            arm_dir = EXAMPLES / a.model / s["category"] / s["name"] / arm
+            arm_dir = AUTOPILOT / a.model / s["category"] / s["name"] / arm
             for _ in range(a.runs):
                 run = next_run_dir(arm_dir)
                 if not a.dry_run:
@@ -936,7 +997,10 @@ def step_log(run, m):
         c = msg.get("content")
         if d.get("type") == "user" and not d.get("isMeta") and push is None:
             text = c if isinstance(c, str) else " ".join(b.get("text", "") for b in c or [] if b.get("type") == "text")
-            if text.strip().lower().startswith("push it further"):
+            # a driven run answers the checkpoint in the question picker: its answer comes back as a tool result
+            picked = " ".join(str(b.get("content", "")) for b in c if isinstance(b, dict) and b.get("type") == "tool_result"
+                              ) if isinstance(c, list) else ""
+            if text.strip().lower().startswith("push it further") or re.search(r'="Push it further', picked):
                 push = _ts(ts)
         if d.get("type") == "assistant":
             last = _ts(ts)
@@ -1051,6 +1115,40 @@ def review_subject(run, key, page, seconds, site=None, vm=None):
     return cap
 
 
+def walk_subject(run, key, page, walk, vm=None):
+    """Click through the example's fixed walk on one version: run/review/<key>/walk/walk.json plus a
+    screenshot per step. Kept until the walk changes."""
+    folder = run / "review" / key / "walk"
+    spec_file = folder / "spec.json"
+    if (folder / "walk.json").exists() and spec_file.exists() and json.loads(spec_file.read_text()) == walk:
+        return json.loads((folder / "walk.json").read_text())
+    shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True)
+    spec_file.write_text(json.dumps(walk, indent=2), encoding="utf-8")
+    if vm:
+        inside = lambda d: "/examples/" + Path(d).resolve().relative_to(EXAMPLES.resolve()).as_posix()  # noqa: E731
+        cmd = vm.ssh("PLAYWRIGHT=/node/node_modules/playwright-core/index.mjs CAPTURE_CHANNEL=chrome node /review/capture.mjs "
+                     + " ".join(shlex.quote(x) for x in (inside(run / "output"), page, inside(folder), "0", inside(spec_file))))
+    else:
+        cmd = ["docker", "run", "--rm", "-v", f"{run / 'output'}:/site:ro", "-v", f"{folder}:/out",
+               "-v", f"{REVIEW_JS.parent}:/review:ro", "-v", f"{REVIEW_NODE}:/node:ro", DOCKER_IMAGE,
+               "node", "/review/capture.mjs", "/site", page, "/out", "0", "/out/spec.json"]
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+    if not (folder / "walk.json").exists():
+        print(f"  walk failed for {run.relative_to(REPO)} {key}: {(p.stderr or p.stdout)[-600:]}", file=sys.stderr)
+        return None
+    res = json.loads((folder / "walk.json").read_text())
+    from PIL import Image
+    for s in res["steps"]:
+        if s.get("file"):
+            png = folder / s["file"]
+            s["file"] = png.with_suffix(".webp").name
+            Image.open(png).save(folder / s["file"], quality=80)
+            png.unlink()
+    (folder / "walk.json").write_text(json.dumps(res, indent=2), encoding="utf-8")
+    return res
+
+
 def seam_text(v):
     import site_builder
     return site_builder.seam_words(v)[0]
@@ -1072,7 +1170,7 @@ def cmd_review(a):
 
 def _review(a, vm):
     for spec in select(load_specs(), a.target):
-        ex = EXAMPLES / a.model / spec["category"] / spec["name"]
+        ex = (DRIVEN_DIR if a.driven else AUTOPILOT) / a.model / spec["category"] / spec["name"]
         said = re.search(r"(\d+)\s*-?\s*second", spec["prompt"])
         seconds = int(said.group(1)) if said else a.seconds
         jobs, runs, reuse = [], [], []
@@ -1113,6 +1211,13 @@ def _review(a, vm):
             if (src / "capture.json").exists():
                 shutil.rmtree(dst, ignore_errors=True)
                 shutil.copytree(src, dst)
+        if spec.get("walk"):  # the four versions a reader compares, clicked through the same fixed path
+            walks = [(run, key, page) for run in runs for key, page in subjects(run, run.parent.name).items() if page.endswith(".html")]
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                for (run, key, page), res in zip(walks, pool.map(lambda w: walk_subject(*w, spec["walk"], vm), walks)):
+                    if res:
+                        missed = sum(1 for s in res["steps"] if not s.get("file"))
+                        print(f"{run.relative_to(REPO)} · {SUBJECT_NAME.get(key, key)} walk: {len(res['steps']) - 1 - missed} steps done, {missed} not in this version, {len(res['errors'])} console errors")
         for (run, key, page, _), cap in zip(jobs, caps):
             if cap and key in SUBJECT_NAME:
                 views = "; ".join(f"{n}: {seam_text(v)}, {len(v['errors'])} console errors" for n, v in cap["views"].items())
@@ -1142,7 +1247,7 @@ def turn1_input(session):
 def check_turn1(run, spec, model):
     """The gate: turn 1 of the ambitious run must be sent exactly what the baseline was sent. Writes
     turn1-input.json with the verdict and, if they differ, a diff of what differs."""
-    base = EXAMPLES / model / spec["category"] / spec["name"] / "not-ambitious" / "run-1" / "transcript" / "session.jsonl"
+    base = AUTOPILOT / model / spec["category"] / spec["name"] / "not-ambitious" / "run-1" / "transcript" / "session.jsonl"
     mine = run / "transcript" / "session.jsonl"
     if not base.exists() or not mine.exists():
         return None
@@ -1161,10 +1266,12 @@ def check_turn1(run, spec, model):
 def cmd_verdict(a):
     """Records our decision for one ambitious run. Nothing in the bench decides this automatically."""
     spec = select(load_specs(), a.target)[0]
-    run = EXAMPLES / a.model / spec["category"] / spec["name"] / "ambitious" / f"run-{a.run}"
+    run = (DRIVEN_DIR if a.driven else AUTOPILOT) / a.model / spec["category"] / spec["name"] / "ambitious" / f"run-{a.run}"
     if not (run / "metrics.json").exists():
         sys.exit(f"ab: no run at {run.relative_to(REPO)}")
     gate = a.gate
+    if not gate and a.driven:
+        gate = "na"  # a person typed turn 1, so there is no stand-in baseline to match
     if not gate:
         check = json.loads((run / "turn1-input.json").read_text()) if (run / "turn1-input.json").exists() else None
         if check is None:
@@ -1201,24 +1308,29 @@ def restatement(run):
     t = run / "transcript.md"
     if not t.exists():
         return ""
-    m = re.search(r"```[a-z]*\n(You asked for:.*?)```", t.read_text(encoding="utf-8"), re.S)
-    return m.group(1).strip() if m else ""
+    found = [b for b in re.findall(r"```[a-z]*\n(You asked for:.*?)```", t.read_text(encoding="utf-8"), re.S)
+             if "<original>" not in b]  # not the template the hook sends
+    return found[0].strip() if found else ""
 
 
 def load_run(run, arm, current):
     m = json.loads((run / "metrics.json").read_text())
+    if m.get("driven") and (run / "transcript" / "session.jsonl").exists():  # derived, so fixes to the split apply
+        m["exchange_log"] = session_exchanges(run / "transcript" / "session.jsonl", m["cost_usd"])
+        m["exchanges"] = len(m["exchange_log"])
     plugin = m.get("plugin") or {"commit": m.get("plugin_commit"), "dirty": None, "hash": None}
     reviews = {}
     for key in subjects(run, arm):
         cf = run / "review" / key / "capture.json"
         if cf.exists():
             reviews[key] = json.loads(cf.read_text())
+    walks = {key: json.loads(wf.read_text()) for key in subjects(run, arm) if (wf := run / "review" / key / "walk" / "walk.json").exists()}
     cj = run / "checks" / "checks.json"
     return {"dir": run, "n": int(run.name.split("-")[1]), "arm": arm, "metrics": m, **run_figures(run),
             "exchange_log": m.get("exchange_log") or [], "plugin": plugin,
             "plain": plain_figures({"metrics": m, "exchange_log": m.get("exchange_log") or [], **run_figures(run)}),
-            "outdated": arm == "ambitious" and plugin.get("hash") != current,
-            "subjects": subjects(run, arm), "reviews": reviews,
+            "outdated": arm == "ambitious" and (plugin.get("method") or method_at(plugin.get("commit"))) != current,
+            "subjects": subjects(run, arm), "reviews": reviews, "walks": walks,
             "checks": json.loads(cj.read_text()) if cj.exists() else [],
             "verdict": json.loads((run / "verdict.json").read_text()) if (run / "verdict.json").exists() else None,
             "restatement": restatement(run) if arm == "ambitious" else "",
@@ -1232,25 +1344,34 @@ def load_run(run, arm, current):
 
 
 def collect():
-    """Everything the results page and the site show, read from examples/<model>/<category>/<name>/."""
+    """Everything the results page and the site show, read from examples/autopilot/<model>/<category>/<name>/,
+    with any driven runs of the same example from examples/driven/."""
     specs = {s["slug"]: s for s in load_specs().values()}
-    current = plugin_version()["hash"]
+    current = plugin_version()["method"]
     out = []
-    for ex in sorted(EXAMPLES.glob("*/*/*")):
-        if not ex.is_dir() or ex.relative_to(EXAMPLES).parts[0] == "archive":
-            continue
-        runs = {arm: [load_run(m.parent, arm, current) for m in sorted(ex.glob(f"{arm}/run-*/metrics.json"),
-                                                                       key=lambda m: int(m.parent.name.split("-")[1]))]
+    def arm_runs(root):
+        return {arm: [load_run(m.parent, arm, current) for m in sorted(root.glob(f"{arm}/run-*/metrics.json"),
+                                                                      key=lambda m: int(m.parent.name.split("-")[1]))]
                 for arm in ARMS}
-        if not any(runs.values()):
+    # every example with autopilot runs, driven runs or both; an idea someone only drove still gets a page
+    rels = sorted({d.relative_to(root) for root in (AUTOPILOT, DRIVEN_DIR) for d in root.glob("*/*/*") if d.is_dir()})
+    for rel in rels:
+        ex = AUTOPILOT / rel
+        runs, driven = arm_runs(ex), arm_runs(DRIVEN_DIR / rel)
+        if not any(runs.values()) and not any(driven.values()):
             continue
-        slug = (runs["ambitious"] or runs["not-ambitious"])[0]["metrics"]["slug"]
-        if not (ex / "spec.json").exists() and slug in specs:
-            save_spec(specs[slug], ex.parent.parent.name)
-        spec = json.loads((ex / "spec.json").read_text()) if (ex / "spec.json").exists() else {}
-        out.append({"dir": ex, "model": ex.parent.parent.name, "category": ex.parent.name, "name": ex.name,
+        home = AUTOPILOT if any(runs.values()) else DRIVEN_DIR  # where its spec.json lives
+        first = (runs["ambitious"] or runs["not-ambitious"] or driven["ambitious"] or driven["not-ambitious"])[0]
+        slug = first["metrics"]["slug"]
+        if not (home / rel / "spec.json").exists() and slug in specs:
+            save_spec(specs[slug], rel.parts[0], home)
+        spec = json.loads((home / rel / "spec.json").read_text()) if (home / rel / "spec.json").exists() else {}
+        out.append({"dir": ex, "model": rel.parts[0], "category": rel.parts[1], "name": rel.parts[2],
                     "slug": slug, "spec": spec, "baseline": (runs["not-ambitious"] or [None])[-1],
-                    "runs": runs["ambitious"][::-1], "plugin_now": current})
+                    "runs": runs["ambitious"][::-1], "plugin_now": current,
+                    # runs a person drove (ab.py drive): shown on their own page, never mixed with the autopilot runs
+                    "driven": {"baseline": (driven["not-ambitious"] or [None])[-1], "runs": driven["ambitious"][::-1]}
+                    if any(driven.values()) else None})
     return out
 
 
@@ -1305,12 +1426,13 @@ def results_markdown(data):
         lines.append("")
         for e in (x for x in data if x["model"] == model):
             rel = e["dir"].relative_to(EXAMPLES).as_posix()
+            site = e["dir"].relative_to(AUTOPILOT).as_posix()  # the site keeps <model>/<category>/<name>/
             lines += [f"### {e['slug']}", "", f"> {e['spec'].get('prompt', '')}", ""]
             for r in e["runs"]:
                 v = r["verdict"]
                 if v:
                     lines += [f"**Run {r['n']}:** {RESULT_WORD.get(v['result'], v['result'])}, gate {v['gate']}. {v.get('summary') or ''}", ""]
-            lines += [f"[Files]({rel}/) · [Visual view]({SITE_URL}{rel}/)", ""]
+            lines += [f"[Files]({rel}/) · [Visual view]({SITE_URL}{site}/)", ""]
     return "\n".join(lines)
 
 
@@ -1332,10 +1454,162 @@ def cmd_list(_a):
         print(f"{s['slug']:<24} {s['prompt'][:70]}{state}")
 
 
+# ---------- driven runs: a person types every message, in the same VM ----------
+
+
+
+def session_exchanges(jsonl, total_cost):
+    """[{n, minutes, cost_usd}] per input from the person (a typed message or a question-picker answer), both cumulative at the end of that exchange, as a
+    stand-in run's exchange_log is: minutes since the first message, and the session's real total cost split
+    by the tokens each exchange's API calls used (input, cache and output weighted roughly as billed)."""
+    rows, t0, units, seen, asks = [], None, [], set(), set()
+    for line in Path(jsonl).read_text(encoding="utf-8").splitlines():
+        try:
+            d = json.loads(line)
+        except ValueError:
+            continue
+        ts = _ts(d["timestamp"]) if d.get("timestamp") else None
+        msg = d.get("message") or {}
+        content = msg.get("content")
+        text = content if isinstance(content, str) else " ".join(
+            c.get("text", "") for c in content or [] if isinstance(c, dict) and c.get("type") == "text")
+        # a person's message: origin is missing or human (task notifications carry another kind), and not a local
+        # command like /usage or /exit, which makes no API call
+        typed = (d.get("type") == "user" and not d.get("isMeta") and not d.get("isSidechain") and text.strip()
+                 and (d.get("origin") or {}).get("kind", "human") == "human"
+                 and not text.lstrip().startswith(("<command-name>", "<local-command")))
+        if d.get("type") == "assistant" and isinstance(content, list):
+            asks |= {c.get("id") for c in content if isinstance(c, dict) and c.get("name") == "AskUserQuestion"}
+        # the person answering a question picker is their input too, where a stand-in would have typed it
+        typed = typed or (d.get("type") == "user" and isinstance(content, list) and any(
+            isinstance(c, dict) and c.get("type") == "tool_result" and c.get("tool_use_id") in asks for c in content))
+        if typed and ts:
+            t0 = t0 or ts
+            rows.append({"n": len(rows) + 1, "end": ts})
+            units.append(0.0)
+        elif rows and ts:
+            rows[-1]["end"] = ts
+            u = msg.get("usage") or {}
+            if d.get("type") == "assistant" and u and msg.get("id") not in seen:  # one API call can span several lines
+                seen.add(msg.get("id"))
+                units[-1] += (u.get("input_tokens", 0) + 2.0 * u.get("cache_creation_input_tokens", 0)
+                              + 0.1 * u.get("cache_read_input_tokens", 0) + 5 * u.get("output_tokens", 0))
+    whole, acc, out = sum(units) or 1, 0.0, []
+    for r, u in zip(rows, units):  # cumulative, as a resumed headless session reports it
+        acc += u
+        out.append({"n": r["n"], "minutes": round((r["end"] - t0) / 60, 2), "cost_usd": round(total_cost * acc / whole, 4)})
+    return out
+
+
+def cmd_drive(a):
+    """You are the user: the same fresh VM, model, effort, settings and plugin sharing as a stand-in run, but an
+    interactive Claude Code session in this terminal, so you type the prompt, answer its questions and decide when
+    to push. Everything after (saving the work, the transcript, steps, cost and the site) works as for any run."""
+    spec = select(load_specs(), a.target)[0]
+    arm = a.arm
+    public, _ = fixture_dirs(spec)
+    if public == "missing":
+        sys.exit(f"ab: {spec['slug']} needs its fixture at examples/fixtures/{spec['slug']}/public/")
+    if a.where != "vm":
+        sys.exit("ab: driven runs use the VM only")
+    ensure_vm()
+    env, isolation = load_env()
+    if isolation != "clean-config":
+        sys.exit("ab: drive needs CLAUDE_CODE_OAUTH_TOKEN or ANTHROPIC_API_KEY in bench/.env, as VM runs do (see bench/README.md)")
+    arm_dir = DRIVEN_DIR / a.model / spec["category"] / spec["name"] / arm
+    # an attempt that stopped before its session started left only the prompt file: reuse its folder
+    unfinished = sorted(d for d in arm_dir.glob("run-*") if not (d / "metrics.json").exists()
+                        and {f.name for f in d.iterdir()} <= {"prompt-to-type.txt"})
+    run = unfinished[0] if unfinished else next_run_dir(arm_dir)
+    sid, version = str(uuid.uuid4()), plugin_version()
+    plugin = staged_plugin() if arm == "ambitious" else None
+    args = ["claude", "--model", a.model, "--effort", a.effort, "--settings", "x", "--setting-sources", "project", "--strict-mcp-config"]
+    if plugin:
+        args += ["--plugin-dir", str(plugin)]
+    out = scratch()
+    if public:
+        shutil.copytree(public, out, dirs_exist_ok=True)
+    run.mkdir(parents=True, exist_ok=True)
+    print(f"\nDriving {spec['slug']} · {arm} · {a.model} at {a.effort} effort.\n"
+          f"Type this prompt exactly (it's also in {run.relative_to(REPO)}/prompt-to-type.txt):\n\n    {spec['prompt']}\n")
+    (run / "prompt-to-type.txt").write_text(spec["prompt"] + "\n", encoding="utf-8")
+    if spec.get("mode") == "plan":
+        print("This example is in plan mode: press shift+tab until plan mode is on before you send the prompt.\n")
+    if arm == "ambitious":
+        print(f"Send {ARM} on its own first, then the prompt. Answer its questions as yourself. It runs to step 8 (Lock); exit with /exit after its last reply.\n")
+    else:
+        print("When plain Claude is done, exit with /exit. The bench saves that answer, then reopens the same chat:\n"
+              f"type “{PLAIN_PUSH}” (or what you'd really say to get more), and /exit when it's done.\n")
+    input("Press Enter to boot the VM… ")
+    dirs = {"work": (out, False), "cfg": (config_dir(env), False), "bench": (vm_share(), True)}
+    if plugin:
+        dirs["plugin"] = (plugin, True)
+    started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    pushed_after = None
+    with VM(dirs, label="drive") as vm:
+        def session(flag):
+            argv = in_vm(vm, args + flag, env, plugin)
+            argv.insert(1, "-t")  # a real terminal for the interactive session
+            subprocess.run(argv)
+        t0 = time.monotonic()
+        session(["--session-id", sid])
+        session_file = lambda: next(iter(config_dir(env).glob(f"projects/*/{sid}.jsonl")), None)  # noqa: E731
+        if arm == "not-ambitious" and session_file():
+            pushed_after = len(session_exchanges(session_file(), 0))
+            save_work(out, run / ".plain-first")
+            input(f"\nSaved the plain answer. Press Enter to reopen the chat for the push ({PLAIN_PUSH})… ")
+            session(["--resume", sid])
+        wall_end = time.monotonic()
+        # The session's real total cost: a resumed -p session reports it, and /cost makes no model call
+        res = claude(in_vm(vm, base_args(a.model, a.effort, 1, "x") + ["--resume", sid], env), out, env, "/cost")
+    if not session_file():
+        shutil.rmtree(out, ignore_errors=True)
+        sys.exit("ab: no session was recorded (nothing was sent?)")
+    save_work(out, run / "output")
+    shutil.rmtree(out, ignore_errors=True)
+    if (run / ".plain-first").exists():
+        shutil.copytree(run / ".plain-first", run / "output" / PLAIN_FIRST, dirs_exist_ok=True)
+        shutil.rmtree(run / ".plain-first")
+    tdir = run / "transcript"
+    found = session_file()
+    copy_scrubbed(found, tdir / "session.jsonl", out, env)
+    for sub in (found.with_suffix("") / "subagents").glob("*"):
+        copy_scrubbed(sub, tdir / "session" / "subagents" / sub.name, out, env)
+    (run / "transcript.md").write_text(render_transcript(tdir / "session.jsonl", f"{spec['slug']} · {arm} · driven"), encoding="utf-8")
+    cost = round(res.get("total_cost_usd") or 0, 4)
+    exchanges = session_exchanges(tdir / "session.jsonl", cost)
+    (run / "prompt.md").write_text(f"# {spec['slug']} · {arm} · driven by a person\n\nEvery message is in transcript.md.\n", encoding="utf-8")
+    models = {}
+    for model, u in (res.get("modelUsage") or {}).items():
+        models[model] = {k: v for k, v in u.items() if isinstance(v, (int, float)) and k not in ("contextWindow", "maxOutputTokens")}
+    metrics = {
+        "slug": spec["slug"], "arm": arm, "model": a.model, "effort": a.effort, "isolation": "vm", "driven": True,
+        "environment": f"{VM_BASE} (macOS, Apple paravirtual GPU)", "started": started, "session_id": sid,
+        "exchanges": len(exchanges), "cost_usd": cost, "client_cost_usd": 0,
+        # Wall clock of the whole session, including the person's own reading and typing time
+        "wall_ms": round((wall_end - t0) * 1000), "duration_ms": 0, "num_turns": 0, "errors": [],
+        "permission_denials": [], "by_model": models, "exchange_log": exchanges, "plain_push_after": pushed_after,
+        "plugin": version, "plugin_commit": version["commit"], "claude_version": VM_CLAUDE,
+    }
+    (run / "metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+    txt = subprocess.run([sys.executable, str(METRICS), str(tdir / "session.jsonl")], capture_output=True, text=True).stdout
+    (run / "metrics.txt").write_text(f"cost ${cost} · {metrics['wall_ms'] / 1000:.0f}s · {len(exchanges)} messages typed\n{txt}", encoding="utf-8")
+    if arm == "ambitious":
+        print(f"  steps: {step_check(run)}", flush=True)
+    measure(run)
+    print(f"done {run.relative_to(REPO)} · ${cost} · {metrics['wall_ms'] / 60000:.0f} min. Next: python3 bench/ab.py review {spec['slug']} --model {a.model} --driven")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("list")
+    dp = sub.add_parser("drive", help="drive one arm yourself in an interactive session in the VM")
+    dp.add_argument("target")
+    dp.add_argument("--arm", choices=ARMS, required=True)
+    dp.add_argument("--model", default="claude-opus-5-5")
+    dp.add_argument("--effort", default="medium")
+    dp.add_argument("--where", choices=("vm",), default="vm")
     for name in ("run", "review", "verdict", "report"):
         sp = sub.add_parser(name)
         if name != "report":
@@ -1352,6 +1626,8 @@ def main():
             sp.add_argument("--where", choices=("vm", "docker", "host"), default="vm",
                             help="vm: a throwaway macOS VM with the GPU (default, for results); docker: the older Linux "
                                  "container with software rendering; host: this machine in the sandbox, for debugging only")
+        if name in ("review", "verdict"):
+            sp.add_argument("--driven", action="store_true", help="the runs you drove yourself (ab.py drive), not the stand-in runs")
         if name == "review":
             sp.add_argument("--run", type=int, default=None, help="only this ambitious run (the baseline is always included)")
             sp.add_argument("--seconds", type=int, default=10, help="how long to capture, when the prompt doesn't say")
@@ -1368,7 +1644,7 @@ def main():
             sp.add_argument("--steps", default=None, help="a Markdown file: what each step of the run did, added, found or removed")
             sp.add_argument("--steps-only", action="store_true", help="only add or replace the step summary; keep the verdict as recorded")
     a = p.parse_args()
-    {"list": cmd_list, "run": cmd_run, "review": cmd_review, "verdict": cmd_verdict, "report": cmd_report}[a.cmd](a)
+    {"list": cmd_list, "drive": cmd_drive, "run": cmd_run, "review": cmd_review, "verdict": cmd_verdict, "report": cmd_report}[a.cmd](a)
 
 
 if __name__ == "__main__":

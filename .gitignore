@@ -7,3 +7,4 @@ __pycache__/
 bench/.cache/
 /examples/**/live
 /examples/archive/
+/ideas/

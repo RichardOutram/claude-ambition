@@ -287,6 +287,35 @@ def trio(ex, r):
     return f'<div class="trio">{"".join(c for c in cards if c)}</div>'
 
 
+def walkthrough(ex, r):
+    """The example's fixed click path, one row per step, every version side by side."""
+    b = ex["baseline"]
+    cols = [(b, "baseline", "Baseline"), (b, "pushed", "Plain push"), (r, "first", "First version"), (r, "final", "Final")]
+    cols = [(run, key, name) for run, key, name in cols if run and key in run.get("walks", {})]
+    if not cols:
+        return ""
+    labels = [s["label"] for s in cols[0][0]["walks"][cols[0][1]]["steps"]]
+    phone = cols[0][0]["walks"][cols[0][1]].get("view") == "phone"
+    head_ = "".join(f"<th>{e(name)}</th>" for _, _, name in cols)
+    rows = []
+    for i, label in enumerate(labels):
+        cells = []
+        for run, key, name in cols:
+            steps = run["walks"][key]["steps"]
+            s = steps[i] if i < len(steps) else None
+            if s and s.get("file"):
+                src = f'{run["arm"]}/run-{run["n"]}/review/{key}/walk/{e(s["file"])}'
+                cells.append(f'<td><a href="{src}"><img loading="lazy" src="{src}" alt="{e(name)}: {e(label)}"></a><span class="did">{e(s.get("did", ""))}</span></td>')
+            else:
+                cells.append('<td class="missing"><span>Not in this version</span></td>')
+        step = "Opened" if i == 0 else f"{i} · {label.split(' / ')[0]}"
+        rows.append(f'<tr><th scope="row">{e(step)}</th>{"".join(cells)}</tr>')
+    errs = [f"{name}: {len(run['walks'][key]['errors'])} console errors" for run, key, name in cols if run["walks"][key]["errors"]]
+    return f"""<details class="walk{' walk-phone' if phone else ''}" open><summary>Click-through</summary>
+<p class="hint">The same fixed path clicked on every version{' at phone size' if phone else ''}, with a screenshot after each step. It's set per example in <code>examples/PROMPTS.md</code>, so it shows what's behind the first screen. Where a version has no matching control, the step is skipped.{(' ' + '; '.join(errs) + '.') if errs else ''}</p>
+<div class="walk-scroll"><table><thead><tr><th>Step</th>{head_}</tr></thead><tbody>{"".join(rows)}</tbody></table></div></details>"""
+
+
 def timeline(ex, r):
     """How the run spent its money: turn 1 is the preview and checkpoint, later turns are pushing on."""
     b = ex["baseline"]
@@ -429,7 +458,7 @@ def run_panel(r, repo, ex):
     file_list = "".join(
         f'<li><a href="{run_rel}/output/{e(rel)}" data-file="{run_rel}/output/{e(rel)}" data-kind="{k}">{e(rel)}</a><span>{human(size)}</span></li>'
         for rel, size, k in files) or '<li class="hint">No files. The whole answer is the reply above.</li>'
-    src = f"{repo}/tree/main/examples/{ex['dir'].relative_to(ex['dir'].parents[2]).as_posix()}/{run_rel}"
+    src = f"{repo}/tree/main/examples/{r['dir'].relative_to(r['dir'].parents[5]).as_posix()}"  # <autopilot|driven>/<model>/<category>/<name>/<arm>/run-N
     denials = len(m.get("permission_denials") or [])
     return f"""<div class="stats">
   <div><b>{money(r["cost_usd"])}</b><span>cost</span></div>
@@ -496,6 +525,7 @@ def example_page(ex, root, repo):
   {plugin_line(r, ex)}
   {verdict_banner(r)}
   {trio(ex, r)}
+  {walkthrough(ex, r)}
   {review}
   {steps}
   {progression(r)}
@@ -513,11 +543,22 @@ def example_page(ex, root, repo):
         sel = "true" if i == 0 else "false"
         tabs.append(f'<button role="tab" aria-selected="{sel}" data-tab="{key}" class="{r["arm"]}">{e(label)}</button>')
         panels.append(f'<div role="tabpanel" data-panel="{key}"{"" if i == 0 else " hidden"}>{run_panel(r, repo, ex)}</div>')
-    body = f"""<nav class="crumbs"><a href="{root}index.html">Results</a> / {e(ex["model"])} / {e(ex["category"])}</nav>
+    driven = ex.get("is_driven")
+    lede = ("Driven by a person: someone typed this prompt into Claude Code in the same fresh VM, with the same model, effort and settings as the stand-in runs, "
+            "answered every question themselves and decided when to push. The plain side is plain Claude with no plugin, then the person asking for more; the plugin side is /be-ambitious with the person answering its interview. "
+            "Times include the person's own reading and typing. There's no turn-1 gate, since a person typed it."
+            if driven else
+            "<b>Autopilot:</b> no person drove these runs. Vanilla Claude (the same model, with no plugin) plays the user: it types the prompt, answers any questions, including the plugin's interview, and says “Push it further.” at the checkpoint. "
+            "Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.")
+    other = (('<p class="driven-link"><a href="../index.html">← The autopilot runs</a> (vanilla Claude plays the user)</p>'
+              if ex.get("has_autopilot") else '<p class="driven-link">No autopilot runs of this prompt yet: it has only been driven by a person.</p>') if driven else
+             '<p class="driven-link"><b>Also driven by a person:</b> <a href="driven/index.html">the same prompt with a real user answering →</a></p>' if ex.get("driven") else "")
+    body = f"""<nav class="crumbs"><a href="{root}index.html">Results</a> / {e(ex["model"])} / {e(ex["category"])}{" / driven" if driven else ""}</nav>
 <section class="hero ex">
   <p class="eyebrow">{e(ex["slug"])}</p>
   <h1>“{e(spec.get("prompt", ""))}”</h1>
-  <p class="lede">Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.</p>
+  <p class="lede">{lede}</p>
+  {other}
   <details class="context"><summary>What we look for</summary><p>{e(spec.get("check", ""))}</p></details>
 </section>
 {terminal(ex)}
@@ -563,7 +604,7 @@ def index_page(data, repo):
         v = (r or {}).get("verdict") or {}
         word, tone = RESULT.get(v.get("result"), ("Not reviewed", "muted"))
         if not r:
-            word, tone = "No plugin run yet", "muted"
+            word, tone = ("Driven runs only", "muted") if ex.get("driven") and not b else ("No plugin run yet", "muted")
         gate = badge("Gate " + v["gate"], "good" if v["gate"] == "pass" else "bad") if v.get("gate") else "–"
         base = pushed = "–"
         if b:
@@ -578,7 +619,7 @@ def index_page(data, repo):
             if b:
                 full += f'<span class="sub">{r["cost_usd"] / pc:.1f}× the plain push\'s cost</span>'
             plug = e(r["plugin"].get("commit") or "?") + (" " + badge("outdated", "warn") if r["outdated"] else "")
-        rows.append(f"""<tr><td><a href="{rel}/index.html">{e(ex["slug"])}</a><span class="sub">{e(ex["model"])}</span></td>
+        rows.append(f"""<tr><td><a href="{rel}/index.html">{e(ex["slug"])}</a><span class="sub">{e(ex["model"])}</span>{f'<a class="sub" href="{rel}/driven/index.html">driven by a person →</a>' if ex.get("driven") else ""}</td>
 <td><div class="badges">{badge(word, tone)}{gate if v.get("gate") else ""}</div></td><td class="num">{base}</td><td class="num">{pushed}</td><td class="num">{prev}</td><td class="num">{full}</td><td>{plug}</td></tr>""")
         cards.append(f"""<a class="ex-card" href="{rel}/index.html">
   <div class="ex-visual">{thumb(ex, rel) or f'<blockquote>“{e(ex["spec"].get("prompt", ""))}”</blockquote>'}</div>
@@ -589,6 +630,7 @@ def index_page(data, repo):
   <p class="eyebrow">An open test of the <a href="{repo}">ambition plugin</a> for Claude Code</p>
   <h1>Does <code>/be-ambitious</code> beat the same prompt typed plainly?</h1>
   <p class="lede">Each example is one ordinary request. Plain Claude answers it, then gets “Push it further.” The plugin gets the same prompt and the same words, and runs its seven-step method instead. The plugin wins an example only if its final beats all three plain versions. Every version is on its page.</p>
+  <p class="lede"><b>These are autopilot runs.</b> No person drove them: vanilla Claude, the same model with no plugin, plays the user, typing the prompt, answering the plugin's questions and pushing on. Where a person drove a run themselves, the example links to it as “driven by a person”.</p>
 </section>
 <section id="results"><h2>Results</h2>
 <div class="table-wrap"><table class="results"><thead><tr><th>Example</th><th>Verdict<span class="sub">and turn-1 gate</span></th><th>Baseline<span class="sub">plain answer</span></th><th>Plain push<span class="sub">answer + “Push it further.”</span></th><th>Preview<span class="sub">plugin turn 1</span></th><th>Full run<span class="sub">plugin, all steps</span></th><th>Plugin</th></tr></thead>
@@ -601,10 +643,10 @@ def index_page(data, repo):
 <ol class="steps">
   <li><b>A baseline.</b> The prompt exactly as a user would type it, once per example. In the same chat, plain Claude then gets “Push it further.” (the plain push), which shows what you get by just asking for more.</li>
   <li><b>The same prompt, with the plugin.</b> <code>/be-ambitious</code> gets the same words. Every run works in a fresh throwaway macOS virtual machine with a real browser, the same model, effort and limits, so it can install tools and look at its own work the way Claude can on your machine.</li>
-  <li><b>The gate.</b> Turn 1 must be sent exactly what the baseline was sent: the same system prompt, tools, parameters and message, checked from the transcripts. Then it makes a first version and stops at a checkpoint: stop here, or push on. That first version is a second plain sample, so the gap between it and the baseline shows how much plain runs vary.</li>
+  <li><b>The gate.</b> Turn 1 must be sent exactly what the baseline was sent: the same system prompt, tools, parameters and message, checked from the transcripts. Then it makes a first version and stops at a checkpoint that asks how to push on (the stand-in always says "Push it further."). That first version is a second plain sample, so the gap between it and the baseline shows how much plain runs vary.</li>
   <li><b>Pushing on.</b> A stand-in user (the same model, knowing only the prompt) answers the checkpoint with “Push it further.” and answers any question the way someone who typed that prompt most plausibly would. The plugin then runs its steps one at a time; each step's changes and cost are shown on the example's page.</li>
   <li><b>Our review, not an auto judge.</b> No model grades the results. The harness captures every version the same way, and we read, run and use them side by side, as described under <a href="#kinds">Kinds of example</a>, then record the verdict and why.</li>
-  <li><b>Only the current plugin counts.</b> Each run records the plugin it used. Runs from an older plugin are marked outdated.</li>
+  <li><b>Only the current plugin counts.</b> Each run records the plugin it used. Runs made before the method last changed are marked outdated; changes to the process around it don't count.</li>
 </ol>
 <p class="hint">Code: <a href="{repo}/tree/main/bench">bench/</a> · Raw results: <a href="{repo}/blob/main/examples/RESULTS.md">examples/RESULTS.md</a></p>
 </section>
@@ -623,6 +665,16 @@ def build(data, docs, site_url, repo):
             shutil.rmtree(old)
     for ex in data:
         dest = docs / ex["model"] / ex["category"] / ex["name"]
-        copy_example(ex, dest)
-        (dest / "index.html").write_text(example_page(ex, "../../../", repo), encoding="utf-8")
+        dest.mkdir(parents=True, exist_ok=True)
+        if ex.get("driven") and not ex["runs"] and not ex["baseline"]:  # driven only: no autopilot page to show
+            (dest / "index.html").write_text('<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" '
+                                             'content="0; url=driven/index.html"><a href="driven/index.html">Driven runs</a>',
+                                             encoding="utf-8")
+        else:
+            copy_example(ex, dest)
+            (dest / "index.html").write_text(example_page(ex, "../../../", repo), encoding="utf-8")
+        if ex.get("driven"):  # the runs a person drove get the same page, one folder down
+            dex = {**ex, **ex["driven"], "driven": None, "is_driven": True, "has_autopilot": bool(ex["runs"] or ex["baseline"])}
+            copy_example(dex, dest / "driven")
+            (dest / "driven" / "index.html").write_text(example_page(dex, "../../../../", repo), encoding="utf-8")
     (docs / "index.html").write_text(index_page(data, repo), encoding="utf-8")

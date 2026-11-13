@@ -300,3 +300,16 @@ a.badge { text-decoration: none; }
 
 /* Step summaries: keep step names whole */
 details.steps td:first-child, details.steps th:first-child { min-width: 7.5em; overflow-wrap: normal; word-break: normal; hyphens: none; }
+
+/* Click-through: the same path on every version, one row per step */
+details.walk .walk-scroll { overflow-x: auto; }
+details.walk table { border-collapse: collapse; width: 100%; table-layout: fixed; min-width: 760px; }
+details.walk th, details.walk td { padding: 6px; vertical-align: top; border-top: 1px solid var(--line, #ddd); text-align: left; }
+details.walk thead th { font-size: .85em; }
+details.walk tbody th { width: 9em; font-weight: 500; font-size: .85em; }
+details.walk img { display: block; width: 100%; height: auto; border-radius: 6px; }
+details.walk.walk-phone img { max-width: 220px; margin: 0 auto; }
+details.walk .did { display: block; font-size: .75em; opacity: .7; margin-top: 3px; }
+details.walk td.missing span { display: block; padding: 2em .5em; text-align: center; font-size: .8em; opacity: .6; border: 1px dashed var(--line, #ccc); border-radius: 6px; }
+
+.driven-link { margin-top: .8em; }
