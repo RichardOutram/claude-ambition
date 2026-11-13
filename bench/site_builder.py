@@ -69,7 +69,27 @@ def badge(text, tone):
 
 
 def money(x):
-    return f"${x:.2f}" if x >= 0.995 or x == 0 else f"${x:.3f}".rstrip("0")
+    return f"${x:.2f}" if x >= 0.1 or x == 0 else f"${x:.3f}".rstrip("0")  # cents, unless a step costs under 10¢
+
+
+def plain_split(b):
+    """(answer, whole chat): the baseline's plain answer, and that answer plus its plain push."""
+    k, log = b["metrics"].get("plain_push_after"), b["exchange_log"]
+    whole = (b["cost_usd"], b["minutes"])
+    return ((log[k - 1]["cost_usd"], log[k - 1]["minutes"]) if k and len(log) >= k else whole), whole
+
+
+KINDS = """<section id="kinds" class="method"><h2>Kinds of example</h2>
+<p>The prompts cover different kinds of work, and each prompt names the form of what it wants, so both sides make the same kind of thing. How we judge depends on the kind:</p>
+<ul class="steps">
+  <li><b>Web pages</b> (games, design, education, prototypes, 3D animation). The harness opens every version in a real browser at desktop and phone sizes, records frames over time, checks for console errors and, for looping animations, whether the loop is seamless. We also open each page live and use it. The frames and the live pages are on each example's page.</li>
+  <li><b>Documents</b> (analysis, architecture, marketing, written as Markdown). Every version is rendered on the page in full. We read them through, recompute key figures and check that the sources resolve. When a run leaves a script or check beside the document, we run it too.</li>
+  <li><b>Scripts</b> (development). The pages show each version's main script in full. We run each version on the same test files, including awkward cases and its undo, and compare what it actually did, not what it says it does.</li>
+  <li><b>Plans</b> (planning). The plugin runs in plan mode, so its push ends with a plan presented for approval and nothing is built. We compare the plans as plans: whether someone could act on them, and whether they're right.</li>
+</ul>
+<p>Every example page also has the full session logs for both sides (replayable), the replies and files from each turn, and, for the plugin, what each step changed and what it cost.</p>
+</section>
+"""
 
 
 def bars(rows, fmt):
@@ -138,11 +158,16 @@ def files_of(output):
 
 # ---------- the side-by-side ----------
 
+LOOPING = {"on": True}  # set per example page: the seam check only means something when the prompt asks for a loop
+
+
 def seam_words(v):
     """The loop check in plain words. Figures are the percent of pixels that visibly changed: between the
     last frame and the first, against a typical one-second step. A seamless loop ends where it began."""
     if not v.get("moving"):
         return "still image", "muted"
+    if not LOOPING["on"]:
+        return "moving", "muted"
     s = v.get("seam") or {}
     first, step = s.get("first_vs_last", 0), s.get("median_step") or 0
     if first <= max(0.05, 0.1 * step):
@@ -157,6 +182,11 @@ def lighthouse_of(r, page):
     return None
 
 
+def is_text(page):
+    """A document or a script: read in place rather than captured in a browser."""
+    return page.endswith(".md") or not page.endswith((".html", ".htm"))
+
+
 def doc_bits(r, folder_rel, page):
     """For a document (a plan, an essay): the rendered text to read in place, and its size. Other documents
     the version made beside it are linked with their own size (a plan-mode run can leave near-copies, so
@@ -166,6 +196,10 @@ def doc_bits(r, folder_rel, page):
     docs = sorted(p for p in path.parent.glob("*.md") if p.name != "CLAUDE.md") if path.exists() else []
     words = lambda p: len(p.read_text(encoding="utf-8", errors="replace").split())
     href = f"{run_rel}/{folder_rel}/{e(page)}"
+    if not page.endswith(".md"):  # a script: its code, with its length in lines
+        lines = len(path.read_text(encoding="utf-8", errors="replace").splitlines()) if path.exists() else 0
+        media = f'<div class="md doc-preview" data-md="{href}" data-code></div>'
+        return media, [badge(f"{lines:,} lines" if path.exists() else "missing", "muted")]
     media = f'<div class="md doc-preview" data-md="{href}"></div>'
     facts = [badge(f"{words(path):,} words" if path.exists() else "missing", "muted")]
     base = page.rsplit("/", 1)[0] + "/" if "/" in page else ""
@@ -184,7 +218,7 @@ def subject_card(r, key, cost, minutes):
     run_rel = f"{r['arm']}/run-{r['n']}"
     live = f"{run_rel}/output/{e(page)}"
     money_line = f"{money(cost)} · {minutes:.1f} min" if cost is not None else ""
-    if page.endswith(".md"):
+    if is_text(page):
         media, facts = doc_bits(r, "output", page)
         return f"""<article class="subject {tone}">
   <header><h3><span class="dot {tone}"></span>{e(name)}</h3><span class="cost">{e(money_line)}</span></header>
@@ -312,7 +346,7 @@ def step_progression(r):
         sp = spent.get(n)
         figs = f"{money(sp['cost_usd'])} · {sp['minutes']:.1f} min so far" if sp else ""
         media, facts = "", ""
-        if pg["page"].endswith(".md"):
+        if is_text(pg["page"]):
             media, fl = doc_bits(r, pg["dir"], pg["page"])
             facts = "".join(fl)
         if cap:
@@ -351,8 +385,8 @@ def progression(r):
         spent = log.get(n)
         figs = f"{money(spent['cost_usd'])} · {spent['minutes']:.1f} min so far" if spent else ""
         media, facts = "", ""
-        if pg["page"].endswith(".md"):
-            media, fl = doc_bits(r, pg["dir"], pg["page"])
+        if is_text(t["page"]):
+            media, fl = doc_bits(r, f"turns/turn-{n}", t["page"])
             facts = "".join(fl)
         if cap:
             d = cap["views"].get("desktop", {})
@@ -417,6 +451,9 @@ def plugin_line(r, ex):
     text = f"plugin {p.get('commit') or '?'}" + (" with uncommitted changes" if p.get("dirty") else "")
     if r["outdated"]:
         return f'<div class="banner warn"><b>Outdated.</b> This run used {e(text)}; the plugin has changed since, so it may not reflect what you\'d get today.</div>'
+    if p.get("dirty"):
+        return (f'<p class="hint">Made with the current plugin. The run recorded {e(text)}; those changes were '
+                f'committed afterwards as they were, so the plugin files match.</p>')
     return f'<p class="hint">Made with {e(text)}, the current plugin.</p>'
 
 
@@ -444,6 +481,7 @@ def terminal(ex):
 
 def example_page(ex, root, repo):
     spec = ex["spec"]
+    LOOPING["on"] = "loop" in spec.get("prompt", "").lower()
     sections = []
     for r in ex["runs"]:
         method = ""
@@ -524,7 +562,10 @@ def index_page(data, repo):
         if not r:
             word, tone = "No plugin run yet", "muted"
         gate = badge("Gate " + v["gate"], "good" if v["gate"] == "pass" else "bad") if v.get("gate") else "–"
-        base = f"{money(b['cost_usd'])} · {b['minutes']:.1f} min" if b else "–"
+        base = pushed = "–"
+        if b:
+            (bc, bm), (pc, pm) = plain_split(b)
+            base, pushed = f"{money(bc)} · {bm:.1f} min", f"{money(pc)} · {pm:.1f} min"
         prev = full = plug = "–"
         if r:
             if r["exchange_log"]:
@@ -532,10 +573,10 @@ def index_page(data, repo):
                 prev = f"{money(t1['cost_usd'])} · {t1['minutes']:.1f} min"
             full = f"{money(r['cost_usd'])} · {r['minutes']:.1f} min"
             if b:
-                full += f'<span class="sub">{r["cost_usd"] / b["cost_usd"]:.1f}× the baseline\'s cost</span>'
+                full += f'<span class="sub">{r["cost_usd"] / pc:.1f}× the plain push\'s cost</span>'
             plug = e(r["plugin"].get("commit") or "?") + (" " + badge("outdated", "warn") if r["outdated"] else "")
         rows.append(f"""<tr><td><a href="{rel}/index.html">{e(ex["slug"])}</a><span class="sub">{e(ex["model"])}</span></td>
-<td>{badge(word, tone)}</td><td>{gate}</td><td class="num">{base}</td><td class="num">{prev}</td><td class="num">{full}</td><td>{plug}</td></tr>""")
+<td><div class="badges">{badge(word, tone)}{gate if v.get("gate") else ""}</div></td><td class="num">{base}</td><td class="num">{pushed}</td><td class="num">{prev}</td><td class="num">{full}</td><td>{plug}</td></tr>""")
         cards.append(f"""<a class="ex-card" href="{rel}/index.html">
   <div class="ex-visual">{thumb(ex, rel) or f'<blockquote>“{e(ex["spec"].get("prompt", ""))}”</blockquote>'}</div>
   <div class="ex-body"><p class="eyebrow">{e(ex["category"])}</p><h3>{e(ex["spec"].get("prompt", ex["slug"]))}</h3>
@@ -544,21 +585,22 @@ def index_page(data, repo):
     body = f"""<section class="hero">
   <p class="eyebrow">An open test of the <a href="{repo}">ambition plugin</a> for Claude Code</p>
   <h1>Does <code>/be-ambitious</code> beat the same prompt typed plainly?</h1>
-  <p class="lede">Each example is one ordinary request, run plainly once as the baseline, then through the plugin. The plugin's cheap first version has to match the baseline before it may push on, and the final has to beat it. Every version is live on its page.</p>
+  <p class="lede">Each example is one ordinary request. Plain Claude answers it, then gets “Push it further.” The plugin gets the same prompt and the same words, and runs its seven-step method instead. The plugin wins an example only if its final beats all three plain versions. Every version is on its page.</p>
 </section>
 <section id="results"><h2>Results</h2>
-<div class="table-wrap"><table class="results"><thead><tr><th>Example</th><th>Verdict</th><th>Gate<span class="sub">turn 1 ≥ baseline</span></th><th>Baseline</th><th>Preview<span class="sub">turn 1</span></th><th>Full run</th><th>Plugin</th></tr></thead>
+<div class="table-wrap"><table class="results"><thead><tr><th>Example</th><th>Verdict<span class="sub">and turn-1 gate</span></th><th>Baseline<span class="sub">plain answer</span></th><th>Plain push<span class="sub">answer + “Push it further.”</span></th><th>Preview<span class="sub">plugin turn 1</span></th><th>Full run<span class="sub">plugin, all steps</span></th><th>Plugin</th></tr></thead>
 <tbody>{"".join(rows)}</tbody></table></div>
-<p class="hint">One run per example. These are illustrations of the current plugin, not measurements.</p>
+<p class="hint">One run per example, judged by us. These are illustrations of the plugin, not measurements. The plugin didn't win every example, and its wins cost many times more than asking plainly: <a href="{repo}#what-we-found-so-far-sonnet-55-november-2026">our overall assessment</a>.</p>
 </section>
 <section><h2>Examples</h2><div class="ex-grid">{"".join(cards)}</div></section>
+{KINDS}
 <section id="method" class="method"><h2>How it's tested</h2>
 <ol class="steps">
-  <li><b>A baseline.</b> The prompt exactly as a user would type it, once per example. It's the bar.</li>
-  <li><b>The same prompt, with the plugin.</b> <code>/be-ambitious</code> gets the same words. Both run in a fresh throwaway container with a real browser, the same model and the same limits, so each can look at its own work the way Claude can on your machine.</li>
+  <li><b>A baseline.</b> The prompt exactly as a user would type it, once per example. In the same chat, plain Claude then gets “Push it further.” (the plain push), which shows what you get by just asking for more.</li>
+  <li><b>The same prompt, with the plugin.</b> <code>/be-ambitious</code> gets the same words. Every run works in a fresh throwaway macOS virtual machine with a real browser, the same model, effort and limits, so it can install tools and look at its own work the way Claude can on your machine.</li>
   <li><b>The gate.</b> Turn 1 must be sent exactly what the baseline was sent: the same system prompt, tools, parameters and message, checked from the transcripts. Then it makes a first version and stops at a checkpoint: stop here, or push on. That first version is a second plain sample, so the gap between it and the baseline shows how much plain runs vary.</li>
-  <li><b>Pushing on.</b> The stand-in user always pushes on and otherwise says "use your best judgement", so both sides get the same information.</li>
-  <li><b>Our review, not an auto judge.</b> The harness captures each version the same way: frames across the whole loop, a seam check, console errors, screenshots and Lighthouse. We compare them side by side, open them live, and record the verdict.</li>
+  <li><b>Pushing on.</b> A stand-in user (the same model, knowing only the prompt) answers the checkpoint with “Push it further.” and answers any question the way someone who typed that prompt most plausibly would. The plugin then runs its steps one at a time; each step's changes and cost are shown on the example's page.</li>
+  <li><b>Our review, not an auto judge.</b> No model grades the results. The harness captures every version the same way, and we read, run and use them side by side, as described under <a href="#kinds">Kinds of example</a>, then record the verdict and why.</li>
   <li><b>Only the current plugin counts.</b> Each run records the plugin it used. Runs from an older plugin are marked outdated.</li>
 </ol>
 <p class="hint">Code: <a href="{repo}/tree/main/bench">bench/</a> · Raw results: <a href="{repo}/blob/main/examples/RESULTS.md">examples/RESULTS.md</a></p>

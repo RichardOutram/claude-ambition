@@ -15,7 +15,12 @@
     try {
       const res = await fetch(el.dataset.md);
       if (!res.ok) throw new Error(res.status);
-      renderMarkdown(el, await res.text());
+      const text = await res.text();
+      if (el.hasAttribute("data-code")) {
+        const pre = document.createElement("pre"), code = document.createElement("code");
+        code.textContent = text; pre.appendChild(code); el.replaceChildren(pre); return;
+      }
+      renderMarkdown(el, text);
       // Relative links and images in the file point next to the file, not next to this page.
       const base = new URL(el.dataset.md, location.href);
       el.querySelectorAll("a[href], img[src]").forEach((n) => {

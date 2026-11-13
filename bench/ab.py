@@ -623,9 +623,13 @@ def html_pages(output, limit=4):
     return pages[:limit]
 
 
+CODE_SUFFIXES = {".py", ".js", ".ts", ".sh", ".rb", ".go"}
+
+
 def work_pages(output, limit=4):
     """The work to compare: its web pages, or, for a deliverable with none (a plan, an essay), its Markdown
-    documents, shortest name first so the main document leads. CLAUDE.md notes and working copies are left out."""
+    documents, or, failing those, its main script; shortest name first so the main one leads. CLAUDE.md notes,
+    tests and working copies are left out."""
     pages = html_pages(output, limit)
     if pages:
         return pages
@@ -633,6 +637,10 @@ def work_pages(output, limit=4):
         return (rel.name != "CLAUDE.md" and not SKIP_DIRS & set(rel.parts)
                 and (rel.parts[0] not in (".ambition", ".plain") or rel.parts[1:2] in (("first",), ("direct",))))
     docs = [p for p in output.rglob("*.md") if keep(p.relative_to(output))]
+    if not docs:
+        # A script deliverable: its main code file, not the tests or check scripts made around it.
+        docs = [p for p in output.rglob("*") if p.suffix in CODE_SUFFIXES and keep(p.relative_to(output))
+                and not p.name.startswith(("test_", "check", "acceptance")) and not p.stem.endswith(("_test", ".test"))]
     docs.sort(key=lambda p: (p.relative_to(output).parts[0] in (".ambition", ".plain"), len(p.relative_to(output).parts),
                              len(p.stem), p.name))
     return docs[:limit]
