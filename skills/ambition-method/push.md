@@ -16,7 +16,7 @@ You do the work yourself, in this conversation. Don't hand it to subagents; the 
 - **No look, no claim.** Whenever you change something people look at, read or use, perceive the result the way they will: render it at the sizes they use and look, read it through, use it. If you can't, get that access first (install a browser or a renderer). If you still can't, say the genre bar is unchecked and leave how it looks, reads or feels as the first version had it.
 - **Look efficiently.** Every image you look at stays in this conversation and is re-read on every later turn. Look at a contact sheet (many frames or sizes in one image) rather than one image per frame, and take at most about three render-and-look rounds in a step. Keep working files (screenshots, scripts) under `.ambition/`, not in the deliverable.
 - **Never trade the genre for a number.** A change must make the work better for the goal without making it worse as this kind of thing. If it does, undo it.
-- **Reviewing.** If the user asked to review each step, end the step with its report and wait for their notes before you copy it. Their notes are steering, not answers.
+- **Reviewing.** If the user chose to push on step by step, or asks at any point to review each step, make sure `.ambition/review` exists. Then end every step with its report and stop before you copy it. Their reply is steering, not answers: act on it, then copy.
 - Respect the session's permission mode and the user's rules. Ambition never authorises skipping a confirmation the user requires.
 
 ## Step 2 · Altitude

@@ -7,9 +7,12 @@ it's needed, so the first turn is exactly what Claude makes from a plain prompt.
           Later in a session, /be-ambitious on its own pushes the work already done.
           The first /ambition step in a session gets the method attached.
   stop    When the armed session's first turn ends, continue it once: save the result as the first version
-          and ask whether to stop there or push it further, with the method and step 2's instruction attached.
+          and ask how to push it further (step by step, or straight through), with the method and step 2's
+          instruction attached.
           After that, each time Claude stops with the current step copied to .ambition/steps/<n>/, continue
-          with the next step's instruction and nothing else, like a person typing the next command.
+          with the next step's instruction and nothing else, like a person typing the next command. Step by
+          step, Claude holds each copy until the user has replied to the step report (`.ambition/review`
+          marks that mode), so the person steers between steps.
 Everything else passes straight through. Instructions travel as hook text, never as file paths: reading
 plugin files from a project needs permission.
 """
@@ -106,7 +109,9 @@ def step_text(n, session, started):
     if n < 8:
         parts.append(f"When this step is finished, copy the deliverable as it stands to `.ambition/steps/{n}/` (even "
                      "if this step didn't change it, and never edit that copy), end with a short step report (did / "
-                     "found / changed course), and stop. The next instruction arrives then.")
+                     "found / changed course), and stop. The next instruction arrives then. If `.ambition/review` "
+                     "exists, the user reviews each step: end with the step report and stop without copying. Their "
+                     "reply is notes to steer by or a go-ahead; act on it, then copy and stop.")
     else:
         parts.append(f"Run started: {started}\nMetrics command for the end: python3 {METRICS} {session} --since {started}")
     return "\n\n".join(parts) + "\n\n## Every step\n\n" + every
@@ -140,10 +145,20 @@ def step_done(cwd, n, started):
 SKIP_WALK = {"node_modules", ".git", ".venv", "venv", "__pycache__", "dist", "build"}
 
 
+def reviewing(cwd):
+    """The user chose to push on step by step: Claude marks that with `.ambition/review`."""
+    root = os.environ.get("CLAUDE_PROJECT_DIR") or cwd or os.getcwd()
+    return any(os.path.exists(p) for p in ambition_paths(root, "review"))
+
+
 def step_folders(root, n, depth=3):
-    """.ambition/steps/<n>/ in the project folder, then in its subfolders up to `depth` levels down: when the
+    return ambition_paths(root, "steps", str(n), depth=depth)
+
+
+def ambition_paths(root, *tail, depth=3):
+    """.ambition/<tail> in the project folder, then in its subfolders up to `depth` levels down: when the
     deliverable lives in a subfolder, Claude may keep .ambition/ beside it (a run stalled at step 2 that way)."""
-    yield os.path.join(root, ".ambition", "steps", str(n))
+    yield os.path.join(root, ".ambition", *tail)
     level = [root]
     for _ in range(depth):
         nxt = []
@@ -156,7 +171,7 @@ def step_folders(root, n, depth=3):
                 path = os.path.join(d, name)
                 if name.startswith(".") or name in SKIP_WALK or not os.path.isdir(path) or os.path.islink(path):
                     continue
-                yield os.path.join(path, ".ambition", "steps", str(n))
+                yield os.path.join(path, ".ambition", *tail)
                 nxt.append(path)
         level = nxt
 
@@ -168,11 +183,14 @@ def checkpoint(session, started):
         "doesn't cover `.ambition/`, add it. Never edit that folder again.\n"
         "2. Unless the task was trivial (a typo, a rename, a one-line answer), end with one question, using "
         "AskUserQuestion when it's available:\n"
-        "   - Stop here: keep it as it is.\n"
-        "   - Push it further: name the two or three improvements you'd go after, and roughly what that costs "
-        "against what's been spent so far.\n"
-        "   Ask nothing else. Keep this brief: your reply about the work is already above.\n"
-        "3. If they push on, do the first step below, and only that step.\n\n" + push_text(session, started)
+        "   - Push it further, step by step: they see each step's result and reply with notes or a go-ahead "
+        "before the next one.\n"
+        "   - Push it further: the steps run straight through.\n"
+        "   Above the question, name the two or three improvements you'd go after, and roughly what pushing on "
+        "costs against what's been spent so far. Ask nothing else. Keep this brief: your reply about the work is "
+        "already above.\n"
+        "3. If they choose step by step, create an empty file `.ambition/review`. Then do the first step below, "
+        "and only that step. If they'd rather stop, stop.\n\n" + push_text(session, started)
     )
 
 
@@ -190,7 +208,7 @@ def on_prompt(data):
         with open(mark(session, "armed"), "w") as f:
             f.write(now())
         reason = ("Ambition is on for your next message. Send the task as you normally would: Claude does it "
-                  "exactly as it would without the plugin, then asks whether to push it further.")
+                  "exactly as it would without the plugin, then asks how to push it further.")
         if task:
             reason = ("Ambition is on for your next message. Send the task on its own, so Claude sees exactly "
                       "what it would without the plugin:\n\n" + task)
@@ -210,7 +228,7 @@ def on_stop(data):
         os.remove(mark(session, "armed"))  # once per arming
         ts = last_prompt(data.get("transcript_path"))[1]
         started = ts[:19] + "Z" if ts else now()
-        begin_push(session, started)  # harmless if they stop here: nothing happens until steps/2 appears
+        begin_push(session, started)  # harmless if they stop: nothing happens until steps/2 appears
         return {"decision": "block", "reason": checkpoint(session, started)}
     if not os.path.exists(mark(session, "step")):
         return None
@@ -226,7 +244,8 @@ def on_stop(data):
             f.write(f"{n + 1} {started}")
         return {"decision": "block", "reason": step_text(n + 1, session, started)}
     nudged = mark(session, f"nudged-{n}")
-    if n > 2 and not os.path.exists(nudged):  # once per step; Altitude stops for answers by design
+    # once per step; Altitude stops for answers by design, and step by step every step waits for the user
+    if n > 2 and not os.path.exists(nudged) and not reviewing(cwd):
         open(nudged, "w").close()
         return {"decision": "block", "reason": (
             f"Step {n} has no copy in `.ambition/steps/{n}/` yet. If the step is finished, copy the deliverable "
