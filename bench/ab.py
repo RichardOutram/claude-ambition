@@ -1170,12 +1170,22 @@ def cmd_verdict(a):
         if check is None:
             sys.exit("ab: no turn1-input.json for this run; pass --gate after checking turn 1's input by hand")
         gate = "pass" if check["identical"] else "fail"
+    if a.steps_only:  # add or replace the step summary without touching the recorded verdict
+        if not a.steps:
+            sys.exit("ab: --steps-only needs --steps")
+        shutil.copy2(a.steps, run / "steps.md")
+        print(f"wrote {(run / 'steps.md').relative_to(REPO)}")
+        return
+    if not a.result or not a.note:
+        sys.exit("ab: verdict needs --result and --note")
     verdict = {"gate": gate, "result": a.result, "preview_worth": a.preview, "push_worth": a.push,
                "summary": a.note, "decided_by": a.by, "date": time.strftime("%Y-%m-%d"),
                "plugin": json.loads((run / "metrics.json").read_text()).get("plugin")}
     (run / "verdict.json").write_text(json.dumps(verdict, indent=2), encoding="utf-8")
     if a.notes:
         shutil.copy2(a.notes, run / "review.md")
+    if a.steps:
+        shutil.copy2(a.steps, run / "steps.md")
     print(f"wrote {(run / 'verdict.json').relative_to(REPO)}")
 
 
@@ -1349,12 +1359,14 @@ def main():
         if name == "verdict":
             sp.add_argument("--run", type=int, required=True)
             sp.add_argument("--gate", choices=("pass", "fail"), help="was turn 1 sent exactly what the baseline was? Defaults to the run's turn1-input.json")
-            sp.add_argument("--result", choices=("win", "tie", "loss"), required=True, help="the final against the baseline")
+            sp.add_argument("--result", choices=("win", "tie", "loss"), help="the final against the baseline (required unless --steps-only)")
             sp.add_argument("--preview", choices=("yes", "no", "na"), default="na", help="was the turn-1 preview worth its cost?")
             sp.add_argument("--push", choices=("yes", "no", "na"), default="na", help="was pushing on worth its extra cost?")
-            sp.add_argument("--note", required=True, help="one or two sentences: why")
+            sp.add_argument("--note", help="one or two sentences: why (required unless --steps-only)")
             sp.add_argument("--notes", default=None, help="a Markdown file with the full side-by-side review")
             sp.add_argument("--by", default="user", help="who made the call")
+            sp.add_argument("--steps", default=None, help="a Markdown file: what each step of the run did, added, found or removed")
+            sp.add_argument("--steps-only", action="store_true", help="only add or replace the step summary; keep the verdict as recorded")
     a = p.parse_args()
     {"list": cmd_list, "run": cmd_run, "review": cmd_review, "verdict": cmd_verdict, "report": cmd_report}[a.cmd](a)
 

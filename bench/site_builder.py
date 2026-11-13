@@ -15,7 +15,7 @@ SUBJECT = {"baseline": ("Baseline", "The prompt exactly as typed, no plugin.", "
            "final": ("Final", "/be-ambitious after pushing on.", "ambitious")}
 RESULT = {"win": ("Beats the baseline", "good"), "tie": ("Ties the baseline", "warn"), "loss": ("Loses to the baseline", "bad")}
 SKIP = {".git", "node_modules", ".venv", "__pycache__", ".claude", ".cache", "_tools"}
-KEEP = ("result.md", "prompt.md", "metrics.json", "metrics.txt", "verdict.json", "review.md")
+KEEP = ("result.md", "prompt.md", "metrics.json", "metrics.txt", "verdict.json", "review.md", "steps.md")
 TEXT_LIMIT = 400_000
 IMAGE = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
 BINARY = {".pdf", ".zip", ".gz", ".tar", ".db", ".sqlite", ".woff", ".woff2", ".ttf", ".mp4", ".mov", ".wav", ".mp3"}
@@ -489,12 +489,15 @@ def example_page(ex, root, repo):
             method = f'<details><summary>How the run restated the task</summary><pre class="restate">{e(r["restatement"])}</pre></details>'
         review = f'<details data-md-on-open open><summary>Our side-by-side review</summary><div class="md" data-md="ambitious/run-{r["n"]}/review.md"></div></details>' \
             if (r["dir"] / "review.md").exists() else ""
+        steps = (f'<details class="steps" data-md-on-open open><summary>What each step did</summary><p class="hint">Our summary of each step from the run\'s own reports and the work it left after each step: what it did, what it added, what it found and what it removed.</p>'
+                 f'<div class="md" data-md="ambitious/run-{r["n"]}/steps.md"></div></details>') if (r["dir"] / "steps.md").exists() else ""
         sections.append(f"""<section class="run-block" id="run-{r['n']}">
   <h2>/be-ambitious, run {r["n"]}</h2>
   {plugin_line(r, ex)}
   {verdict_banner(r)}
   {trio(ex, r)}
   {review}
+  {steps}
   {progression(r)}
   <h3 class="label">Where the time and money went</h3>
   {timeline(ex, r)}
