@@ -85,7 +85,7 @@ examples/<model>/<category>/<name>/
     review.md          our side-by-side review, if written
 ```
 
-Saved work leaves out dependencies (including Python virtualenvs), screenshot and tooling folders, and images inside `.ambition/` (where the run keeps its looks at the work), for every arm alike. Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced, tokens are redacted, and images the run looked at are replaced by a note.
+Saved work leaves out dependencies (including Python virtualenvs), screenshot and tooling folders, and images inside `.ambition/` (where the run keeps its looks at the work), for every arm alike. Files over 10 MB, such as raw data a run downloaded to test against, are left out and listed in `NOT-SAVED.txt`. Before saving, transcripts are scrubbed: your home path becomes `~`, the workspace path becomes `<workspace>`, email addresses are replaced, tokens are redacted, and images the run looked at are replaced by a note.
 
 ## Fixtures
 

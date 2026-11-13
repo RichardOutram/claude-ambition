@@ -820,6 +820,27 @@ def save_work(src, dest):
         venv = {n for n in names if (Path(d) / n / "pyvenv.cfg").exists()}  # virtualenvs are dependencies too
         return venv | {n for n in names if n in SKIP_DIRS or n in WORK_SKIP or working and Path(n).suffix.lower() in IMAGE_EXT}
     shutil.copytree(src, dest, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True, ignore=ignore)
+    prune_large(dest)
+
+
+MAX_SAVED_BYTES = 10_000_000
+NOT_SAVED = "NOT-SAVED.txt"
+
+
+def prune_large(dest):
+    """Leaves out files over 10 MB, such as raw data a run downloaded to test against, and lists them in
+    NOT-SAVED.txt so readers know what the run had. The work itself is never that large."""
+    dest = Path(dest)
+    big = sorted(p for p in dest.rglob("*") if p.is_file() and not p.is_symlink() and p.stat().st_size > MAX_SAVED_BYTES)
+    if not big:
+        return
+    lines = [f"{p.relative_to(dest).as_posix()}  {p.stat().st_size / 1e6:.1f} MB" for p in big]
+    for p in big:
+        p.unlink()
+    note = dest / NOT_SAVED
+    old = note.read_text().splitlines()[2:] if note.exists() else []
+    note.write_text("Files the run had but that aren't saved here, because each is over 10 MB:\n\n"
+                    + "\n".join(sorted(set(old + lines))) + "\n")
 
 
 def save_plans(env, run, n, since):
