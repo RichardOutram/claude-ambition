@@ -9,6 +9,32 @@ speed up our test suite
 
 Inspired by Felix Rieseberg's essay **[How to be more ambitious: a tutorial for humans with models](https://felixrieseberg.com/how-to-be-more-ambitious-a-tutorial-for-humans-with-models/)**. Read it first. This repo turns its ideas into skills, commands and two small hooks. It is an independent project, not affiliated with or endorsed by Anthropic or the author.
 
+## FAQ
+
+**Is this for everything?** No. It pays off where "done" is open-ended and a better answer can be checked: analysis, teaching material, plans, design documents, visual and interactive work. It's poor value for small, well-specified tasks where Claude's plain answer is already right, like a utility script or a simple page. In our tests, a photo-renaming script cost 21× as much and came out no better. Skip it too when you need something short: pushed documents grow, often 3–7×.
+
+**Does it improve results?** Nearly always. In our [10 test tasks](#what-we-found-so-far-sonnet-55-november-2026), the final beat the plain answer and plain Claude's own "Push it further." in 9: 7 clearly and 2 slightly. One was no better. Three of the wins came on a second attempt after a fix, and each result is a single run, so treat this as strong evidence, not a guarantee. The gain comes mostly from **problems it finds**, not features it adds: a wrong assumption tested against real data, a bug found by running the work, a harm found by its red team.
+
+**Is it more expensive?** Yes. A full push cost 4–27× the plain push in our tests: typically $2–4 and 12–70 minutes on Sonnet 5.5, against $0.15–0.45 and usually a few minutes. You only pay that if you choose to push: the first answer costs exactly what plain Claude costs, and the plugin then asks before spending more. The [results site](https://richardoutram.github.io/claude-ambition/) shows the cost and time of every step.
+
+**Can the steps be used on their own?** Yes. Each move is its own command, and you can drop any of them into any session at any time: run `/ambition-e-judge` on work you don't trust yet, or `/ambition-c-challenge` on a plan before you commit to it. You can also let Claude answer the normal way, look at the result, and then type `/be-ambitious` to push that plain answer through the whole method. Or start with `/ambition <task>` and follow each `Next →` pointer yourself.
+
+## What each step adds
+
+We summarised what every step did in each of [10 test runs](https://richardoutram.github.io/claude-ambition/) (each example page has its own step-by-step table). Across all ten:
+
+| Step | What it reliably added |
+|---|---|
+| **Altitude** (the questions) | Turned a generic task into a specific one: who it's for, what "done" means, how it'll be proved. In 6 of 10 runs it rebuilt the work right away around the answers. |
+| **Depth** | The biggest jump in substance. It worked from raw material instead of memory (a real Wikipedia traffic trace, 400 real photos, official pricing pages, Ofgem figures) and built its own tools. The work typically grew 2–3×. |
+| **Challenge** | **The most consistent value: every run found at least one wrong assumption that mattered.** It caught a temporary VAT cut treated as permanent, a cache hit rate the design relied on that real traffic didn't support, a buy button below the fold on common laptops, a flag that could corrupt a Photos library, a game that crashed where it would be hosted, a plan that never checked profit, and a Google Play testing rule that would have delayed launch. |
+| **Range** | Ideas from other fields that nobody asked for: an "explain it back" card from learning science, a production calendar from manufacturing, a facilitator's session log from user research, a shareable emoji grid from Wordle. Its red team found harms: a strobe flash, a home location recoverable from 3 rides, typed text that ran as code, missing auto-renewal and product-safety disclosures. |
+| **Judge** | **Caught its own regressions:** contrast made worse, sections dropped in a rewrite, a 4× slowdown, a script output it had invented, three source claims it had overstated. Without this step they would have shipped. |
+| **Stretch** | Mixed. It met most targets (5× faster, the answer in one click, no scrolling to decide) and missed one, which it honestly reverted. It sometimes found real bugs, but it's also where documents grow most. The weakest step for value per cost. |
+| **Lock** | Left re-runnable checks, a `CLAUDE.md` note and often a slash command in the project, so the next change can be verified cheaply. |
+
+The plain "Push it further." adds features too, but it never found that it was wrong. Challenge and Judge are where the method most clearly earns its cost.
+
 ## Install
 
 ```
@@ -114,6 +140,8 @@ To analyse any past session: `python3 scripts/ambition-metrics.py <session-id> [
 
 - **[Results site](https://richardoutram.github.io/claude-ambition/):** the baseline, the plain push, the plugin's first version and its final side by side (pages live, documents rendered in full), what each step changed and cost, both sessions replayable, and our review.
 - **[Results table](examples/RESULTS.md):** per example, the verdict, the gate, and the cost and time of the baseline, the plain push, the preview and the full run.
+
+- **Run it yourself:** the bench is in the repo. [`bench/README.md`](bench/README.md) covers setup (a macOS VM and a Claude token), running an example, reviewing it and rebuilding the site. To test your own prompts, add them to `examples/PROMPTS.md`.
 
 Only runs of the current plugin are kept as examples.
 
