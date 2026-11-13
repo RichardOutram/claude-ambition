@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Neon Solar Implosion</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;background:#02000a;overflow:hidden;touch-action:none}
+  .live,.live body{cursor:none}
+  canvas{display:block}
+  #hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);font:12px/1 ui-monospace,Menlo,monospace;
+    letter-spacing:.3em;color:#bcd0ff;opacity:.92;text-shadow:0 0 6px #000,0 0 14px #000;text-transform:uppercase;pointer-events:none;mix-blend-mode:screen;transition:opacity 2s}
+  #bar{position:fixed;left:0;bottom:0;height:2px;background:linear-gradient(90deg,#0ff,#f0f,#ff0);width:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="hint">move to bend the orbits · click to send a shockwave</div>
+<div id="bar"></div>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+"three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+const fail=msg=>{document.body.insertAdjacentHTML('beforeend',`<div style="position:fixed;inset:0;display:grid;place-items:center;color:#9af;font:14px/1.8 ui-monospace,Menlo,monospace;letter-spacing:.15em;text-align:center;padding:24px">${msg}</div>`);document.documentElement.classList.remove('live');document.getElementById('hint')?.remove();};
+let THREE,EffectComposer,RenderPass,UnrealBloomPass,ShaderPass,OutputPass;
+try{
+  THREE=await import('three');
+  ({EffectComposer}=await import('three/addons/postprocessing/EffectComposer.js'));
+  ({RenderPass}=await import('three/addons/postprocessing/RenderPass.js'));
+  ({UnrealBloomPass}=await import('three/addons/postprocessing/UnrealBloomPass.js'));
+  ({ShaderPass}=await import('three/addons/postprocessing/ShaderPass.js'));
+  ({OutputPass}=await import('three/addons/postprocessing/OutputPass.js'));
+}catch(e){fail('Could not load three.js from the network.<br>Check your connection and reload.');throw e;}
+
+const LOOP = 10;          // seconds
+const DET  = 0.84;        // loop phase of the detonation
+const WAVE = 57;          // shockwave radius reached by the end of the loop
+const T0   = 8.7;         // page opens just after the detonation
+const STILL = new URLSearchParams(location.search).has('still'); // test mode: no pointer, no adaptive quality
+const TAU = Math.PI*2;
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches; // gentler flash, no shake or zoom punch
+if(matchMedia('(pointer:coarse)').matches) document.getElementById('hint').textContent='touch to bend the orbits · tap for a shockwave';
+const ss=(a,b,x)=>{x=Math.min(1,Math.max(0,(x-a)/(b-a)));return x*x*(3-2*x);};
+
+const dpr0 = Math.min(devicePixelRatio,2);
+const mobile = /Mobi|Android/i.test(navigator.userAgent);
+let Q = mobile ? 0.5 : (innerWidth*innerHeight*dpr0*dpr0 > 8e6 ? 0.75 : 1);
+const qParam=+new URLSearchParams(location.search).get('q'); if(qParam>0) Q=qParam; // test/tuning override
+
+let renderer;
+try{renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'});}
+catch(e){fail('WebGL is not available in this browser.');throw e;}
+document.documentElement.classList.add('live');
+renderer.setPixelRatio(dpr0);
+renderer.setSize(innerWidth,innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02000a);
+const camera = new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,500);
+
+const HSV = `vec3 hsv(float h,float s,float v){vec3 k=clamp(abs(fract(h+vec3(0.,2./3.,1./3.))*6.-3.)-1.,0.,1.);return v*mix(vec3(1.),k,s);}`;
+
+// ---------- particle generation ----------
+const items=[]; // [tilt, lx,ly,lz, R,a0,n,size, r,g,b]
+const rnd=(a=1)=>Math.random()*a, gauss=()=>(Math.random()+Math.random()+Math.random()-1.5)/1.5;
+const c=new THREE.Color();
+function add(R,a0,n,size,lx,ly,lz,hue,sat=1,l=0.6,tilt=0){
+  if(Q<1){ if(Math.random()>Q) return; }
+  const reps=Q>1?Math.floor(Q)+(Math.random()<Q-Math.floor(Q)?1:0):1;
+  for(let rr=0;rr<reps;rr++){
+    const j=rr?.05:0; // extra copies are slightly scattered so they add density, not duplicates
+    c.setHSL(((hue%1)+1)%1,sat,l);
+    items.push([tilt,lx+gauss()*j,ly+gauss()*j,lz+gauss()*j,R,a0+gauss()*j*.05,n,size,c.r,c.g,c.b]);
+  }
+}
+const sph=(r)=>{const th=rnd(TAU),ph=Math.acos(2*rnd()-1);return [r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),r*Math.sin(ph)*Math.sin(th)];};
+for(let i=0;i<14000;i++){const r=2.2*Math.cbrt(rnd())*(0.6+0.4*rnd());const [x,y,z]=sph(r);
+  add(0,0,0,1.2+rnd(2),x,y,z,0.02+rnd(0.1),1,0.55+rnd(0.2));}
+for(let i=0;i<6000;i++){const r=2.4+Math.pow(rnd(),3)*3;const [x,y,z]=sph(r);
+  add(0,0,0,0.8+rnd(1.2),x,y,z,0.95+rnd(0.1),1,0.5);}
+const planets=[[5,7,.35,.55],[7.5,5,.55,.85],[10.5,4,.7,.5],[14,3,.5,.08],[19,2,1.2,.12],[24,2,1.0,.62],[29,1,.8,.5],[34,1,.8,.75]];
+planets.forEach(([R,n,s,h],pi)=>{
+  const a0=rnd(TAU), tilt=(rnd()-.5)*0.25;
+  for(let i=0;i<1800+R*60;i++) add(R,rnd(TAU),0,0.5+rnd(0.5),gauss()*.06,gauss()*.06,gauss()*.06,h,0.9,0.35,tilt);
+  for(let i=0;i<1600;i++){const [x,y,z]=sph(s*Math.cbrt(rnd()));add(R,a0,n,1+rnd(2),x,y,z,h+rnd(.08),1,0.55+rnd(.25),tilt);}
+  for(let i=0;i<1500;i++){const lag=Math.pow(rnd(),1.7)*0.9/(R*0.12+1);
+    add(R,a0-lag,n,0.6+rnd(1),gauss()*s*.35,gauss()*s*.35,gauss()*s*.35,h+lag*0.3,1,0.5,tilt);}
+  if(pi===4||pi===1){for(let i=0;i<2500;i++){const a=rnd(TAU),rr=s*(1.5+rnd(1));
+    add(R,a0,n,0.8+rnd(1),Math.cos(a)*rr,gauss()*.03,Math.sin(a)*rr,h+0.1,0.8,0.65,tilt);}}
+});
+for(let i=0;i<9000;i++){const R=16+rnd(1.8)+gauss()*.3,n=2+Math.floor(rnd(2));
+  add(R,rnd(TAU),n,0.6+rnd(1),gauss()*.2,gauss()*.25,gauss()*.2,0.1+rnd(0.15),0.7,0.55,0);}
+for(let i=0;i<10000;i++){const R=8+rnd(34),n=1+Math.floor(rnd(3));
+  add(R,rnd(TAU),n,0.4+rnd(0.7),gauss()*.4,gauss()*3,gauss()*.4,0.5+rnd(0.5),0.9,0.45,0);}
+
+// shuffle so that draw-range reduction thins every layer evenly
+for(let i=items.length-1;i>0;i--){const j=(Math.random()*(i+1))|0;[items[i],items[j]]=[items[j],items[i]];}
+const N=items.length;
+window.__neon={particles:N,quality:Q};
+const A_tilt=new Float32Array(N*3),A_loc=new Float32Array(N*3),A_par=new Float32Array(N*4),A_col=new Float32Array(N*3);
+items.forEach((it,i)=>{
+  A_tilt[i*3]=it[0]; A_loc.set(it.slice(1,4),i*3); A_par.set(it.slice(4,8),i*4); A_col.set(it.slice(8,11),i*3);
+});
+const geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.BufferAttribute(A_tilt,3)); // x = orbit tilt
+geo.setAttribute('aLoc',new THREE.BufferAttribute(A_loc,3));
+geo.setAttribute('aPar',new THREE.BufferAttribute(A_par,4));
+geo.setAttribute('aCol',new THREE.BufferAttribute(A_col,3));
+geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(),200);
+
+const mat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  uniforms:{uP:{value:0},uMouse:{value:new THREE.Vector3(999,0,999)},uWell:{value:0},
+            uClickPos:{value:new THREE.Vector3()},uClickT:{value:99},uDim:{value:1},uScale:{value:innerHeight*dpr0}},
+  vertexShader:`
+    attribute vec3 aLoc; attribute vec4 aPar; attribute vec3 aCol;
+    uniform float uP,uScale,uWell,uClickT,uDim; uniform vec3 uMouse,uClickPos;
+    varying vec3 vCol;
+    const float TAU=6.28318530718, DET=${DET.toFixed(3)}, WAVE=${WAVE.toFixed(1)};
+    float h1(float n){return fract(sin(n*91.345)*47453.5453);}
+    mat2 rot(float a){float c=cos(a),s=sin(a);return mat2(c,-s,s,c);}
+    ${HSV}
+    void main(){
+      float p=uP, R=aPar.x;
+      float a=aPar.y+TAU*aPar.z*p;               // integer revolutions per loop -> seamless
+      float tilt=position.x;
+      vec3 w=vec3(cos(a)*R, sin(a)*R*tilt, sin(a)*R)+aLoc;
+      w*=1.+.06*sin(TAU*p*2.+R);
+      float rho=length(w);
+      float seed=h1(aPar.y*17.+aLoc.x*31.+aLoc.z*7.+R);
+
+      // ANTICIPATION: gravity-accelerated inward spiral (outer rings lag slightly)
+      float inb=clamp(pow(smoothstep(.45,DET,p),1.8)*(1.3+seed*.2-R*.005),0.,1.);
+      // FOLLOW-THROUGH: a shock front releases each particle when it arrives, with an overshoot bounce
+      float F=max(p-DET,0.)/(1.-DET)*WAVE;
+      float s=(F-rho)/6.;
+      float g;
+      if(p<DET) g=1.-.985*inb;
+      else g=(s<0.)?.015:1.-.985*exp(-2.5*s)*cos(3.5*s);
+      g=mix(g,1.,smoothstep(.96,1.,p));          // exact seam
+      float cc=clamp((1.-g)/.985,0.,1.);          // 0 = formed, 1 = in the singularity
+      w.xz=rot(cc*(2.5+seed*3.5))*w.xz;           // twist in, untwist out
+      w.y*=1.-.7*cc;                              // flatten into an accretion disc
+      w*=g;
+
+      // POINTER GRAVITY WELL: swirl about the pointer, then fall toward it
+      vec3 d=uMouse-w;
+      float inf=uWell*exp(-dot(d,d)/36.);
+      vec3 r=w-uMouse; r.xz=rot(inf*1.6)*r.xz; w=uMouse+r;
+      d=uMouse-w; w+=d*inf*.55;
+      // CLICK SHOCKWAVE
+      vec3 e=w-uClickPos; float ed=length(e)+1e-3;
+      float ph=ed-18.*uClickT;
+      float cw=exp(-ph*ph/5.)*exp(-uClickT*1.5);
+      w+=e/ed*cw*3.5;
+
+      vec4 mv=modelViewMatrix*vec4(w,1.);
+      gl_Position=projectionMatrix*mv;
+      float sz=aPar.w*(1.-.5*cc)*(1.+inf*1.2+cw*1.5);
+      gl_PointSize=1.;
+
+      float wg=(p>=DET&&s>0.)?exp(-s*1.1):0.;
+      wg*=1.-smoothstep(.95,1.,p);
+      float sh=sin(TAU*p+R*.15);
+      vec3 base=mix(aCol,aCol.gbr,.35+.35*sh*sh);
+      vec3 rb=hsv(fract(rho*.022+.55+s*.06),.85,1.);
+      vCol=base*(1.+inf*2.2+cw*3.)*mix(1.,.006,cc)+rb*wg*1.1; vCol*=uDim;
+    }`,
+  fragmentShader:`
+    varying vec3 vCol;
+    void main(){
+      float r=length(gl_PointCoord-.5);
+      float a=smoothstep(.5,0.,r); a=a*a;
+      gl_FragColor=vec4(vCol*a*.5,a);
+    }`
+});
+const points=new THREE.Points(geo,mat); points.frustumCulled=false; scene.add(points);
+
+// ---------- singularity core (screen-relative billboard: same look at any resolution, no point-size caps) ----------
+const coreMat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,depthTest:false,blending:THREE.AdditiveBlending,
+  uniforms:{uSize:{value:40},uInt:{value:.5},uRes:{value:new THREE.Vector2(innerWidth,innerHeight)}},
+  vertexShader:`uniform float uSize; uniform vec2 uRes; varying vec2 vQ;
+    void main(){
+      vec4 c=projectionMatrix*modelViewMatrix*vec4(0.,0.,0.,1.);
+      float px=uSize*min(uRes.x,uRes.y)/360.;           // diameter in css px, tuned at 360px
+      c.xy+=vec2(position.x*2.*px/uRes.x,position.y*2.*px/uRes.y)*c.w;
+      vQ=position.xy*2.; gl_Position=c;}`,
+  fragmentShader:`uniform float uInt; varying vec2 vQ; void main(){
+    float r=length(vQ);
+    float core=exp(-r*r*14.)+.35*exp(-r*3.5);
+    vec3 col=mix(vec3(.7,.25,1.),vec3(1.),exp(-r*r*12.));
+    gl_FragColor=vec4(col*core*uInt*step(r,1.),1.);}`
+});
+const core=new THREE.Mesh(new THREE.PlaneGeometry(1,1),coreMat); core.frustumCulled=false; scene.add(core);
+
+// ---------- shockwave shell + ring ----------
+const shellMat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+  uniforms:{uInt:{value:0}},
+  vertexShader:`varying vec3 vN,vV,vO; void main(){vO=normal;vN=normalize(normalMatrix*normal);
+    vec4 mv=modelViewMatrix*vec4(position,1.);vV=-mv.xyz;gl_Position=projectionMatrix*mv;}`,
+  fragmentShader:`uniform float uInt; varying vec3 vN,vV,vO; ${HSV}
+    void main(){float f=pow(1.-abs(dot(normalize(vN),normalize(vV))),2.4);
+      vec3 c=hsv(fract(.5+vO.y*.45+vO.x*.2),.9,1.);
+      gl_FragColor=vec4(c*f*uInt,1.);}`
+});
+const shell=new THREE.Mesh(new THREE.SphereGeometry(1,64,40),shellMat); shell.frustumCulled=false; scene.add(shell);
+const ringMat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,
+  uniforms:{uInt:{value:0}},
+  vertexShader:`varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`uniform float uInt; varying vec3 vP; ${HSV}
+    void main(){float t=(length(vP.xz)-.94)/.06; float a=sin(clamp(t,0.,1.)*3.14159); a*=a;
+      vec3 c=hsv(fract(atan(vP.z,vP.x)/6.28318+.1),.75,1.);
+      gl_FragColor=vec4(c*a*uInt,1.);}`
+});
+const ringGeo=new THREE.RingGeometry(.94,1,192,1); ringGeo.rotateX(-Math.PI/2);
+const ring=new THREE.Mesh(ringGeo,ringMat); ring.frustumCulled=false; scene.add(ring);
+
+// ---------- starfield ----------
+{
+  const g=new THREE.BufferGeometry(),p=[];
+  for(let i=0;i<2500;i++){const v=new THREE.Vector3().randomDirection().multiplyScalar(150+rnd(100));p.push(v.x,v.y,v.z);}
+  g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x6a7cff,size:.5,transparent:true,opacity:.6,depthWrite:false})));
+}
+
+// ---------- pointer trail (GPU-drifted ring buffer) ----------
+const TN=5000;
+const T_pos=new Float32Array(TN*3),T_vel=new Float32Array(TN*3),T_birth=new Float32Array(TN).fill(-1e4),T_seed=new Float32Array(TN);
+const tgeo=new THREE.BufferGeometry();
+const tattrs={
+  position:new THREE.BufferAttribute(T_pos,3),aVel:new THREE.BufferAttribute(T_vel,3),
+  aBirth:new THREE.BufferAttribute(T_birth,1),aSeed:new THREE.BufferAttribute(T_seed,1)};
+for(const k in tattrs){tattrs[k].setUsage(THREE.DynamicDrawUsage);tgeo.setAttribute(k,tattrs[k]);}
+tgeo.boundingSphere=new THREE.Sphere(new THREE.Vector3(),200);
+const trailMat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  uniforms:{uNow:{value:0},uScale:mat.uniforms.uScale},
+  vertexShader:`
+    attribute vec3 aVel; attribute float aBirth,aSeed; uniform float uNow,uScale;
+    varying vec3 vCol; varying float vA; ${HSV}
+    void main(){
+      float age=uNow-aBirth, f=clamp(1.-age/2.4,0.,1.);
+      vec3 pp=position+aVel*(1.-exp(-age*1.5))/1.5; pp.y+=.4*age*(aSeed-.5);
+      vec4 mv=modelViewMatrix*vec4(pp,1.); gl_Position=projectionMatrix*mv;
+      vA=f*f;
+      gl_PointSize=f>0.?clamp((1.+f*3.)*uScale*.126/(-mv.z)*1.2,1.,48.):0.;
+      vCol=hsv(fract(.5+aBirth*.12+(1.-f)*.18),.85,1.)*(.6+aSeed);
+    }`,
+  fragmentShader:`varying vec3 vCol; varying float vA; void main(){
+      float r=length(gl_PointCoord-.5); float a=smoothstep(.5,0.,r); a*=a;
+      gl_FragColor=vec4(vCol*a*vA*1.6,1.);}`
+});
+const trail=new THREE.Points(tgeo,trailMat); trail.frustumCulled=false; scene.add(trail);
+let thead=0;
+function spawn(x,y,z,now){
+  const i=thead; thead=(thead+1)%TN;
+  T_pos[i*3]=x+gauss()*.12; T_pos[i*3+1]=y+gauss()*.12; T_pos[i*3+2]=z+gauss()*.12;
+  const a=rnd(TAU), sp=.3+rnd(1.2);
+  T_vel[i*3]=Math.cos(a)*sp; T_vel[i*3+1]=gauss()*.5; T_vel[i*3+2]=Math.sin(a)*sp;
+  T_birth[i]=now; T_seed[i]=rnd();
+}
+
+// ---------- post ----------
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.0,0.8,0.05);
+composer.addPass(bloom);
+const grade=new ShaderPass({
+  uniforms:{tDiffuse:{value:null},uCA:{value:.002}},
+  vertexShader:`varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`uniform sampler2D tDiffuse; uniform float uCA; varying vec2 vUv;
+    void main(){vec2 c=vUv-.5; vec2 o=c*uCA; float d=dot(c,c);
+      vec3 col=vec3(texture2D(tDiffuse,vUv+o).r,texture2D(tDiffuse,vUv).g,texture2D(tDiffuse,vUv-o).b);
+      float l=dot(col,vec3(.2126,.7152,.0722)); col=mix(vec3(l),col,1.7); // keep neon saturated through bloom/tonemap
+      col*=1.-smoothstep(.15,.6,d)*.6;
+      gl_FragColor=vec4(col,1.);}`
+});
+composer.addPass(grade);
+composer.addPass(new OutputPass());
+
+// ---------- pointer ----------
+const ptr=new THREE.Vector2(0.3,0.1), ptrS=new THREE.Vector2(0.3,0.1), ptrC=new THREE.Vector2();
+let real=false, active=true, clickAt=-1e4;
+const cursor=document.createElement('div');
+Object.assign(cursor.style,{position:'fixed',width:'26px',height:'26px',marginLeft:'-13px',marginTop:'-13px',borderRadius:'50%',display:'none',
+  border:'2px solid #0ff',boxShadow:'0 0 18px #0ff,0 0 40px #f0f,inset 0 0 12px #f0f',pointerEvents:'none',mixBlendMode:'screen'});
+document.body.appendChild(cursor);
+addEventListener('pointermove',e=>{
+  real=true; active=true; cursor.style.display='block';
+  ptr.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight*2-1));
+  cursor.style.left=e.clientX+'px'; cursor.style.top=e.clientY+'px';
+  document.getElementById('hint').style.opacity=0;
+});
+document.documentElement.addEventListener('pointerleave',()=>{active=false;});
+let clickPending=false;
+addEventListener('pointerdown',e=>{
+  const rp=cursor.cloneNode(); rp.style.display='block'; rp.style.left=e.clientX+'px'; rp.style.top=e.clientY+'px'; document.body.appendChild(rp);
+  rp.animate([{transform:'scale(1)',opacity:.9},{transform:'scale(4.5)',opacity:0}],{duration:700,easing:'ease-out'}).onfinish=()=>rp.remove();
+  ptr.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight*2-1)); real=true; active=true; clickPending=true;
+});
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);
+  mat.uniforms.uScale.value=innerHeight*renderer.getPixelRatio();
+  coreMat.uniforms.uRes.value.set(innerWidth,innerHeight);
+});
+setTimeout(()=>{document.getElementById('hint').style.opacity=0;},9000);
+
+// ---------- adaptive quality (device scaling) ----------
+const levels=[1,.7,.5,.35]; let level=0, acc=0, nf=0, lastNow=0;
+function adapt(dt){
+  if(STILL||dt<=0||dt>0.25) return;
+  acc+=dt; nf++;
+  if(nf<90) return;
+  const avg=acc/nf; acc=0; nf=0;
+  if(avg>0.021&&level<levels.length-1){
+    level++;
+    geo.setDrawRange(0,Math.floor(N*levels[level]));
+    const pr=Math.max(1,renderer.getPixelRatio()*0.85);
+    renderer.setPixelRatio(pr); composer.setPixelRatio(pr); composer.setSize(innerWidth,innerHeight);
+    mat.uniforms.uScale.value=innerHeight*pr;
+  }
+}
+
+// ---------- loop ----------
+const bar=document.getElementById('bar');
+const ray=new THREE.Raycaster(), plane=new THREE.Plane(new THREE.Vector3(0,1,0),0), hit=new THREE.Vector3(), lastW=new THREE.Vector3(999,0,999);
+let tStart=null;
+function frame(){
+  const now=performance.now()/1000;
+  if(tStart===null){tStart=now;lastNow=now;}
+  adapt(now-lastNow); lastNow=now;
+  const t=now-tStart+T0, p=(((t%LOOP)+LOOP)%LOOP)/LOOP, ang=p*TAU;
+  mat.uniforms.uP.value=p;
+  bar.style.width=(p*100)+'%';
+
+  // shared envelopes (all zero / exact at the loop seam)
+  const fade=1-ss(.95,1,p);
+  const tens = p<DET ? Math.pow(ss(.5,DET,p),2) : Math.exp(-(p-DET)*60);
+  const kRM=RM?.3:1;
+  const burst= ss(DET-.015,DET,p)*(p>DET?Math.exp(-(p-DET)*120):1)*fade*kRM;
+  const dip = ss(DET-.045,DET-.012,p)*(1-ss(DET-.012,DET,p))*kRM; // the held breath before impact
+  mat.uniforms.uDim.value=1-.6*dip;
+  const F = p>DET ? (p-DET)/(1-DET)*WAVE : 0;
+
+  // pointer
+  if(!real&&!STILL){ const rt=now-tStart; ptr.set(.5*Math.sin(rt*.9+.5),.32*Math.sin(rt*1.3)+.1); }
+  ptrS.lerp(ptr,.35); ptrC.lerp(ptr,.05);
+
+  // camera: periodic orbit + anticipation dolly + impact kick
+  const wide=Math.min(2,Math.max(1,Math.pow(1.5/camera.aspect,.7))); // frame the whole system on tall screens
+  const dist=(48-10*Math.sin(ang)-9*tens+12*burst)*wide;
+  const yaw=Math.sin(ang)*0.5+ptrC.x*0.5, pitch=0.62+0.12*Math.cos(ang)-ptrC.y*0.25;
+  camera.position.set(Math.sin(yaw)*Math.cos(pitch)*dist,Math.sin(pitch)*dist,Math.cos(yaw)*Math.cos(pitch)*dist);
+  const sh=RM?0:(tens*tens*.25+burst*.5);
+  camera.position.x+=Math.sin(ang*137)*sh; camera.position.y+=Math.cos(ang*113)*sh;
+  camera.lookAt(0,0,0);
+  camera.fov=55-6*tens+14*burst; camera.updateProjectionMatrix();
+  camera.updateMatrixWorld();
+
+  // well position on the orbital plane
+  ray.setFromCamera(ptrS,camera);
+  if(ray.ray.intersectPlane(plane,hit)){ if(hit.length()>60) hit.setLength(60); mat.uniforms.uMouse.value.copy(hit); }
+  const target=(STILL||!active)?0:1;
+  mat.uniforms.uWell.value+=(target-mat.uniforms.uWell.value)*.12;
+  if(clickPending){clickPending=false;clickAt=now;mat.uniforms.uClickPos.value.copy(hit);}
+  mat.uniforms.uClickT.value=Math.min(99,now-clickAt);
+
+  // trail
+  if(mat.uniforms.uWell.value>.2){
+    const W=mat.uniforms.uMouse.value;
+    const seg=lastW.x>900?0:W.distanceTo(lastW);
+    const n=Math.min(60,Math.floor(seg*5)+3);
+    for(let i=0;i<n;i++){const f=(i+Math.random())/n;
+      spawn(lastW.x>900?W.x:lastW.x+(W.x-lastW.x)*f,0,lastW.x>900?W.z:lastW.z+(W.z-lastW.z)*f,now);}
+    for(const k in tattrs) tattrs[k].needsUpdate=true;
+    lastW.copy(W);
+  } else lastW.set(999,0,999);
+  trailMat.uniforms.uNow.value=now;
+
+  // core, shockwave
+  coreMat.uniforms.uSize.value=(40+tens*tens*170+burst*480)*fade+ (1-fade)*40;
+  coreMat.uniforms.uInt.value=.35+tens*.55+burst*.7;
+  const sf=Math.pow(Math.max(0,Math.min(1,1-F/50)),1.5);
+  const sv=F>.5&&sf>0;
+  shell.visible=ring.visible=sv;
+  if(sv){shell.scale.setScalar(F);ring.scale.setScalar(F*1.0);shellMat.uniforms.uInt.value=1.6*sf;ringMat.uniforms.uInt.value=2.2*sf;}
+
+  bloom.strength=.55+.3*tens+.5*burst;
+  grade.uniforms.uCA.value=.0015+.012*burst;
+  composer.render();
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

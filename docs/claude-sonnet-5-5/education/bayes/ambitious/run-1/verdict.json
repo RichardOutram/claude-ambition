@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "The final turns a slider demo into a lesson: asks for a guess first, then steps through why a positive test is usually a false alarm with 1,000 dots and plain-language sliders.",
+  "decided_by": "Claude, agreed by the user",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  }
+}

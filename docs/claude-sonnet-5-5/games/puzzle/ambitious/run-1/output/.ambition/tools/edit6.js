@@ -1,0 +1,12 @@
+const fs=require('fs');let t=fs.readFileSync('template.html','utf8');
+const rep=(a,b)=>{if(!t.includes(a))throw new Error('missing '+a.slice(0,50));t=t.replace(a,()=>b);};
+rep('Land the round teal twin and the square orange twin on their rings. Teal follows your arrows; orange moves the opposite way sideways.','Land the round teal twin and the square orange twin on their rings. Teal follows your arrows. Orange moves the same up and down, but mirrored left and right. The badges above show its current rule.');
+rep('Pits swallow a twin. A move that would drop either one in is refused.','Pits are off-limits: a move that would drop either twin in is refused.');
+rep("Green ⇅ pads flip orange’s up–down rule. Watch the two rule badges.","Green ⇅ pads flip orange’s up–down rule, just like purple pads do for left–right.");
+rep("$('mc').textContent=moves+' moves · par '+LEVELS[li].par;","$('mc').textContent=moves+(moves===1?' move':' moves')+' · par '+LEVELS[li].par;");
+rep("$('lname').textContent='LEVEL '+(i+1);","$('lname').textContent='LEVEL '+(i+1)+' · '+CHAPTERS.find(c=>i>=c.from&&i<=c.to).name.toUpperCase();");
+rep("$('wmsg').textContent=moves+' moves'+","$('wmsg').textContent=moves+(moves===1?' move':' moves')+");
+rep('#win .row{','#wmsg{white-space:pre-line}\n#win .row{');
+rep('#top button{padding:8px 12px}','#top button{padding:8px 12px;min-width:44px;min-height:44px}');
+fs.writeFileSync('template.html',t);
+let a=fs.readFileSync('accept.js','utf8');a=a.replace("rows[2].includes('f')&&!rows[0].includes('f')&&!rows[1].includes('f')","rows[2].join('').includes('f')&&!rows[0].join('').includes('f')&&!rows[1].join('').includes('f')").replace('minBtn<38','minBtn<40').replace('buttons >=38px','buttons >=40px');fs.writeFileSync('accept.js',a);

@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>data/heat-pump · claude-ambition</title>
+<meta name="description" content="Work out whether switching from my gas boiler to a heat pump would save me money, as a Markdown file">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../../assets/style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script defer src="../../../assets/app.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/asciinema-player.css">
+<script defer src="https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap top-in">
+  <a class="brand" href="../../../index.html">claude-ambition <span>results</span></a>
+  <nav><a href="../../../index.html#method">How it's tested</a><a href="https://github.com/RichardOutram/claude-ambition">GitHub</a></nav>
+</div></header>
+<main class="wrap">
+<nav class="crumbs"><a href="../../../index.html">Results</a> / claude-sonnet-5-5 / data-analysis</nav>
+<section class="hero ex">
+  <p class="eyebrow">data/heat-pump</p>
+  <h1>“Work out whether switching from my gas boiler to a heat pump would save me money, as a Markdown file”</h1>
+  <p class="lede">Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.</p>
+  <details class="context"><summary>What we look for</summary><p>Recompute every figure: efficiency (SCOP), unit prices, standing charges, grants, install cost, payback. Check sources are current and named. Rubric: whether it answers the actual decision, handles uncertainty honestly (ranges, what would change the answer), and says what to measure or ask an installer.</p></details>
+</section>
+<section class="term-section" aria-label="Session replays">
+  <div class="term">
+    <div class="term-bar"><span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="term-tabs" role="tablist"><button role="tab" class="not-ambitious" aria-selected="true" data-cast="not-ambitious/run-1/transcript.cast" data-stats="3.0 min · $0.37 · 3 user messages">baseline.session</button><button role="tab" class="ambitious" aria-selected="false" data-cast="ambitious/run-1/transcript.cast" data-stats="20.4 min · $3.49 · 6 user messages">be-ambitious-1.session</button></div></div>
+    <div class="term-screen"></div>
+    <div class="term-status"><span class="term-stats"></span><span>Replayed from the saved transcript · long waits shortened</span></div>
+  </div>
+</section>
+<section class="run-block" id="run-1">
+  <h2>/be-ambitious, run 1</h2>
+  <div class="banner warn"><b>Outdated.</b> This run used plugin ccf02d5; the plugin has changed since, so it may not reflect what you'd get today.</div>
+  <div class="banner good">
+  <div class="badges"><span class="badge good">Beats the baseline</span><span class="badge good">Gate pass</span><span class="badge muted">preview worth it</span><span class="badge muted">pushing on worth it</span></div>
+  <p>A regenerable model with 84/84 checks, sourced Ofgem prices with VAT, Monte Carlo and quote grids; hand-recomputed figures hold. The baseline is a one-off estimate.</p>
+  <p class="hint">Decided by Claude, agreed by the user on 2026-11-13, after a side-by-side review.</p>
+</div>
+  <div class="trio"><article class="subject not-ambitious">
+  <header><h3><span class="dot not-ambitious"></span>Baseline</h3><span class="cost">$0.23 · 1.8 min</span></header>
+  <p class="hint">The prompt exactly as typed, no plugin.</p>
+  <div class="subject-media"><div class="md doc-preview" data-md="not-ambitious/run-1/output/.plain/first/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">1,745 words</span></div>
+  <p class="open"><a href="not-ambitious/run-1/output/.plain/first/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open it ↗</a> <code>.plain/first/heat-pump-vs-gas-boiler.md</code></p>
+</article><article class="subject not-ambitious">
+  <header><h3><span class="dot not-ambitious"></span>Plain push</h3><span class="cost">$0.37 · 3.0 min</span></header>
+  <p class="hint">The baseline, then “Push it further.” in the same chat, still no plugin.</p>
+  <div class="subject-media"><div class="md doc-preview" data-md="not-ambitious/run-1/output/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">2,540 words</span></div>
+  <p class="open"><a href="not-ambitious/run-1/output/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open it ↗</a> <code>heat-pump-vs-gas-boiler.md</code></p>
+</article><article class="subject first">
+  <header><h3><span class="dot first"></span>First version</h3><span class="cost">$0.14 · 0.8 min</span></header>
+  <p class="hint">Turn 1 of /be-ambitious: the cheap preview, before the checkpoint.</p>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/first/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">902 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/first/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open it ↗</a> <code>.ambition/first/heat-pump-vs-gas-boiler.md</code></p>
+</article><article class="subject ambitious">
+  <header><h3><span class="dot ambitious"></span>Final</h3><span class="cost">$3.49 · 20.4 min</span></header>
+  <p class="hint">/be-ambitious after pushing on.</p>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">4,436 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open it ↗</a> <code>heat-pump-vs-gas-boiler.md</code></p>
+</article></div>
+  
+  <h3 class="label">How it got there</h3>
+<p class="hint">A turn is a step of the method: turn 1 is the plain first version, turn 2 is altitude (the questions, the answers and the work on them), then depth, challenge, range, judge, stretch and lock. Each card is the work at the end of a turn that changed it, with what had been spent by then.</p>
+<div class="turns"><article class="turn">
+  <header><b>Turn 1 · First version</b><span>$0.14 · 0.8 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/first/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">902 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/first/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 1 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 3 · Depth</b><span>$1.01 · 7.7 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/steps/3/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">2,618 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/3/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 3 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 4 · Challenge</b><span>$1.46 · 10.8 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/steps/4/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">3,295 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/4/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 4 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 5 · Range</b><span>$1.86 · 12.4 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/steps/5/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">3,905 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/5/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 5 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 6 · Judge</b><span>$2.70 · 16.0 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/steps/6/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">4,177 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/6/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 6 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 7 · Stretch</b><span>$3.03 · 18.1 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/steps/7/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">4,233 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/7/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 7 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 8 · Lock</b><span>$3.49 · 20.4 min so far</span></header>
+  <div class="subject-media"><div class="md doc-preview" data-md="ambitious/run-1/output/.ambition/steps/8/heat-pump-vs-gas-boiler.md"></div></div>
+  <div class="facts"><span class="badge muted">4,436 words</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/8/heat-pump-vs-gas-boiler.md" target="_blank" rel="noopener">Open turn 8 live ↗</a></p>
+</article></div>
+  <h3 class="label">Where the time and money went</h3>
+  <div class="grid2"><div class="card"><h3>Cost by step</h3><div class="bars"><div class="bar-row"><span class="bar-label">Baseline · plain prompt</span><span class="bar-track"><span class="bar not-ambitious" style="width:26.8%"></span></span><span class="bar-val">$0.23</span></div><div class="bar-row"><span class="bar-label">Baseline + plain push</span><span class="bar-track"><span class="bar not-ambitious" style="width:44.2%"></span></span><span class="bar-val">$0.37</span></div><div class="bar-row"><span class="bar-label">Turn 1 · first version + checkpoint</span><span class="bar-track"><span class="bar first" style="width:16.7%"></span></span><span class="bar-val">$0.14</span></div><div class="bar-row"><span class="bar-label">Turn 2 · Altitude</span><span class="bar-track"><span class="bar ambitious" style="width:73.5%"></span></span><span class="bar-val">$0.62</span></div><div class="bar-row"><span class="bar-label">Turn 3 · Depth</span><span class="bar-track"><span class="bar ambitious" style="width:30.3%"></span></span><span class="bar-val">$0.25</span></div><div class="bar-row"><span class="bar-label">Turn 4 · Challenge</span><span class="bar-track"><span class="bar ambitious" style="width:53.3%"></span></span><span class="bar-val">$0.45</span></div><div class="bar-row"><span class="bar-label">Turn 5 · Range</span><span class="bar-track"><span class="bar ambitious" style="width:47.9%"></span></span><span class="bar-val">$0.40</span></div><div class="bar-row"><span class="bar-label">Turn 6 · Judge</span><span class="bar-track"><span class="bar ambitious" style="width:100.0%"></span></span><span class="bar-val">$0.84</span></div><div class="bar-row"><span class="bar-label">Turn 7 · Stretch</span><span class="bar-track"><span class="bar ambitious" style="width:39.2%"></span></span><span class="bar-val">$0.33</span></div><div class="bar-row"><span class="bar-label">Turn 8 · Lock</span><span class="bar-track"><span class="bar ambitious" style="width:54.5%"></span></span><span class="bar-val">$0.46</span></div></div></div><div class="card"><h3>Time by step</h3><div class="bars"><div class="bar-row"><span class="bar-label">Baseline · plain prompt</span><span class="bar-track"><span class="bar not-ambitious" style="width:32.7%"></span></span><span class="bar-val">1.8 min</span></div><div class="bar-row"><span class="bar-label">Baseline + plain push</span><span class="bar-track"><span class="bar not-ambitious" style="width:52.5%"></span></span><span class="bar-val">3.0 min</span></div><div class="bar-row"><span class="bar-label">Turn 1 · first version + checkpoint</span><span class="bar-track"><span class="bar first" style="width:14.6%"></span></span><span class="bar-val">0.8 min</span></div><div class="bar-row"><span class="bar-label">Turn 2 · Altitude</span><span class="bar-track"><span class="bar ambitious" style="width:100.0%"></span></span><span class="bar-val">5.6 min</span></div><div class="bar-row"><span class="bar-label">Turn 3 · Depth</span><span class="bar-track"><span class="bar ambitious" style="width:21.7%"></span></span><span class="bar-val">1.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 4 · Challenge</span><span class="bar-track"><span class="bar ambitious" style="width:56.5%"></span></span><span class="bar-val">3.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 5 · Range</span><span class="bar-track"><span class="bar ambitious" style="width:27.0%"></span></span><span class="bar-val">1.5 min</span></div><div class="bar-row"><span class="bar-label">Turn 6 · Judge</span><span class="bar-track"><span class="bar ambitious" style="width:64.5%"></span></span><span class="bar-val">3.6 min</span></div><div class="bar-row"><span class="bar-label">Turn 7 · Stretch</span><span class="bar-track"><span class="bar ambitious" style="width:37.7%"></span></span><span class="bar-val">2.1 min</span></div><div class="bar-row"><span class="bar-label">Turn 8 · Lock</span><span class="bar-track"><span class="bar ambitious" style="width:39.8%"></span></span><span class="bar-val">2.2 min</span></div></div></div></div><p class="hint">Full run: <b>15.5×</b> the baseline's cost and <b>11.1×</b> its time. The plain push: <b>1.6×</b> and <b>1.6×</b>. The preview alone: <b>0.6×</b> and <b>0.4×</b>.</p>
+  <details><summary>How the run restated the task</summary><pre class="restate">You asked for:   &lt;original&gt;
+Raises all of:   &lt;each part the request names, as the same kind of thing, and what excellent means for each&gt;
+Genre bar:       &lt;what this kind of thing is judged on by its users and best practitioners, including qualities judged by perception, and why they&#x27;d choose it over the alternatives&gt;
+Aiming at:       &lt;restated goal&gt;, because &lt;reason&gt;
+Excellent means: &lt;specific hard target, on every part of the ask, on the genre bar and on the goal&gt;
+Proven by:       &lt;the outside check: what will be run or rendered and measured, and the comparison with the first version&gt;
+Needs access to: &lt;gaps, or &quot;nothing new&quot;&gt;
+Mode:            plan|build · answerer · reviewer</pre></details>
+</section>
+<section><h2>Replies and files</h2><div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="not-ambitious-1" class="not-ambitious">Baseline</button><button role="tab" aria-selected="false" data-tab="ambitious-1" class="ambitious">/be-ambitious · run 1</button></div><div role="tabpanel" data-panel="not-ambitious-1"><div class="stats">
+  <div><b>$0.37</b><span>cost</span></div>
+  <div><b>3.0</b><span>minutes</span></div>
+  <div><b>21,714</b><span>output tokens</span></div>
+  <div><b>3</b><span>user messages</span></div>
+  
+</div>
+<details data-md-on-open><summary>What the user side sent (3 messages)</summary><div class="md" data-md="not-ambitious/run-1/prompt.md"></div></details>
+<h3 class="label">Final reply</h3>
+<div class="md reply" data-md="not-ambitious/run-1/result.md"></div>
+<h3 class="label">Files (2)</h3>
+<div class="files"><ul><li><a href="not-ambitious/run-1/output/.plain/first/heat-pump-vs-gas-boiler.md" data-file="not-ambitious/run-1/output/.plain/first/heat-pump-vs-gas-boiler.md" data-kind="md">.plain/first/heat-pump-vs-gas-boiler.md</a><span>10 KB</span></li><li><a href="not-ambitious/run-1/output/heat-pump-vs-gas-boiler.md" data-file="not-ambitious/run-1/output/heat-pump-vs-gas-boiler.md" data-kind="md">heat-pump-vs-gas-boiler.md</a><span>14 KB</span></li></ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/claude-sonnet-5-5/data-analysis/heat-pump/not-ambitious/run-1">on GitHub</a>.</p></div><div role="tabpanel" data-panel="ambitious-1" hidden><div class="stats">
+  <div><b>$3.49</b><span>cost</span></div>
+  <div><b>20.4</b><span>minutes</span></div>
+  <div><b>152,599</b><span>output tokens</span></div>
+  <div><b>6</b><span>user messages</span></div>
+  
+</div>
+<details data-md-on-open><summary>What the user side sent (6 messages)</summary><div class="md" data-md="ambitious/run-1/prompt.md"></div></details>
+<h3 class="label">Final reply</h3>
+<div class="md reply" data-md="ambitious/run-1/result.md"></div>
+<h3 class="label">Files (4)</h3>
+<div class="files"><ul><li><a href="ambitious/run-1/output/CLAUDE.md" data-file="ambitious/run-1/output/CLAUDE.md" data-kind="md">CLAUDE.md</a><span>835 B</span></li><li><a href="ambitious/run-1/output/check_report.py" data-file="ambitious/run-1/output/check_report.py" data-kind="text">check_report.py</a><span>13 KB</span></li><li><a href="ambitious/run-1/output/heat-pump-vs-gas-boiler.md" data-file="ambitious/run-1/output/heat-pump-vs-gas-boiler.md" data-kind="md">heat-pump-vs-gas-boiler.md</a><span>25 KB</span></li><li><a href="ambitious/run-1/output/heatpump_model.py" data-file="ambitious/run-1/output/heatpump_model.py" data-kind="text">heatpump_model.py</a><span>48 KB</span></li></ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/claude-sonnet-5-5/data-analysis/heat-pump/ambitious/run-1">on GitHub</a>.</p></div></section>
+</main>
+<footer class="wrap foot">Generated from <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples">examples/</a> by <code>bench/ab.py report</code>.
+Outputs are shown exactly as produced. Model-made pages run in sandboxed frames.</footer>
+</body>
+</html>

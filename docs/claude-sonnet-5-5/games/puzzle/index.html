@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>game/puzzle · claude-ambition</title>
+<meta name="description" content="Make an original puzzle game I can play in the browser, as a single web page">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="../../../assets/style.css">
+<script defer src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
+<script defer src="../../../assets/app.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/asciinema-player.css">
+<script defer src="https://cdn.jsdelivr.net/npm/asciinema-player@3.17.0/dist/bundle/asciinema-player.min.js"></script>
+</head>
+<body>
+<header class="top"><div class="wrap top-in">
+  <a class="brand" href="../../../index.html">claude-ambition <span>results</span></a>
+  <nav><a href="../../../index.html#method">How it's tested</a><a href="https://github.com/RichardOutram/claude-ambition">GitHub</a></nav>
+</div></header>
+<main class="wrap">
+<nav class="crumbs"><a href="../../../index.html">Results</a> / claude-sonnet-5-5 / games</nav>
+<section class="hero ex">
+  <p class="eyebrow">game/puzzle</p>
+  <h1>“Make an original puzzle game I can play in the browser, as a single web page”</h1>
+  <p class="lede">Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.</p>
+  <details class="context"><summary>What we look for</summary><p>Play it at desktop and phone sizes with mouse, touch and keyboard. No console errors; levels are solvable (solve them, or run any solver it ships). Rubric: originality of the core mechanic, how quickly a new player gets it, difficulty curve, game feel (feedback, animation, sound), and whether you want another go.</p></details>
+</section>
+<section class="term-section" aria-label="Session replays">
+  <div class="term">
+    <div class="term-bar"><span class="term-dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="term-tabs" role="tablist"><button role="tab" class="not-ambitious" aria-selected="true" data-cast="not-ambitious/run-1/transcript.cast" data-stats="28.8 min · $0.44 · 2 user messages">baseline.session</button><button role="tab" class="ambitious" aria-selected="false" data-cast="ambitious/run-1/transcript.cast" data-stats="15.6 min · $1.83 · 5 user messages">be-ambitious-1.session</button></div></div>
+    <div class="term-screen"></div>
+    <div class="term-status"><span class="term-stats"></span><span>Replayed from the saved transcript · long waits shortened</span></div>
+  </div>
+</section>
+<section class="run-block" id="run-1">
+  <h2>/be-ambitious, run 1</h2>
+  <p class="hint">Made with the current plugin. The run recorded plugin aa6de6f with uncommitted changes; those changes were committed afterwards as they were, so the plugin files match.</p>
+  <div class="banner good">
+  <div class="badges"><span class="badge good">Beats the baseline</span><span class="badge good">Gate pass</span><span class="badge muted">preview worth it</span><span class="badge muted">pushing on worth it</span></div>
+  <p>A title screen, a first level that teaches the rule, 16 levels in chapters that each add a twist (pads that flip how the second twin moves), stars against a par a solver computes, so every level is proven solvable, and a phone d-pad. The plain push has more levels (22) and more object types, but nothing proves its levels can be solved, and it looks plainer. (A first run collapsed into one turn and never pushed; this is the second.)</p>
+  <p class="hint">Decided by Claude on 2026-11-13, after a side-by-side review.</p>
+</div>
+  <div class="trio"><article class="subject not-ambitious">
+  <header><h3><span class="dot not-ambitious"></span>Baseline</h3><span class="cost">$0.17 · 1.3 min</span></header>
+  <p class="hint">The prompt exactly as typed, no plugin.</p>
+  <div class="subject-media"><img loading="lazy" src="not-ambitious/run-1/review/baseline/desktop-t00.webp" alt="Baseline, desktop"></div>
+  <div class="facts"><span class="badge muted">desktop: still image</span><span class="badge muted">phone: still image</span><span class="score good"><b>100</b>performance</span> <span class="score warn"><b>85</b>accessibility</span> <span class="score good"><b>96</b>best practices</span> <span class="score good"><b>90</b>seo</span></div>
+  <p class="open"><a href="not-ambitious/run-1/output/.plain/first/mirror-twins/index.html" target="_blank" rel="noopener">Open it live ↗</a> <code>.plain/first/mirror-twins/index.html</code></p>
+  <details class="live"><summary>Play it here</summary><div class="frame"><iframe loading="lazy" sandbox="allow-scripts" src="not-ambitious/run-1/output/.plain/first/mirror-twins/index.html" title="Baseline"></iframe></div></details>
+</article><article class="subject not-ambitious">
+  <header><h3><span class="dot not-ambitious"></span>Plain push</h3><span class="cost">$0.44 · 28.8 min</span></header>
+  <p class="hint">The baseline, then “Push it further.” in the same chat, still no plugin.</p>
+  <div class="subject-media"><img loading="lazy" src="not-ambitious/run-1/review/pushed/desktop-t00.webp" alt="Plain push, desktop"><details class="phone-sheet"><summary>Phone frames</summary><img loading="lazy" src="not-ambitious/run-1/review/pushed/sheet-phone.jpg" alt="Plain push: one frame per second across the loop, phone"></details></div>
+  <div class="facts"><span class="badge muted">desktop: still image</span><span class="badge muted">phone: moving</span><span class="score good"><b>100</b>performance</span> <span class="score warn"><b>85</b>accessibility</span> <span class="score good"><b>96</b>best practices</span> <span class="score good"><b>90</b>seo</span></div>
+  <p class="open"><a href="not-ambitious/run-1/output/mirror-twins/index.html" target="_blank" rel="noopener">Open it live ↗</a> <code>mirror-twins/index.html</code></p>
+  <details class="live"><summary>Play it here</summary><div class="frame"><iframe loading="lazy" sandbox="allow-scripts" src="not-ambitious/run-1/output/mirror-twins/index.html" title="Plain push"></iframe></div></details>
+</article><article class="subject first">
+  <header><h3><span class="dot first"></span>First version</h3><span class="cost">$0.20 · 1.2 min</span></header>
+  <p class="hint">Turn 1 of /be-ambitious: the cheap preview, before the checkpoint.</p>
+  <div class="subject-media"><img loading="lazy" src="ambitious/run-1/review/first/desktop-t00.webp" alt="First version, desktop"></div>
+  <div class="facts"><span class="badge muted">desktop: still image</span><span class="badge muted">phone: still image</span><span class="score good"><b>100</b>performance</span> <span class="score good"><b>100</b>accessibility</span> <span class="score good"><b>96</b>best practices</span> <span class="score good"><b>90</b>seo</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/first/mirror-twins.html" target="_blank" rel="noopener">Open it live ↗</a> <code>.ambition/first/mirror-twins.html</code></p>
+  <details class="live"><summary>Play it here</summary><div class="frame"><iframe loading="lazy" sandbox="allow-scripts" src="ambitious/run-1/output/.ambition/first/mirror-twins.html" title="First version"></iframe></div></details>
+</article><article class="subject ambitious">
+  <header><h3><span class="dot ambitious"></span>Final</h3><span class="cost">$1.83 · 15.6 min</span></header>
+  <p class="hint">/be-ambitious after pushing on.</p>
+  <div class="subject-media"><a class="sheet" href="ambitious/run-1/review/final/sheet-desktop.jpg"><img loading="lazy" src="ambitious/run-1/review/final/sheet-desktop.jpg" alt="Final: one frame per second across the loop, desktop"></a><details class="phone-sheet"><summary>Phone frames</summary><img loading="lazy" src="ambitious/run-1/review/final/sheet-phone.jpg" alt="Final: one frame per second across the loop, phone"></details></div>
+  <div class="facts"><span class="badge muted">desktop: moving</span><span class="badge muted">phone: moving</span><span class="score good"><b>100</b>performance</span> <span class="score good"><b>91</b>accessibility</span> <span class="score good"><b>96</b>best practices</span> <span class="score good"><b>90</b>seo</span></div>
+  <p class="open"><a href="ambitious/run-1/output/mirror-twins.html" target="_blank" rel="noopener">Open it live ↗</a> <code>mirror-twins.html</code></p>
+  <details class="live"><summary>Play it here</summary><div class="frame"><iframe loading="lazy" sandbox="allow-scripts" src="ambitious/run-1/output/mirror-twins.html" title="Final"></iframe></div></details>
+</article></div>
+  
+  <h3 class="label">How it got there</h3>
+<p class="hint">A turn is a step of the method: turn 1 is the plain first version, turn 2 is altitude (the questions, the answers and the work on them), then depth, challenge, range, judge, stretch and lock. Each card is the work at the end of a turn that changed it, with what had been spent by then.</p>
+<div class="turns"><article class="turn">
+  <header><b>Turn 1 · First version</b><span>$0.20 · 1.2 min so far</span></header>
+  <div class="subject-media"><a href="ambitious/run-1/review/first/desktop-t00.webp"><img loading="lazy" src="ambitious/run-1/review/first/desktop-t00.webp" alt="Turn 1 · First version: frames across the loop"></a></div>
+  <div class="facts"><span class="badge muted">still image</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/first/mirror-twins.html" target="_blank" rel="noopener">Open turn 1 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 3 · Depth</b><span>$0.70 · 8.2 min so far</span></header>
+  <div class="subject-media"><a href="ambitious/run-1/review/step-3/sheet-desktop.jpg"><img loading="lazy" src="ambitious/run-1/review/step-3/sheet-desktop.jpg" alt="Turn 3 · Depth: frames across the loop"></a></div>
+  <div class="facts"><span class="badge muted">moving</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/3/mirror-twins.html" target="_blank" rel="noopener">Open turn 3 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 4 · Challenge</b><span>$0.95 · 10.4 min so far</span></header>
+  <div class="subject-media"><a href="ambitious/run-1/review/step-4/sheet-desktop.jpg"><img loading="lazy" src="ambitious/run-1/review/step-4/sheet-desktop.jpg" alt="Turn 4 · Challenge: frames across the loop"></a></div>
+  <div class="facts"><span class="badge muted">moving</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/4/mirror-twins.html" target="_blank" rel="noopener">Open turn 4 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 5 · Range</b><span>$1.14 · 11.5 min so far</span></header>
+  <div class="subject-media"><a href="ambitious/run-1/review/step-5/sheet-desktop.jpg"><img loading="lazy" src="ambitious/run-1/review/step-5/sheet-desktop.jpg" alt="Turn 5 · Range: frames across the loop"></a></div>
+  <div class="facts"><span class="badge muted">moving</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/5/mirror-twins.html" target="_blank" rel="noopener">Open turn 5 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 6 · Judge</b><span>$1.52 · 14.0 min so far</span></header>
+  <div class="subject-media"><a href="ambitious/run-1/review/step-6/sheet-desktop.jpg"><img loading="lazy" src="ambitious/run-1/review/step-6/sheet-desktop.jpg" alt="Turn 6 · Judge: frames across the loop"></a></div>
+  <div class="facts"><span class="badge muted">moving</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/6/mirror-twins.html" target="_blank" rel="noopener">Open turn 6 live ↗</a></p>
+</article><article class="turn">
+  <header><b>Turn 7 · Stretch</b><span>$1.69 · 14.8 min so far</span></header>
+  <div class="subject-media"><a href="ambitious/run-1/review/step-7/sheet-desktop.jpg"><img loading="lazy" src="ambitious/run-1/review/step-7/sheet-desktop.jpg" alt="Turn 7 · Stretch: frames across the loop"></a></div>
+  <div class="facts"><span class="badge muted">moving</span></div>
+  <p class="open"><a href="ambitious/run-1/output/.ambition/steps/7/mirror-twins.html" target="_blank" rel="noopener">Open turn 7 live ↗</a></p>
+</article></div>
+  <h3 class="label">Where the time and money went</h3>
+  <div class="grid2"><div class="card"><h3>Cost by step</h3><div class="bars"><div class="bar-row"><span class="bar-label">Baseline · plain prompt</span><span class="bar-track"><span class="bar not-ambitious" style="width:37.9%"></span></span><span class="bar-val">$0.17</span></div><div class="bar-row"><span class="bar-label">Baseline + plain push</span><span class="bar-track"><span class="bar not-ambitious" style="width:100.0%"></span></span><span class="bar-val">$0.44</span></div><div class="bar-row"><span class="bar-label">Turn 1 · first version + checkpoint</span><span class="bar-track"><span class="bar first" style="width:45.4%"></span></span><span class="bar-val">$0.20</span></div><div class="bar-row"><span class="bar-label">Turn 2 · Altitude</span><span class="bar-track"><span class="bar ambitious" style="width:19.1%"></span></span><span class="bar-val">$0.085</span></div><div class="bar-row"><span class="bar-label">Turn 3 · Depth</span><span class="bar-track"><span class="bar ambitious" style="width:93.6%"></span></span><span class="bar-val">$0.41</span></div><div class="bar-row"><span class="bar-label">Turn 4 · Challenge</span><span class="bar-track"><span class="bar ambitious" style="width:57.3%"></span></span><span class="bar-val">$0.25</span></div><div class="bar-row"><span class="bar-label">Turn 5 · Range</span><span class="bar-track"><span class="bar ambitious" style="width:42.4%"></span></span><span class="bar-val">$0.19</span></div><div class="bar-row"><span class="bar-label">Turn 6 · Judge</span><span class="bar-track"><span class="bar ambitious" style="width:85.1%"></span></span><span class="bar-val">$0.38</span></div><div class="bar-row"><span class="bar-label">Turn 7 · Stretch</span><span class="bar-track"><span class="bar ambitious" style="width:38.8%"></span></span><span class="bar-val">$0.17</span></div><div class="bar-row"><span class="bar-label">Turn 8 · Lock</span><span class="bar-track"><span class="bar ambitious" style="width:32.6%"></span></span><span class="bar-val">$0.14</span></div></div></div><div class="card"><h3>Time by step</h3><div class="bars"><div class="bar-row"><span class="bar-label">Baseline · plain prompt</span><span class="bar-track"><span class="bar not-ambitious" style="width:4.6%"></span></span><span class="bar-val">1.3 min</span></div><div class="bar-row"><span class="bar-label">Baseline + plain push</span><span class="bar-track"><span class="bar not-ambitious" style="width:100.0%"></span></span><span class="bar-val">28.8 min</span></div><div class="bar-row"><span class="bar-label">Turn 1 · first version + checkpoint</span><span class="bar-track"><span class="bar first" style="width:4.2%"></span></span><span class="bar-val">1.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 2 · Altitude</span><span class="bar-track"><span class="bar ambitious" style="width:6.3%"></span></span><span class="bar-val">1.8 min</span></div><div class="bar-row"><span class="bar-label">Turn 3 · Depth</span><span class="bar-track"><span class="bar ambitious" style="width:18.0%"></span></span><span class="bar-val">5.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 4 · Challenge</span><span class="bar-track"><span class="bar ambitious" style="width:7.5%"></span></span><span class="bar-val">2.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 5 · Range</span><span class="bar-track"><span class="bar ambitious" style="width:4.0%"></span></span><span class="bar-val">1.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 6 · Judge</span><span class="bar-track"><span class="bar ambitious" style="width:8.6%"></span></span><span class="bar-val">2.5 min</span></div><div class="bar-row"><span class="bar-label">Turn 7 · Stretch</span><span class="bar-track"><span class="bar ambitious" style="width:2.9%"></span></span><span class="bar-val">0.8 min</span></div><div class="bar-row"><span class="bar-label">Turn 8 · Lock</span><span class="bar-track"><span class="bar ambitious" style="width:2.7%"></span></span><span class="bar-val">0.8 min</span></div></div></div></div><p class="hint">Full run: <b>10.9×</b> the baseline's cost and <b>11.8×</b> its time. The plain push: <b>2.6×</b> and <b>21.6×</b>. The preview alone: <b>1.2×</b> and <b>0.9×</b>.</p>
+  <details><summary>How the run restated the task</summary><pre class="restate">You asked for:   &lt;original&gt;
+Raises all of:   &lt;each part the request names, as the same kind of thing, and what excellent means for each&gt;
+Genre bar:       &lt;what this kind of thing is judged on by its users and best practitioners, including qualities judged by perception, and why they&#x27;d choose it over the alternatives&gt;
+Aiming at:       &lt;restated goal&gt;, because &lt;reason&gt;
+Excellent means: &lt;specific hard target, on every part of the ask, on the genre bar and on the goal&gt;
+Proven by:       &lt;the outside check: what will be run or rendered and measured, and the comparison with the first version&gt;
+Needs access to: &lt;gaps, or &quot;nothing new&quot;&gt;
+Mode:            plan|build · answerer · reviewer</pre></details>
+</section>
+<section><h2>Replies and files</h2><div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="not-ambitious-1" class="not-ambitious">Baseline</button><button role="tab" aria-selected="false" data-tab="ambitious-1" class="ambitious">/be-ambitious · run 1</button></div><div role="tabpanel" data-panel="not-ambitious-1"><div class="stats">
+  <div><b>$0.44</b><span>cost</span></div>
+  <div><b>28.8</b><span>minutes</span></div>
+  <div><b>23,157</b><span>output tokens</span></div>
+  <div><b>2</b><span>user messages</span></div>
+  
+</div>
+<details data-md-on-open><summary>What the user side sent (2 messages)</summary><div class="md" data-md="not-ambitious/run-1/prompt.md"></div></details>
+<h3 class="label">Final reply</h3>
+<div class="md reply" data-md="not-ambitious/run-1/result.md"></div>
+<h3 class="label">Files (11)</h3>
+<div class="files"><ul><li><a href="not-ambitious/run-1/output/.plain/first/check.js" data-file="not-ambitious/run-1/output/.plain/first/check.js" data-kind="text">.plain/first/check.js</a><span>357 B</span></li><li><a href="not-ambitious/run-1/output/.plain/first/mirror-twins/index.html" data-file="not-ambitious/run-1/output/.plain/first/mirror-twins/index.html" data-kind="html">.plain/first/mirror-twins/index.html</a><span>10 KB</span></li><li><a href="not-ambitious/run-1/output/check.js" data-file="not-ambitious/run-1/output/check.js" data-kind="text">check.js</a><span>357 B</span></li><li><a href="not-ambitious/run-1/output/gen.js" data-file="not-ambitious/run-1/output/gen.js" data-kind="text">gen.js</a><span>1 KB</span></li><li><a href="not-ambitious/run-1/output/mirror-twins/index.html" data-file="not-ambitious/run-1/output/mirror-twins/index.html" data-kind="html">mirror-twins/index.html</a><span>15 KB</span></li><li><a href="not-ambitious/run-1/output/new.txt" data-file="not-ambitious/run-1/output/new.txt" data-kind="text">new.txt</a><span>1 KB</span></li><li><a href="not-ambitious/run-1/output/pick.js" data-file="not-ambitious/run-1/output/pick.js" data-kind="text">pick.js</a><span>1 KB</span></li><li><a href="not-ambitious/run-1/output/plain.json" data-file="not-ambitious/run-1/output/plain.json" data-kind="download">plain.json</a><span>703 KB</span></li><li><a href="not-ambitious/run-1/output/plates.json" data-file="not-ambitious/run-1/output/plates.json" data-kind="text">plates.json</a><span>321 KB</span></li><li><a href="not-ambitious/run-1/output/plates2.json" data-file="not-ambitious/run-1/output/plates2.json" data-kind="download">plates2.json</a><span>790 KB</span></li><li><a href="not-ambitious/run-1/output/smoke.js" data-file="not-ambitious/run-1/output/smoke.js" data-kind="text">smoke.js</a><span>999 B</span></li></ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/claude-sonnet-5-5/games/puzzle/not-ambitious/run-1">on GitHub</a>.</p></div><div role="tabpanel" data-panel="ambitious-1" hidden><div class="stats">
+  <div><b>$1.83</b><span>cost</span></div>
+  <div><b>15.6</b><span>minutes</span></div>
+  <div><b>80,570</b><span>output tokens</span></div>
+  <div><b>5</b><span>user messages</span></div>
+  <div><b>1</b><span>tool denials</span></div>
+</div>
+<details data-md-on-open><summary>What the user side sent (5 messages)</summary><div class="md" data-md="ambitious/run-1/prompt.md"></div></details>
+<h3 class="label">Final reply</h3>
+<div class="md reply" data-md="ambitious/run-1/result.md"></div>
+<h3 class="label">Files (12)</h3>
+<div class="files"><ul><li><a href="ambitious/run-1/output/CLAUDE.md" data-file="ambitious/run-1/output/CLAUDE.md" data-kind="md">CLAUDE.md</a><span>1005 B</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/accept.js" data-file="ambitious/run-1/output/mirror-twins-tools/accept.js" data-kind="text">mirror-twins-tools/accept.js</a><span>9 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/build.js" data-file="ambitious/run-1/output/mirror-twins-tools/build.js" data-kind="text">mirror-twins-tools/build.js</a><span>500 B</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/coldread.json" data-file="ambitious/run-1/output/mirror-twins-tools/coldread.json" data-kind="text">mirror-twins-tools/coldread.json</a><span>1 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/final_levels.json" data-file="ambitious/run-1/output/mirror-twins-tools/final_levels.json" data-kind="text">mirror-twins-tools/final_levels.json</a><span>922 B</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/gen.js" data-file="ambitious/run-1/output/mirror-twins-tools/gen.js" data-kind="text">mirror-twins-tools/gen.js</a><span>2 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/logic.js" data-file="ambitious/run-1/output/mirror-twins-tools/logic.js" data-kind="text">mirror-twins-tools/logic.js</a><span>3 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/package-lock.json" data-file="ambitious/run-1/output/mirror-twins-tools/package-lock.json" data-kind="text">mirror-twins-tools/package-lock.json</a><span>11 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/package.json" data-file="ambitious/run-1/output/mirror-twins-tools/package.json" data-kind="text">mirror-twins-tools/package.json</a><span>188 B</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/prune.js" data-file="ambitious/run-1/output/mirror-twins-tools/prune.js" data-kind="text">mirror-twins-tools/prune.js</a><span>2 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins-tools/template.html" data-file="ambitious/run-1/output/mirror-twins-tools/template.html" data-kind="html">mirror-twins-tools/template.html</a><span>20 KB</span></li><li><a href="ambitious/run-1/output/mirror-twins.html" data-file="ambitious/run-1/output/mirror-twins.html" data-kind="html">mirror-twins.html</a><span>24 KB</span></li></ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/claude-sonnet-5-5/games/puzzle/ambitious/run-1">on GitHub</a>.</p></div></section>
+</main>
+<footer class="wrap foot">Generated from <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples">examples/</a> by <code>bench/ab.py report</code>.
+Outputs are shown exactly as produced. Model-made pages run in sandboxed frames.</footer>
+</body>
+</html>

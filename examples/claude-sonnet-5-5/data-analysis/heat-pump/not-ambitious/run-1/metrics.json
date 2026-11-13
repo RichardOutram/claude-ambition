@@ -1,0 +1,67 @@
+{
+  "slug": "data/heat-pump",
+  "arm": "not-ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-13T01:28:17Z",
+  "session_id": "39eca497-4b88-4226-896b-c5414bf2f97f",
+  "exchanges": 3,
+  "cost_usd": 0.3712,
+  "client_cost_usd": 0.1157,
+  "wall_ms": 177319,
+  "duration_ms": 155045,
+  "num_turns": 13,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 24,
+      "outputTokens": 19630,
+      "thinkingTokens": 6454,
+      "cacheReadInputTokens": 260328,
+      "cacheCreationInputTokens": 31194,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 31194,
+      "webSearchRequests": 0,
+      "costUSD": 0.34715679999999993
+    },
+    "claude-haiku-5-5": {
+      "inputTokens": 29945,
+      "outputTokens": 2084,
+      "thinkingTokens": 543,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "webSearchRequests": 2,
+      "costUSD": 0.024036500000000002
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 0.61,
+      "cost_usd": 0.0688
+    },
+    {
+      "n": 2,
+      "minutes": 1.84,
+      "cost_usd": 0.2254
+    },
+    {
+      "n": 3,
+      "minutes": 2.9,
+      "cost_usd": 0.3712
+    }
+  ],
+  "plain_push_after": 2,
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  },
+  "plugin_commit": "ccf02d5",
+  "claude_version": "2.1.322"
+}

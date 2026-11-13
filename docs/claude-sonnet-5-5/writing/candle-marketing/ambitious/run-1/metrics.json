@@ -1,0 +1,82 @@
+{
+  "slug": "write/candle-marketing",
+  "arm": "ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-13T08:04:54Z",
+  "session_id": "b6c57b24-c817-4874-9190-6b6c3d6b881f",
+  "exchanges": 6,
+  "cost_usd": 3.9726,
+  "client_cost_usd": 0.184,
+  "wall_ms": 1380663,
+  "duration_ms": 666403,
+  "num_turns": 40,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 162,
+      "outputTokens": 176266,
+      "thinkingTokens": 92502,
+      "cacheReadInputTokens": 8910872,
+      "cacheCreationInputTokens": 291964,
+      "cacheCreationEphemeral5mInputTokens": 51536,
+      "cacheCreationEphemeral1hInputTokens": 240428,
+      "webSearchRequests": 0,
+      "costUSD": 3.7446232000000004
+    },
+    "claude-haiku-5-5": {
+      "inputTokens": 280375,
+      "outputTokens": 19793,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 19,
+      "costUSD": 0.22793400000000003,
+      "thinkingTokens": 5415,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 0
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 0.99,
+      "cost_usd": 0.1624
+    },
+    {
+      "n": 2,
+      "minutes": 1.14,
+      "cost_usd": 0.1695
+    },
+    {
+      "n": 3,
+      "minutes": 1.32,
+      "cost_usd": 0.1775
+    },
+    {
+      "n": 4,
+      "minutes": 1.47,
+      "cost_usd": 0.1857
+    },
+    {
+      "n": 5,
+      "minutes": 1.86,
+      "cost_usd": 0.2109
+    },
+    {
+      "n": 6,
+      "minutes": 23.01,
+      "cost_usd": 3.9726
+    }
+  ],
+  "plain_push_after": null,
+  "plugin": {
+    "commit": "aa6de6f",
+    "dirty": true,
+    "hash": "64d580e673b3"
+  },
+  "plugin_commit": "aa6de6f",
+  "claude_version": "2.1.322"
+}

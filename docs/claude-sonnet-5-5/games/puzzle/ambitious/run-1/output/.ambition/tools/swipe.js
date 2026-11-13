@@ -1,0 +1,10 @@
+const pp=require('puppeteer-core');(async()=>{const b=await pp.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:'new'});
+const p=await b.newPage();await p.setViewport({width:390,height:780,isMobile:true,hasTouch:true,deviceScaleFactor:2});const errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.goto('file:///Volumes/My Shared Files/work/mirror-twins.html');await p.tap('#play');await new Promise(r=>setTimeout(r,100));
+for(let i=0;i<2;i++){await p.touchscreen.touchStart(60,160);await p.touchscreen.touchMove(200,165);await p.touchscreen.touchEnd();}
+await new Promise(r=>setTimeout(r,200));console.log('swipe from outside canvas -> moves',await p.evaluate(()=>window.__mt.state.moves),'won',await p.evaluate(()=>window.__mt.state.won),'errs',errs.length);
+await p.evaluate(()=>window.__mt.load(6));await new Promise(r=>setTimeout(r,500));await p.screenshot({path:'r5_phone.png'});
+const d=await b.newPage();await d.setViewport({width:900,height:600});await d.goto('file:///Volumes/My Shared Files/work/mirror-twins.html');await d.evaluate(()=>window.__mt.load(15));await new Promise(r=>setTimeout(r,500));await d.screenshot({path:'r5_desk.png'});
+const g=await b.newPage();await g.setViewport({width:900,height:600});await g.goto('file:///Volumes/My Shared Files/work/mirror-twins.html');await g.evaluate(()=>{localStorage.setItem('mirror-twins-v2',JSON.stringify({best:{0:2,1:7,2:6,3:10,4:15,5:25},cur:5}))});await g.reload();await g.click('#maps');await new Promise(r=>setTimeout(r,300));await g.screenshot({path:'r5_map.png'});
+require('fs').writeFileSync('sheet3.html','<body style=\"margin:0;background:#000;display:flex;gap:6px;align-items:flex-start\"><img src=\"r5_desk.png\" style=\"height:500px\"><img src=\"r5_phone.png\" style=\"height:500px\"><img src=\"r5_map.png\" style=\"height:500px\"></body>');
+const s=await b.newPage();await s.setViewport({width:1500,height:510});await s.goto('file:///Volumes/My Shared Files/work/.ambition/tools/sheet3.html');await new Promise(r=>setTimeout(r,300));await s.screenshot({path:'sheet3.png'});await b.close();})();

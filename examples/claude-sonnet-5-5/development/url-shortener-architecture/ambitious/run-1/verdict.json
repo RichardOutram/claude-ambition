@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "The plain push assumes over 95% of reads come from cache. The final tests that against a simulation and an hour of real Wikipedia traffic, finds 20\u201340% more likely, and sizes the database to work with no cache at all. Every decision says what would flip it, it works out that guessing 7-character links finds about 736k live links a day, and it shows where the design breaks at 100k requests a second. Its own check passes 43/43. (A first run got stuck planning a rewrite instead of improving the document; we fixed the method's wording and re-ran.)",
+  "decided_by": "Claude",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "aa6de6f",
+    "dirty": true,
+    "hash": "64d580e673b3"
+  }
+}

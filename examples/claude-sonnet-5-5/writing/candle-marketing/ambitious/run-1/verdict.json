@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "A dated 24-week plan that fits in 5 hours a week. Its margin table shows a $38 two-jar bundle earns about $4, or loses money when an Etsy Offsite Ad gets the sale; it warns that monthly orders swing by about \u00b16 by chance, and plans pouring around cure time. The plain push is a generic template with [brackets]. Weak point: at 9,200 words it's long for someone with 5 hours a week. (Second run, after the same method fix as url-shortener.)",
+  "decided_by": "Claude",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "aa6de6f",
+    "dirty": true,
+    "hash": "64d580e673b3"
+  }
+}

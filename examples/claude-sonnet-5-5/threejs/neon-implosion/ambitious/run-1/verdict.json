@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "Only the final reads as a scene: the baseline, the plain push and the plugin's own first version blow out to white bloom in the captured frames; the final shows orbits, a particle ring and trails, seamless loop, 0 console errors.",
+  "decided_by": "Claude, agreed by the user",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  }
+}

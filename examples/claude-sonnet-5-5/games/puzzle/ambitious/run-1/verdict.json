@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "A title screen, a first level that teaches the rule, 16 levels in chapters that each add a twist (pads that flip how the second twin moves), stars against a par a solver computes, so every level is proven solvable, and a phone d-pad. The plain push has more levels (22) and more object types, but nothing proves its levels can be solved, and it looks plainer. (A first run collapsed into one turn and never pushed; this is the second.)",
+  "decided_by": "Claude",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "aa6de6f",
+    "dirty": true,
+    "hash": "64d580e673b3"
+  }
+}

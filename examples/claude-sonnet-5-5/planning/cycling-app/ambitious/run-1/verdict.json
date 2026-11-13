@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "A plan a team could start building from: 37 sized tickets with acceptance criteria, and two real traps the plain plans miss (Google Play's 14-day closed test, and a home privacy zone its own simulation could undo). Its reason for riders to switch is weak, and it's three times longer.",
+  "decided_by": "Claude",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "c59ebef",
+    "dirty": false,
+    "hash": "64d580e673b3"
+  }
+}

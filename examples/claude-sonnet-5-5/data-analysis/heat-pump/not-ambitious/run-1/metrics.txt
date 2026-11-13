@@ -1,0 +1,4 @@
+cost $0.3712 · 177s · 13 turns · 3 exchanges
+Metrics (cost: /cost, or total_cost_usd in headless JSON)
+total   in 24 · out 19.6k (think 6.5k) · cache read 260.3k · write 31.2k · hit 89% · 10 calls
+model   sonnet-5-5: in 24 · out 19.6k (think 6.5k) · cache read 260.3k · write 31.2k · hit 89% · 10 calls

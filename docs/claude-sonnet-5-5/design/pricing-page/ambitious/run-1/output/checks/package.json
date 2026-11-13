@@ -1,0 +1,9 @@
+{
+  "name": "pricing-checks",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node accept.mjs \"$PWD/../pricing.html\" && node stretch.mjs \"$PWD/../pricing.html\""
+  },
+  "dependencies": { "axe-core": "^4", "puppeteer-core": "^24" }
+}

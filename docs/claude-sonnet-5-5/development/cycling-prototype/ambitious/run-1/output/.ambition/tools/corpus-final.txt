@@ -1,0 +1,527 @@
+
+===== SCREEN: auth
+🚴
+PedalQuest
+
+Ride outdoors. Earn XP. Own the climb.
+
+ Sign in
+or
+Continue with Apple G Continue with Google
+[placeholders] Email | Password
+===== SCREEN: feed
+Feed
+🔔 4
+Following
+Club
+🔥
+6-week streak
+Ride before Sunday to keep it alive
+MC
+Maya Chen
+2h ago · 🌲 Gravel
+Sunrise gravel loop
+62.4 km
+Distance
+780 m
+Elev
+3:12:40
+Time
+🤍 24
+💬 2
+📷 3
+↗ Share
+TO
+Tom Okafor
+5h ago · 🚴 Road
+Hill repeats on Mt. Vista
+38.1 km
+Distance
+1120 m
+Elev
+2:05:12
+Time
+🧡 41
+💬 1
+📷 2
+↗ Share
+PN
+Priya Nair
+Yesterday · 🚴 Road
+Easy recovery spin
+21 km
+Distance
+120 m
+Elev
+0:58:03
+Time
+🤍 9
+💬 0
+↗ Share
+JW
+Jonas Weber
+Yesterday · 🚴 Road
+Club Saturday paceline
+84.9 km
+Distance
+640 m
+Elev
+3:01:22
+Time
+🤍 57
+💬 1
+↗ Share
+[placeholders] 
+===== SCREEN: feed-club
+Feed
+🔔 4
+Following
+Club
+🔥
+6-week streak
+Ride before Sunday to keep it alive
+MC
+Maya Chen
+2h ago · 🌲 Gravel
+Sunrise gravel loop
+62.4 km
+Distance
+780 m
+Elev
+3:12:40
+Time
+🤍 24
+💬 2
+📷 3
+↗ Share
+[placeholders] 
+===== SCREEN: ride
+‹ Back
+Ride
+MC
+Maya Chen
+2h ago
+Sunrise gravel loop
+62.4 km
+Distance
+780 m
+Elev
+3:12:40
+Time
+19.5
+km/h avg
+🤍 24 kudos
+PHOTOS
+SEGMENTS
+⛰️
+Vista Switchbacks
+Climb · Cat 3 · 3.2 km
+›
+🔖 Save as route
+✂️ Create segment
+PRO ANALYSIS
+212 W
+Norm. power
+87
+Training load
+VAM 910
+Climb rate
+Power & climb analysis
+Unlock with Pro
+COMMENTS
+TomLooks epic! 🔥
+PriyaNext time invite me
+Send
+[placeholders] Add a comment…
+===== SCREEN: ride-pro
+‹ Back
+Ride
+MC
+Maya Chen
+2h ago
+Sunrise gravel loop
+62.4 km
+Distance
+780 m
+Elev
+3:12:40
+Time
+19.5
+km/h avg
+🤍 24 kudos
+PHOTOS
+SEGMENTS
+⛰️
+Vista Switchbacks
+Climb · Cat 3 · 3.2 km
+›
+🔖 Save as route
+✂️ Create segment
+PRO ANALYSIS
+212 W
+Norm. power
+87
+Training load
+VAM 910
+Climb rate
+COMMENTS
+TomLooks epic! 🔥
+PriyaNext time invite me
+Send
+[placeholders] Add a comment…
+===== SCREEN: segment
+‹ Back
+Segment
+Vista Switchbacks
+Climb · Cat 3 · paved
+3.2 km
+Length
+7.4%
+Avg grade
+paved
+Surface
+⚠️ Segments are on public roads. Obey traffic laws. No leaderboard spot is worth a crash.
+Friends
+Club
+Local
+1
+👑 Tom Okafor
+KOM
+12:41
+2
+Maya Chen
+13:05
+3
+Jonas Weber
+13:48
+4
+Alex Rider
+14:22
+5
+Priya Nair
+15:10
+[placeholders] 
+===== SCREEN: segment-sprint
+‹ Back
+Segment
+River Road Sprint
+Sprint · mixed
+1.1 km
+Length
+0.5%
+Avg grade
+mixed
+Surface
+⚠️ Segments are on public roads. Obey traffic laws. No leaderboard spot is worth a crash.
+Friends
+Club
+Local
+1
+👑 Jonas Weber
+KOM
+1:29
+2
+Alex Rider
+1:34
+3
+Tom Okafor
+1:36
+4
+Maya Chen
+1:41
+[placeholders] 
+===== SCREEN: record-idle
+Record
+GPS ready ●
+Ride type
+🚴 Road
+🌲 Gravel
+Bike: Canyon Grizl · Background tracking on · Auto-pause on
+Demo tip
+Tap Start ride, wait ~5 seconds (the demo ride runs at 1 second = 2 minutes), then tap Finish to see what you earn.
+● Start ride
+[placeholders] 
+===== SCREEN: record-running
+Recording
+● GPS
+0:00:00
+Demo speed: 1 second = 2 minutes of riding
+0.00
+km
+0.0
+km/h
+0
+m elevation
+0
+XP earned
+⏸ Pause
+■ Finish
+[placeholders] 
+===== SCREEN: challenges
+Challenges
+❄️
+Streak freeze tokens: 1
+Protects your 6-week streak once
+Earn a token by completing any challenge.
+Active
+Discover
+Weekly 150 km
++300 XP
+Ride 150 km this week
+96 / 150 km
+64%
+Climb 2,000 m
++400 XP
+Gain 2,000 m of elevation
+1340 / 2000 m
+67%
+PERSONAL GOAL
+Ride 5,000 km in 2026
+2,904 km · on pace
+[placeholders] 
+===== SCREEN: challenges-discover
+Challenges
+❄️
+Streak freeze tokens: 1
+Protects your 6-week streak once
+Earn a token by completing any challenge.
+Active
+Discover
+Ride 4 days
++200 XP
+Complete 4 rides this week
+2 / 4 rides
+Join
+Gravel Grinder
+PRO
++500 XP
+60 km of gravel
+0 / 60 km
+🔒 Unlock
+PERSONAL GOAL
+Ride 5,000 km in 2026
+2,904 km · on pace
+[placeholders] 
+===== SCREEN: clubs
+Clubs
++ New
+Club vs Club · November
+Dawn Patrol
+5,120 km
+Gravel Goblins
+3,480 km
+DPC
+Dawn Patrol CC
+248 members
+Joined
+GG
+Gravel Goblins
+112 members
+›
+HCU
+Hill Climbers United
+391 members
+›
+[placeholders] 
+===== SCREEN: club-joined
+‹ Back
+Dawn Patrol CC
+
+Early-morning road rides, all paces.
+
+248
+Members
+5,120
+km this month
+Leave club
+Club admin PRO
+Analytics, custom challenges, member management
+Unlock with Pro
+CLUB FEED
+JonasSaturday ride leaves 7:00 from the bridge ☕
+MayaWho is in for the gravel social?
+Post
+[placeholders] Post to club…
+===== SCREEN: club-notjoined
+‹ Back
+Gravel Goblins
+
+Dirt, mud, snacks.
+
+112
+Members
+3,480
+km this month
+Join club (free)
+CLUB FEED
+SamNew route dropped: Forest Loop 70k
+Join to post
+[placeholders] 
+===== SCREEN: club-pro
+‹ Back
+Gravel Goblins
+
+Dirt, mud, snacks.
+
+112
+Members
+3,480
+km this month
+Join club (free)
+CLUB FEED
+SamNew route dropped: Forest Loop 70k
+Join to post
+[placeholders] 
+===== SCREEN: profile
+Profile
+⚙️
+AR
+Alex Rider Free · what is Pro?
+Level 4 · 1840 XP ⓘ
+160 XP to level 5
+🔥 6
+wk streak
+38
+rides
+2,904
+km
+BADGES
+🌅
+Early Bird
+💯
+First 100 km
+🔥
+7-Week Streak
+⛰️
+Everesting 42%
+🏆
+First KOM
+🚵
+Gravel Rookie
+🤝
+Club Member
+⚡
+Sprinter
+TRAINING INSIGHTS
+212 W
+Norm. power
+87
+Training load
+VAM 910
+Climb rate
+⚡ Unlock with Pro
+BIKE GARAGE
+🚲
+Canyon Grizl
+Gravel · 1,204 km
+🚲
+Specialized Tarmac
+Road · 1,700 km
+PRIVACY
+Home privacy zone (200 m)
+On
+Default ride visibility
+Followers
+Sign out
+[placeholders] 
+===== SHEET: notifications
+Notifications
+🧡
+Tom gave you kudos on your ride
+2h
+⚡
+Jonas beat your time on River Road Sprint
+5h
+🎯
+Challenge progress: Weekly 150 km is 64% done
+3h
+🔥
+Streak at risk: ride before Sunday to keep your 6-week streak
+1d
+Close
+===== SHEET: settings
+Settings
+Home privacy zone (200 m)
+On
+Push notifications
+On
+📋 Session log (for facilitator)↺ Reset demoDone
+===== SHEET: paywall
+⚡
+Go Pro
+
+Recording, feed, segments & basic clubs stay free forever.
+
+📈 Training load & trends
+⛰ Power & climb analysis
+🏁 Premium challenges
+🛠 Club admin tools & analytics
+$5.99
+per month
+$39.99
+per year · save 44%
+
+Example pricing: free for 7 days, then $5.99/month or $39.99/year. Cancel anytime in your store settings.
+
+Start 7-day free trial
+
+Restore purchases
+
+Not now
+===== SHEET: explain-xp
+⭐ XP & levels
+
+You earn XP for every ride: distance, climbing and riding consistently. Every 500 XP is a new level.
+
+Got it
+===== SHEET: explain-streak
+🔥 Weekly streak
+
+Ride at least once a week to keep your streak. A freeze token (❄️) protects it for one missed week. Sick, injured or the weather is awful? Use one. Rest is part of training.
+
+Got it
+===== SHEET: share
+Share “Sunrise gravel loop”
+🔗 Copy link 👥 Share to club 🖼 Save as image
+===== SHEET: new-club
+Create a club
+Create club (free)
+===== SHEET: ride-summary
+Ride complete 🎉
+
+Saving… uploading to cloud (offline-safe)
+
+3 km
+Distance
+0:10:00
+Time
+10 m
+Elev
+ Save & share
+
+Discard
+===== SHEET: reward
+🏅
++46 XP
+
+XP = distance + climbing + weekly ride bonus. Every 500 XP is a new level. Learn more
+
+🚴
+Badge unlocked: Fresh Legs
+First ride logged
+Distance (3 km × 8)
++24
+Climbing (10 m ÷ 4)
++2
+Weekly ride bonus (1 km+)
++20
+
+🔥 Streak: 6 weeks
+This week is counted. Ride weekly to keep it.
+
+⚡ Segment: River Road Sprint
+Your best: 1:34 · 2nd on the friends leaderboard
+Next up: Climb 2,000 m 68% · 114 XP to Level 5
+See my challenges →
+
+Back to feed

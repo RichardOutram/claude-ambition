@@ -1,0 +1,112 @@
+{
+  "url": "bayes.html",
+  "seconds": 10,
+  "views": {
+    "phone": {
+      "frames": [
+        {
+          "t": 0,
+          "file": "phone-t00.webp"
+        },
+        {
+          "t": 1,
+          "file": "phone-t01.webp"
+        },
+        {
+          "t": 2,
+          "file": "phone-t02.webp"
+        },
+        {
+          "t": 3,
+          "file": "phone-t03.webp"
+        },
+        {
+          "t": 4,
+          "file": "phone-t04.webp"
+        },
+        {
+          "t": 5,
+          "file": "phone-t05.webp"
+        },
+        {
+          "t": 6,
+          "file": "phone-t06.webp"
+        },
+        {
+          "t": 7,
+          "file": "phone-t07.webp"
+        },
+        {
+          "t": 8,
+          "file": "phone-t08.webp"
+        },
+        {
+          "t": 9,
+          "file": "phone-t09.webp"
+        },
+        {
+          "t": 10,
+          "file": "phone-t10.webp"
+        }
+      ],
+      "moving": false,
+      "seam": null,
+      "errors": [],
+      "sheet": "sheet-phone.jpg"
+    },
+    "desktop": {
+      "frames": [
+        {
+          "t": 0,
+          "file": "desktop-t00.webp"
+        },
+        {
+          "t": 1,
+          "file": "desktop-t01.webp"
+        },
+        {
+          "t": 2,
+          "file": "desktop-t02.webp"
+        },
+        {
+          "t": 3,
+          "file": "desktop-t03.webp"
+        },
+        {
+          "t": 4,
+          "file": "desktop-t04.webp"
+        },
+        {
+          "t": 5,
+          "file": "desktop-t05.webp"
+        },
+        {
+          "t": 6,
+          "file": "desktop-t06.webp"
+        },
+        {
+          "t": 7,
+          "file": "desktop-t07.webp"
+        },
+        {
+          "t": 8,
+          "file": "desktop-t08.webp"
+        },
+        {
+          "t": 9,
+          "file": "desktop-t09.webp"
+        },
+        {
+          "t": 10,
+          "file": "desktop-t10.webp"
+        }
+      ],
+      "moving": false,
+      "seam": null,
+      "errors": [],
+      "sheet": "sheet-desktop.jpg"
+    }
+  },
+  "page": "bayes.html",
+  "subject": "step-5"
+}

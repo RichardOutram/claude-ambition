@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bayes' Theorem, Interactively</title>
+<style>
+  :root{
+    --bg:#fafaf8; --fg:#1c1c1a; --muted:#66655f; --card:#fff; --line:#dcdbd4;
+    --h:#2a6fdb;      /* hypothesis true, evidence positive */
+    --hl:#a9c4f0;     /* hypothesis true, evidence negative */
+    --f:#e8742a;      /* hypothesis false, evidence positive (false alarm) */
+    --fl:#d9d8d1;     /* hypothesis false, evidence negative */
+  }
+  @media (prefers-color-scheme:dark){
+    :root{ --bg:#16161a; --fg:#ecebe6; --muted:#a09f98; --card:#1f1f25; --line:#383840;
+      --h:#5b9bff; --hl:#2c4670; --f:#ff9650; --fl:#3a3a42; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+  main{max-width:980px;margin:0 auto;padding:32px 20px 64px}
+  h1{font-size:2rem;margin:0 0 4px}
+  h2{font-size:1.15rem;margin:0 0 10px}
+  .lead{color:var(--muted);margin:0 0 24px;max-width:70ch}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin-bottom:20px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .presets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+  button{font:inherit;font-size:.9rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--fg);cursor:pointer}
+  button:hover,button.on{border-color:var(--h);color:var(--h)}
+  .ctl{margin:12px 0}
+  .ctl label{display:flex;justify-content:space-between;font-size:.95rem}
+  .ctl label b{font-variant-numeric:tabular-nums}
+  .ctl small{color:var(--muted);display:block}
+  input[type=range]{width:100%;accent-color:var(--h)}
+  .answer{text-align:center}
+  .big{font-size:3rem;font-weight:700;color:var(--h);line-height:1.1;font-variant-numeric:tabular-nums}
+  .answer p{margin:6px 0 0;color:var(--muted)}
+  .bar{position:relative;height:14px;border-radius:7px;background:var(--fl);margin:14px 0 4px;overflow:hidden}
+  .bar i{position:absolute;left:0;top:0;bottom:0;background:var(--h);transition:width .15s}
+  .bar em{position:absolute;top:-2px;bottom:-2px;width:3px;background:var(--fg);transition:left .15s}
+  .barlab{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted)}
+  svg{width:100%;height:auto;display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:.85rem;margin-top:10px}
+  .legend span::before{content:"";display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+  .formula{font-family:Georgia,'Times New Roman',serif;font-size:1.25rem;text-align:center;margin:8px 0 14px;overflow-x:auto;white-space:nowrap}
+  .frac{display:inline-block;vertical-align:middle;text-align:center}
+  .frac>span{display:block;padding:0 6px}
+  .frac>span:first-child{border-bottom:1.5px solid currentColor}
+  .hl-h{color:var(--h)} .hl-f{color:var(--f)}
+  .steps{font-variant-numeric:tabular-nums;margin:0;padding-left:20px}
+  .steps li{margin:4px 0}
+  .note{color:var(--muted);font-size:.92rem}
+  .dot{transition:fill .15s}
+</style>
+</head>
+<body>
+<main>
+  <h1>Bayes' Theorem</h1>
+  <p class="lead">Bayes' theorem tells you how to <em>update</em> a belief when you see new evidence. Drag the sliders below and watch how the same evidence can mean very different things depending on what you believed beforehand.</p>
+
+  <div class="card">
+    <h2>1. Set up a scenario</h2>
+    <div class="presets" id="presets"></div>
+    <div class="grid2">
+      <div>
+        <div class="ctl"><label><span id="nameH">Prior: P(H)</span><b id="vPrior"></b></label>
+          <input type="range" id="prior" min="0.1" max="99" step="0.1">
+          <small id="dPrior"></small></div>
+        <div class="ctl"><label><span>Hit rate: P(E | H)</span><b id="vSens"></b></label>
+          <input type="range" id="sens" min="0" max="100" step="0.5">
+          <small id="dSens"></small></div>
+        <div class="ctl"><label><span>False-alarm rate: P(E | not H)</span><b id="vFpr"></b></label>
+          <input type="range" id="fpr" min="0" max="100" step="0.5">
+          <small id="dFpr"></small></div>
+      </div>
+      <div class="answer">
+        <div class="note">After seeing the evidence, P(H | E) =</div>
+        <div class="big" id="post"></div>
+        <div class="bar"><i id="barPost"></i><em id="barPrior"></em></div>
+        <div class="barlab"><span>0%</span><span>black tick = prior, blue = posterior</span><span>100%</span></div>
+        <p id="verdict"></p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>2. Picture it as 1,000 people</h2>
+      <svg id="dots" viewBox="0 0 500 200" role="img" aria-label="1000 dots showing true and false positives"></svg>
+      <div class="legend" id="legDots"></div>
+      <p class="note" id="dotsText"></p>
+    </div>
+    <div class="card">
+      <h2>3. Picture it as areas</h2>
+      <svg id="area" viewBox="0 0 300 260" role="img" aria-label="Area diagram of Bayes theorem"></svg>
+      <div class="legend" id="legArea"></div>
+      <p class="note">Width = how common H is. Height of the shaded part = how likely the evidence is in that group. Posterior = blue area ÷ (blue + orange).</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>4. The theorem, with your numbers</h2>
+    <div class="formula">
+      P(H | E) =
+      <span class="frac"><span>P(E | H) · P(H)</span><span>P(E | H) · P(H) + P(E | ¬H) · P(¬H)</span></span>
+    </div>
+    <div class="formula" id="numeric"></div>
+    <ol class="steps" id="steps"></ol>
+    <p class="note">In words: of all the ways the evidence could show up (<span class="hl-h">true hits</span> + <span class="hl-f">false alarms</span>), what fraction are true hits? When the hypothesis is rare, false alarms from the huge "not H" group can swamp the true hits, even with an accurate test. This is the <b>base-rate fallacy</b>.</p>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const pct = (x, d=1) => (x*100).toFixed(d).replace(/\.0+$/,'') + '%';
+
+const PRESETS = [
+  {n:'Rare disease test', H:'has the disease', E:'tests positive', p:1, s:90, f:9,
+    dp:'1% of people have the disease', ds:'90% of sick people test positive', df:'9% of healthy people also test positive'},
+  {n:'Spam filter', H:'is spam', E:'contains "winner"', p:40, s:30, f:2,
+    dp:'40% of email is spam', ds:'30% of spam contains the word', df:'2% of real email contains it'},
+  {n:'Very accurate test, very rare condition', H:'has the condition', E:'tests positive', p:0.1, s:99, f:1,
+    dp:'1 in 1000 has it', ds:'99% sensitivity', df:'1% false-positive rate'},
+  {n:'Coin: fair or trick?', H:'coin is two-headed', E:'lands heads', p:5, s:100, f:50,
+    dp:'5% of coins in the bag are two-headed', ds:'two-headed coins always land heads', df:'fair coins land heads half the time'},
+];
+let cur = PRESETS[0];
+
+PRESETS.forEach((p,i)=>{
+  const b=document.createElement('button'); b.textContent=p.n; b.onclick=()=>load(i); b.id='pb'+i;
+  $('presets').appendChild(b);
+});
+
+function load(i){
+  cur = PRESETS[i];
+  $('prior').value=cur.p; $('sens').value=cur.s; $('fpr').value=cur.f;
+  PRESETS.forEach((_,j)=>$('pb'+j).classList.toggle('on',i===j));
+  update();
+}
+['prior','sens','fpr'].forEach(id=>$(id).addEventListener('input',()=>{
+  PRESETS.forEach((_,j)=>$('pb'+j).classList.remove('on')); update();
+}));
+
+function rect(x,y,w,h,fill,extra=''){
+  return `<rect x="${x}" y="${y}" width="${Math.max(w,0)}" height="${Math.max(h,0)}" fill="var(--${fill})" ${extra}/>`;
+}
+
+function update(){
+  const pH=$('prior').value/100, sens=$('sens').value/100, fpr=$('fpr').value/100;
+  const pN=1-pH;
+  const tp=sens*pH, fp=fpr*pN, pE=tp+fp;
+  const post = pE>0 ? tp/pE : 0;
+
+  $('vPrior').textContent=pct(pH); $('vSens').textContent=pct(sens); $('vFpr').textContent=pct(fpr);
+  $('dPrior').textContent=`Before any evidence: someone/something ${cur.H}. (${cur.dp})`;
+  $('dSens').textContent=`If H is true, chance of seeing the evidence (${cur.E}).`;
+  $('dFpr').textContent=`If H is false, chance of seeing it anyway.`;
+  $('nameH').textContent='Prior: P(H)';
+  $('post').textContent=pct(post);
+  $('barPost').style.width=(post*100)+'%';
+  $('barPrior').style.left=`calc(${pH*100}% - 1px)`;
+  const ratio = pH>0 ? post/pH : 0;
+  $('verdict').textContent = pE===0 ? 'The evidence is impossible under both hypotheses.' :
+    `Your belief moved from ${pct(pH)} to ${pct(post)} (${ratio>=1?'×'+ratio.toFixed(1)+' more':'×'+ratio.toFixed(2)+' as'} likely). Of everything that ${cur.E}, ${pct(post,0)} really ${cur.H.replace(/^has/,'has').replace(/^is/,'is')}.`;
+
+  // ---- dots: 1000 people, 50 x 20
+  const N=1000, nH=Math.round(N*pH);
+  const TP=Math.round(nH*sens), FN=nH-TP;
+  const FP=Math.round((N-nH)*fpr), TN=N-nH-FP;
+  const order=[['h',TP],['hl',FN],['f',FP],['fl',TN]];
+  let dots='', k=0;
+  for(const [c,n] of order) for(let i=0;i<n;i++,k++){
+    const col=k%50,row=Math.floor(k/50);
+    dots+=`<circle class="dot" cx="${5+col*10}" cy="${5+row*10}" r="3.6" fill="var(--${c})"/>`;
+  }
+  $('dots').innerHTML=dots;
+  const leg=(c,t)=>`<span style="--c:var(--${c})">${t}</span>`;
+  $('legDots').innerHTML=leg('h',`H true, E seen: ${TP}`)+leg('hl',`H true, no E: ${FN}`)+leg('f',`H false, E seen: ${FP}`)+leg('fl',`H false, no E: ${TN}`);
+  $('dotsText').innerHTML=`Out of ${N} people, ${nH} are H. Evidence appears for <b class="hl-h">${TP}</b> of them and for <b class="hl-f">${FP}</b> of the other ${N-nH}. So among the ${TP+FP} showing the evidence, <b>${TP}</b> are truly H: ${TP+FP?pct(TP/(TP+FP)):'–'}.`;
+
+  // ---- area diagram
+  const X0=10,Y0=10,S=240, wH=S*pH, wN=S-wH;
+  const hTP=S*sens, hFP=S*fpr;
+  let a='';
+  a+=rect(X0,Y0,wH,S,'hl'); a+=rect(X0+wH,Y0,wN,S,'fl');
+  a+=rect(X0,Y0,wH,hTP,'h'); a+=rect(X0+wH,Y0,wN,hFP,'f');
+  a+=`<rect x="${X0}" y="${Y0}" width="${S}" height="${S}" fill="none" stroke="var(--fg)" stroke-width="1"/>`;
+  a+=`<line x1="${X0+wH}" x2="${X0+wH}" y1="${Y0}" y2="${Y0+S}" stroke="var(--fg)" stroke-width="1"/>`;
+  a+=`<text x="${X0+wH/2}" y="${Y0+S+16}" text-anchor="${wH<40?'start':'middle'}" font-size="11" fill="var(--muted)">H</text>`;
+  a+=`<text x="${X0+wH+wN/2}" y="${Y0+S+16}" text-anchor="middle" font-size="11" fill="var(--muted)">not H</text>`;
+  // brace on right showing posterior share of "evidence" strip
+  const bx=X0+S+10, tot=hTP*wH/S+hFP*wN/S; // not used for geometry, just ratio
+  const share=post;
+  a+=`<text x="${bx}" y="${Y0+12}" font-size="10" fill="var(--muted)">E rows</text>`;
+  a+=`<text x="${bx}" y="${Y0+26}" font-size="11" font-weight="600" fill="var(--h)">${pct(post,0)}</text>`;
+  a+=`<text x="${bx}" y="${Y0+38}" font-size="9" fill="var(--muted)">blue</text>`;
+  $('area').setAttribute('viewBox','0 0 300 '+(Y0+S+26));
+  $('area').innerHTML=a;
+  $('legArea').innerHTML=leg('h','True hits: P(E|H)·P(H)')+leg('f','False alarms: P(E|¬H)·P(¬H)')+leg('hl','H, no E')+leg('fl','not H, no E');
+
+  // ---- numbers
+  const f4=x=>x.toFixed(4).replace(/0+$/,'').replace(/\.$/,'');
+  $('numeric').innerHTML = pE>0 ?
+    `P(H | E) = <span class="frac"><span><span class="hl-h">${f4(sens)} × ${f4(pH)}</span></span><span><span class="hl-h">${f4(sens)} × ${f4(pH)}</span> + <span class="hl-f">${f4(fpr)} × ${f4(pN)}</span></span></span> = <span class="frac"><span class="hl-h">${f4(tp)}</span><span>${f4(pE)}</span></span> = <b>${pct(post,2)}</b>` : 'Undefined (evidence has probability 0).';
+  $('steps').innerHTML=
+    `<li><b>Prior</b> P(H) = ${pct(pH)}, so P(¬H) = ${pct(pN)}.</li>`+
+    `<li><b>True hits:</b> P(E|H)·P(H) = <span class="hl-h">${pct(tp,2)}</span> of everyone.</li>`+
+    `<li><b>False alarms:</b> P(E|¬H)·P(¬H) = <span class="hl-f">${pct(fp,2)}</span> of everyone.</li>`+
+    `<li><b>Total evidence</b> P(E) = ${pct(pE,2)}.</li>`+
+    `<li><b>Posterior</b> = hits ÷ total = ${pct(post,2)}.</li>`;
+}
+load(0);
+</script>
+</body>
+</html>

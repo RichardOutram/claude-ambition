@@ -1,0 +1,8 @@
+{
+  "slug": "data/heat-pump",
+  "prompt": "Work out whether switching from my gas boiler to a heat pump would save me money, as a Markdown file",
+  "mode": "",
+  "brief": "A 3-bed semi in the UK, about 12,000 kWh of gas a year, an ageing boiler. Grants exist but the user doesn't know the details.",
+  "check": "Recompute every figure: efficiency (SCOP), unit prices, standing charges, grants, install cost, payback. Check sources are current and named. Rubric: whether it answers the actual decision, handles uncertainty honestly (ranges, what would change the answer), and says what to measure or ask an installer.",
+  "fixture": null
+}

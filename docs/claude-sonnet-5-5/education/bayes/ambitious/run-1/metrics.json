@@ -1,0 +1,82 @@
+{
+  "slug": "learn/bayes",
+  "arm": "ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-13T00:39:33Z",
+  "session_id": "696ccbad-6a8b-47c3-8914-9b095c6d9aa5",
+  "exchanges": 6,
+  "cost_usd": 2.9586,
+  "client_cost_usd": 0.1806,
+  "wall_ms": 1959435,
+  "duration_ms": 85392,
+  "num_turns": 13,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 194,
+      "outputTokens": 113273,
+      "thinkingTokens": 40090,
+      "cacheReadInputTokens": 10799985,
+      "cacheCreationInputTokens": 183399,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 183399,
+      "webSearchRequests": 0,
+      "costUSD": 2.9467124999999985
+    },
+    "claude-haiku-5-5": {
+      "inputTokens": 13307,
+      "outputTokens": 1052,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 1,
+      "costUSD": 0.0118567,
+      "thinkingTokens": 288,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 0
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 1.11,
+      "cost_usd": 0.2033
+    },
+    {
+      "n": 2,
+      "minutes": 1.28,
+      "cost_usd": 0.218
+    },
+    {
+      "n": 3,
+      "minutes": 1.46,
+      "cost_usd": 0.2277
+    },
+    {
+      "n": 4,
+      "minutes": 1.61,
+      "cost_usd": 0.2374
+    },
+    {
+      "n": 5,
+      "minutes": 1.87,
+      "cost_usd": 0.2603
+    },
+    {
+      "n": 6,
+      "minutes": 32.66,
+      "cost_usd": 2.9586
+    }
+  ],
+  "plain_push_after": null,
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  },
+  "plugin_commit": "ccf02d5",
+  "claude_version": "2.1.322"
+}

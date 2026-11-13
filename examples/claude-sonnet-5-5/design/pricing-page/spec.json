@@ -1,0 +1,8 @@
+{
+  "slug": "design/pricing-page",
+  "prompt": "Design a pricing page for an invoicing app for freelancers, as a single web page",
+  "mode": "",
+  "brief": "A new product competing with bigger names. Most visitors arrive from a comparison article on a phone.",
+  "check": "Screenshots at 375px and desktop, Lighthouse (performance and accessibility). Rubric: whether a visitor can pick a plan in seconds, how it handles the comparison with bigger rivals, visual distinctiveness (not a template look), and honest copy.",
+  "fixture": null
+}

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Neon Solar Implosion</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;background:#02000a;overflow:hidden;cursor:none}
+  canvas{display:block}
+  #hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);font:12px/1 ui-monospace,Menlo,monospace;
+    letter-spacing:.3em;color:#9af;opacity:.55;text-transform:uppercase;pointer-events:none;mix-blend-mode:screen}
+  #bar{position:fixed;left:0;bottom:0;height:2px;background:linear-gradient(90deg,#0ff,#f0f,#ff0);width:0;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="hint">move pointer · click to pulse · 10s loop</div>
+<div id="bar"></div>
+<script type="importmap">
+{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+"three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const LOOP = 10;
+const renderer = new THREE.WebGLRenderer({antialias:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x02000a);
+const camera = new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,500);
+
+// ---------- particle generation ----------
+const pos=[],loc=[],par=[],col=[]; // loc: local offset; par: R, a0, n, size ; col: color
+const TAU=Math.PI*2;
+const rnd=(a=1)=>Math.random()*a, gauss=()=>(Math.random()+Math.random()+Math.random()-1.5)/1.5;
+const c=new THREE.Color();
+function add(R,a0,n,size,lx,ly,lz,hue,sat=1,l=0.6,tilt=0){
+  loc.push(lx,ly,lz); par.push(R,a0,n,size);
+  c.setHSL(((hue%1)+1)%1,sat,l); col.push(c.r,c.g,c.b);
+  pos.push(tilt,0,0);
+}
+// sun: fibonacci shell + volume
+for(let i=0;i<14000;i++){
+  const u=rnd(),v=rnd(),th=TAU*u,ph=Math.acos(2*v-1),r=2.2*Math.cbrt(rnd())*(0.6+0.4*rnd());
+  const hue=0.02+rnd(0.1);
+  add(0,0,0,1.2+rnd(2),r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),r*Math.sin(ph)*Math.sin(th),hue,1,0.55+rnd(0.2));
+}
+// corona streamers
+for(let i=0;i<6000;i++){
+  const th=rnd(TAU),ph=Math.acos(2*rnd()-1),r=2.4+Math.pow(rnd(),3)*3;
+  add(0,0,0,0.8+rnd(1.2),r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),r*Math.sin(ph)*Math.sin(th),0.95+rnd(0.1),1,0.5);
+}
+// planets: radius, integer speed, size, hue, rings?
+const planets=[[5,7,.35,.55],[7.5,5,.55,.85],[10.5,4,.7,.5],[14,3,.5,.08],[19,2,1.2,.12],[24,2,1.0,.62],[29,1,.8,.5],[34,1,.8,.75]];
+planets.forEach(([R,n,s,h],pi)=>{
+  const a0=rnd(TAU), tilt=(rnd()-.5)*0.25;
+  // orbit ring
+  for(let i=0;i<1800+R*60;i++) add(R,rnd(TAU),0,0.5+rnd(0.5),gauss()*.06,gauss()*.06,gauss()*.06,h,0.9,0.35,tilt);
+  // planet body
+  for(let i=0;i<1600;i++){
+    const th=rnd(TAU),ph=Math.acos(2*rnd()-1),r=s*Math.cbrt(rnd());
+    add(R,a0,n,1+rnd(2),r*Math.sin(ph)*Math.cos(th),r*Math.cos(ph),r*Math.sin(ph)*Math.sin(th),h+rnd(.08),1,0.55+rnd(.25),tilt);
+  }
+  // comet trail (angular lag)
+  for(let i=0;i<1500;i++){
+    const lag=Math.pow(rnd(),1.7)*0.9/ (R*0.12+1);
+    add(R,a0-lag,n,0.6+rnd(1),gauss()*s*.35,gauss()*s*.35,gauss()*s*.35,h+lag*0.3,1,0.5,tilt);
+  }
+  // planet ring for some
+  if(pi===4||pi===1){
+    for(let i=0;i<2500;i++){
+      const a=rnd(TAU),rr=s*(1.5+rnd(1));
+      add(R,a0,n,0.8+rnd(1),Math.cos(a)*rr,gauss()*.03,Math.sin(a)*rr,h+0.1,0.8,0.65,tilt);
+    }
+  }
+});
+// asteroid belt
+for(let i=0;i<9000;i++){
+  const R=16+rnd(1.8)+gauss()*.3, n=2+Math.floor(rnd(2));
+  add(R,rnd(TAU),n,0.6+rnd(1),gauss()*.2,gauss()*.25,gauss()*.2,0.1+rnd(0.15),0.7,0.55,0);
+}
+// far dust halo
+for(let i=0;i<10000;i++){
+  const R=8+rnd(34),n=1+Math.floor(rnd(3));
+  add(R,rnd(TAU),n,0.4+rnd(0.7),gauss()*.4,gauss()*3,gauss()*.4,0.5+rnd(0.5),0.9,0.45,0);
+}
+
+const geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3)); // x = tilt
+geo.setAttribute('aLoc',new THREE.Float32BufferAttribute(loc,3));
+geo.setAttribute('aPar',new THREE.Float32BufferAttribute(par,4));
+geo.setAttribute('aCol',new THREE.Float32BufferAttribute(col,3));
+geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(),200);
+
+const mat=new THREE.ShaderMaterial({
+  transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  uniforms:{uP:{value:0},uMouse:{value:new THREE.Vector3(999,999,999)},uPulse:{value:0},
+            uScale:{value:innerHeight*renderer.getPixelRatio()}},
+  vertexShader:`
+    attribute vec3 aLoc; attribute vec4 aPar; attribute vec3 aCol;
+    uniform float uP,uPulse,uScale; uniform vec3 uMouse;
+    varying vec3 vCol; varying float vGlow;
+    const float TAU=6.28318530718;
+    float h(float n){return fract(sin(n*91.345)*47453.5453);}
+    void main(){
+      float p=uP;
+      // implosion curve: slow bloom, violent collapse, rebirth -> periodic, k(0)=k(1)=0
+      float k=smoothstep(.5,.86,p)-smoothstep(.86,.97,p);
+      k=pow(k,1.4);
+      float burst=smoothstep(.86,.9,p)*(1.-smoothstep(.9,1.,p)); // flash
+      float R=aPar.x, a=aPar.y+TAU*aPar.z*p;
+      float tilt=position.x;
+      vec3 c=vec3(cos(a)*R, sin(a)*R*tilt, sin(a)*R);
+      vec3 w=c+aLoc;
+      // pre-collapse breathing
+      w*=1.+.08*sin(TAU*p*2.+R);
+      float seed=h(aPar.y*17.+aLoc.x*31.+aLoc.z*7.+R);
+      // implosion: spiral inward, shrink to a core, stagger by radius
+      float kk=clamp(k*(1.15+seed*.15-R*.004),0.,1.);
+      float sw=kk*(2.5+seed*3.)*(1.-kk*.3);
+      float cs=cos(sw),sn=sin(sw);
+      w.xz=mat2(cs,-sn,sn,cs)*w.xz;
+      w*=1.-.985*kk;
+      // rebirth shockwave ripple
+      float ring=exp(-pow((length(w)-p*0.)*0.,2.));
+      // pointer force field
+      vec3 d=w-uMouse; float md=length(d);
+      float inf=exp(-md*md/18.);
+      w+=normalize(d+1e-4)*inf*(2.5+uPulse*8.)+cross(normalize(d+1e-4),vec3(0,1,0))*inf*1.5;
+      // pulse shockwave
+      vec4 mv=modelViewMatrix*vec4(w,1.);
+      gl_Position=projectionMatrix*mv;
+      float sz=aPar.w*(1.+kk*2.)*(1.+inf*1.5);
+      gl_PointSize=clamp(sz*uScale*.0042/(-mv.z)*30.,1.,60.);
+      vec3 base=aCol;
+      // neon hue shift over loop
+      float s=sin(TAU*p+R*.15);
+      base=mix(base,base.gbr,.35+.35*s*s*(R>0.?1.:0.));
+      vec3 hot=vec3(1.,.9,1.);
+      vCol=base*(1.+kk*2.5+inf*2.)+hot*(burst*.8+kk*kk*.7);
+      vGlow=1.;
+    }`,
+  fragmentShader:`
+    varying vec3 vCol; varying float vGlow;
+    void main(){
+      vec2 q=gl_PointCoord-.5; float r=length(q);
+      float a=smoothstep(.5,0.,r); a=a*a;
+      gl_FragColor=vec4(vCol*a*.9,a);
+    }`
+});
+const points=new THREE.Points(geo,mat); points.frustumCulled=false; scene.add(points);
+
+// starfield backdrop (static)
+{
+  const g=new THREE.BufferGeometry(),p=[];
+  for(let i=0;i<2500;i++){const v=new THREE.Vector3().randomDirection().multiplyScalar(150+rnd(100));p.push(v.x,v.y,v.z);}
+  g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x6a7cff,size:.5,transparent:true,opacity:.6,depthWrite:false})));
+}
+
+// ---------- post ----------
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.2,0.8,0.05);
+composer.addPass(bloom);
+
+// ---------- pointer ----------
+const ptr=new THREE.Vector2(0,0), ptrS=new THREE.Vector2(0,0);
+let pulse=0;
+addEventListener('pointermove',e=>{ptr.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight*2-1));});
+addEventListener('pointerdown',()=>{pulse=1;});
+const cursor=document.createElement('div');
+Object.assign(cursor.style,{position:'fixed',width:'26px',height:'26px',marginLeft:'-13px',marginTop:'-13px',borderRadius:'50%',
+  border:'2px solid #0ff',boxShadow:'0 0 18px #0ff,0 0 40px #f0f,inset 0 0 12px #f0f',pointerEvents:'none',mixBlendMode:'screen'});
+document.body.appendChild(cursor);
+addEventListener('pointermove',e=>{cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px';});
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);
+  mat.uniforms.uScale.value=innerHeight*renderer.getPixelRatio();
+});
+
+// ---------- loop ----------
+const clock=new THREE.Clock(), bar=document.getElementById('bar');
+const ray=new THREE.Raycaster(), plane=new THREE.Plane(new THREE.Vector3(0,1,0),0), hit=new THREE.Vector3();
+function frame(){
+  const t=clock.getElapsedTime(), p=(t%LOOP)/LOOP, ang=p*TAU;
+  mat.uniforms.uP.value=p;
+  bar.style.width=(p*100)+'%';
+  // camera: periodic orbit + slow dolly, plus pointer parallax
+  ptrS.lerp(ptr,0.06);
+  const k=Math.pow(Math.max(0,Math.sin(Math.PI*Math.min(1,Math.max(0,(p-.5)/.4)))),1.0);
+  const dist=48-10*Math.sin(ang)+(-6)*k;
+  const yaw=Math.sin(ang)*0.5+ptrS.x*0.5, pitch=0.62+0.12*Math.cos(ang)+ptrS.y*-0.25;
+  camera.position.set(Math.sin(yaw)*Math.cos(pitch)*dist,Math.sin(pitch)*dist,Math.cos(yaw)*Math.cos(pitch)*dist);
+  camera.lookAt(0,0,0);
+  // camera shake at collapse
+  const sh=k*k*0.25; camera.position.x+=Math.sin(t*90)*sh; camera.position.y+=Math.cos(t*77)*sh;
+  camera.updateMatrixWorld();
+  // pointer on orbital plane
+  ray.setFromCamera(ptrS.clone().lerp(ptr,1),camera);
+  if(ray.ray.intersectPlane(plane,hit)) mat.uniforms.uMouse.value.copy(hit);
+  pulse*=0.93; mat.uniforms.uPulse.value=pulse;
+  bloom.strength=1.0+1.6*k+pulse*0.8;
+  composer.render();
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why a positive test is usually a false alarm</title>
+<style>
+:root{
+  --bg:#fafaf9; --surface:#fff; --ink:#1c1b19; --ink2:#55524c; --muted:#8a867e; --line:#e4e1da;
+  --sick:#2160c4;   /* truly sick, tested positive */
+  --miss:#9dbbe8;   /* sick, tested negative */
+  --fp:#c4570f;     /* healthy, tested positive (false alarm) */
+  --neutral:#a8a399;/* healthy / not yet sorted (validated: 2.45:1, passes separation) */
+  --accent:#2160c4;
+}
+@media (prefers-color-scheme:dark){
+:root{ --bg:#141413; --surface:#1d1c1a; --ink:#f1efe9; --ink2:#bdb9b0; --muted:#8a867e; --line:#34322e;
+  --sick:#5b9bf0; --miss:#2c4a78; --fp:#f08a45; --neutral:#7a756b; --accent:#5b9bf0; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:980px;margin:0 auto;padding:28px 16px 72px}
+h1{font-size:clamp(1.6rem,5vw,2.3rem);line-height:1.2;margin:0 0 10px}
+h2{font-size:1.2rem;margin:36px 0 8px}
+p{margin:0 0 12px;color:var(--ink2);max-width:66ch}
+b{color:var(--ink)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+button{font:inherit;font-size:.92rem;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ink2)}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.q{font-size:1.1rem;color:var(--ink);padding:16px;border-left:4px solid var(--fp);background:var(--surface);border-radius:0 12px 12px 0;max-width:66ch;margin:14px 0}
+.guesses{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px}
+#gfeed{min-height:1.5em;color:var(--ink)}
+.play{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+.play>*,main>*{min-width:0}
+@media (max-width:760px){.play{grid-template-columns:minmax(0,1fr)}}
+html,body{overflow-x:hidden}
+.nav{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.nav .step{color:var(--muted);font-size:.88rem;margin-left:auto}
+#story{min-height:4.6em;color:var(--ink);margin:0 0 10px}
+#story b{font-variant-numeric:tabular-nums}
+svg#dots{width:100%;height:auto;display:block}
+svg#dots circle{transition:transform .7s cubic-bezier(.3,.7,.2,1),fill .4s,opacity .4s}
+svg#dots circle.dim{opacity:.1}
+.stage0 .g-tp,.stage0 .g-fn,.stage0 .g-fp,.stage0 .g-tn{fill:var(--neutral)}
+.stage1 .g-tp,.stage1 .g-fn{fill:var(--sick)}
+.stage1 .g-fp,.stage1 .g-tn{fill:var(--neutral)}
+.stage2 .g-tp,.stage3 .g-tp{fill:var(--sick)}
+.stage2 .g-fn,.stage3 .g-fn{fill:var(--miss)}
+.stage2 .g-fp,.stage3 .g-fp{fill:var(--fp)}
+.stage2 .g-tn,.stage3 .g-tn{fill:var(--neutral)}
+.stage1 .g-tp,.stage1 .g-fn,.stage2 .g-tp,.stage3 .g-tp{stroke:var(--sick);stroke-opacity:.35;stroke-width:5}  /* halo so a lone sick dot is findable */
+.stage3 .g-fn,.stage3 .g-tn{opacity:.1}
+.stage3 .g-fn.hl,.stage3 .g-tn.hl{opacity:1}
+#annot{font-size:26px;font-weight:600;fill:var(--ink)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;font-size:.84rem;color:var(--ink2);margin-top:10px;min-height:1.4em}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+#answerwrap{margin-top:12px;display:none}
+.answer{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px}
+.big{font-size:clamp(2.2rem,8vw,3rem);font-weight:700;color:var(--sick);line-height:1;font-variant-numeric:tabular-nums}
+.bar{display:flex;gap:2px;height:22px;margin:10px 0 4px}
+.bar span{min-width:3px;border-radius:4px}
+.bar .a{background:var(--sick)}.bar .b{background:var(--fp)}
+.barlab{display:flex;justify-content:space-between;font-size:.82rem;color:var(--ink2)}
+.verdict{margin:8px 0 0;color:var(--ink);font-weight:600}
+.ctl{margin-bottom:16px}
+.ctl label{display:block;font-weight:600;font-size:.95rem;line-height:1.3}
+.ctl label small{display:block;font-weight:400;color:var(--muted);font-size:.82rem}
+.row{display:flex;gap:10px;align-items:center;margin-top:6px}
+.row input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
+.row .num{display:flex;align-items:center;gap:2px}
+.row input[type=number]{width:5.6em;font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);text-align:right;font-variant-numeric:tabular-nums}
+.presets{display:flex;flex-direction:column;gap:6px}
+.presets button{text-align:left;border-radius:10px}
+#formulaSec{display:none}
+.fline{margin:10px 0;overflow-x:auto;padding:4px 0;color:var(--ink);font-variant-numeric:tabular-nums}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 4px}
+.frac>span:first-child{border-bottom:1.5px solid var(--ink);padding:0 8px 3px}
+.frac>span:last-child{padding:3px 8px 0}
+.term{padding:1px 4px;border-radius:5px;cursor:default;white-space:nowrap}
+.term.t-a{background:color-mix(in srgb,var(--sick) 18%,transparent)}
+.term.t-b{background:color-mix(in srgb,var(--fp) 20%,transparent)}
+.term.t-all{background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.term:hover,.term:focus-visible{outline:2px solid var(--ink2)}
+.note{font-size:.88rem;color:var(--muted)}
+.takeaway{border-left:4px solid var(--sick);padding:4px 0 4px 14px;color:var(--ink);max-width:62ch}
+@media (prefers-reduced-motion:reduce){svg#dots circle{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Why a positive test is usually a false alarm</h1>
+<p>It sounds backwards, but it happens whenever a condition is rare and the test makes even a few mistakes. You'll see why with dots. No maths needed yet. <span class="note">(Made-up numbers, for learning. Not medical advice.)</span></p>
+
+<div class="q" id="question">
+  A test for a condition is <b>90% accurate</b>. Only <b>1 in 100</b> people have the condition. You take the test and it comes back <b>positive</b>.<br>
+  <b>What's the chance you actually have it?</b>
+  <div class="note" style="margin-top:8px">"90% accurate" here means: it catches 90 of every 100 sick people, and wrongly flags 10 of every 100 healthy people.</div>
+</div>
+<div class="guesses" role="group" aria-label="Your guess">
+  <button data-g="90">About 90%</button><button data-g="50">About 50%</button>
+  <button data-g="10">About 10%</button><button data-g="1">About 1%</button>
+</div>
+<p id="gfeed" aria-live="polite">Make a guess, then let's find out.</p>
+
+<h2>Let's find out</h2>
+<div class="play">
+  <section class="card" aria-label="Dot picture">
+    <div class="nav">
+      <button id="back">← Back</button><button id="next" class="primary">Next →</button>
+      <span class="step" id="stepLab"></span>
+    </div>
+    <p id="story"></p>
+    <svg id="dots" class="stage0" role="img" aria-label="1,000 dots, each one person"></svg>
+    <div class="legend" id="legend"></div>
+    <div id="answerwrap">
+      <div class="bar" id="bar" aria-hidden="true"><span class="a"></span><span class="b"></span></div>
+      <div class="barlab"><span id="lblA"></span><span id="lblB"></span></div>
+      <div class="answer" style="margin-top:12px">
+        <span class="big" id="post"></span><span id="postWords" style="color:var(--ink2)">chance you're really sick</span>
+      </div>
+      <p class="verdict" id="verdict"></p>
+    </div>
+  </section>
+
+  <section class="card" aria-label="Change the numbers">
+    <div class="ctl">
+      <label for="prev-n">How common is the condition?<small>Percent of people who have it</small></label>
+      <div class="row"><input type="range" id="prev-r" min="0" max="100" step="0.1" aria-label="Prevalence slider">
+        <span class="num"><input type="number" id="prev-n" min="0" max="100" step="any" inputmode="decimal">%</span></div>
+    </div>
+    <div class="ctl">
+      <label for="sens-n">Does the test catch it?<small>Of sick people, percent who test positive (sensitivity)</small></label>
+      <div class="row"><input type="range" id="sens-r" min="0" max="100" step="1" aria-label="Sensitivity slider">
+        <span class="num"><input type="number" id="sens-n" min="0" max="100" step="any" inputmode="decimal">%</span></div>
+    </div>
+    <div class="ctl">
+      <label for="fpr-n">Does it cry wolf?<small>Of healthy people, percent who still test positive (false-positive rate)</small></label>
+      <div class="row"><input type="range" id="fpr-r" min="0" max="100" step="0.5" aria-label="False-positive slider">
+        <span class="num"><input type="number" id="fpr-n" min="0" max="100" step="any" inputmode="decimal">%</span></div>
+    </div>
+    <div class="note" style="margin:-4px 0 12px">Type an exact number or drag. The dots update as you go.</div>
+    <div class="presets" id="presets"></div>
+  </section>
+</div>
+
+<section id="formulaSec">
+  <h2>Now the formula, with your numbers</h2>
+  <p>This is <b>Bayes' theorem</b>. It's exactly what the dots just did. Hover a coloured piece to light up its dots.</p>
+  <div class="card">
+    <div class="fline" id="f1"></div>
+    <div class="fline" id="f2"></div>
+    <p class="note" id="fnote" style="margin-top:8px"></p>
+  </div>
+</section>
+
+<h2>Try a challenge</h2>
+<section class="card" id="challenge">
+  <p style="margin-bottom:6px;color:var(--ink)">Can you make a positive result <b>more likely real than a false alarm</b>? Move any sliders you like.</p>
+  <p class="verdict" id="chal" style="margin:0"></p>
+  <p class="note" id="chalHint" style="margin:6px 0 0">Hint: what would give you more sick people to find, or fewer healthy people to mistake for them?</p>
+</section>
+
+<h2>Say it in your own words</h2>
+<section class="card" id="explain">
+  <p style="color:var(--ink);margin-bottom:10px">Finish the sentence: <b>"For a rare condition, most positive results are false alarms because…"</b></p>
+  <div class="presets" id="eopts">
+    <button data-e="0">…the test must be badly made.</button>
+    <button data-e="1">…there are far more healthy people than sick ones, so even a small false-alarm rate flags more healthy people than the test catches sick ones.</button>
+    <button data-e="2">…a positive result tells you nothing at all.</button>
+  </div>
+  <p id="efeed" aria-live="polite" style="margin:10px 0 0;color:var(--ink)"></p>
+</section>
+
+<h2>The idea in one breath</h2>
+<p class="takeaway">When few people have the condition, even a small false-alarm rate adds up to more healthy people flagged than sick people caught. So a positive result is more likely to come from the large healthy group. Make the condition common, or the test never cry wolf, and the answer jumps.</p>
+
+<h2>Before you take this to a real test result</h2>
+<section class="card" id="safety" style="border-left:4px solid var(--fp)">
+  <p style="color:var(--ink);margin:0">The numbers here are <b>made up for learning</b>. This isn't medical advice. If you've had a real positive result, don't wave it away. A positive screening result means <i>check again</i>, not <i>probably nothing</i>, and a second positive changes the odds a lot. Your own chances also depend on your age, family history and symptoms, and tests can miss sick people too. Ask your doctor what your result means for you.</p>
+</section>
+</main>
+<div id="sr" aria-live="polite" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden"></div>
+
+<script>
+// ===== MODEL-START (tested independently) =====
+function clampPct(v){ v = Number(v); if(!isFinite(v)) return 0; return Math.min(100, Math.max(0, v)); }
+function model(prevPct, sensPct, fprPct){
+  const pH = clampPct(prevPct)/100, s = clampPct(sensPct)/100, f = clampPct(fprPct)/100;
+  const tp = pH*s, fn = pH*(1-s), fp = (1-pH)*f, tn = (1-pH)*(1-f);
+  const pE = tp + fp;
+  return { pH, s, f, tp, fn, fp, tn, pE, post: pE > 0 ? tp/pE : null };
+}
+// largest-remainder rounding so the four counts always sum to exactly N
+function counts(m, N){
+  const keys = ['tp','fn','fp','tn'], raw = keys.map(k => m[k]*N), c = raw.map(Math.floor);
+  let rem = N - c.reduce((a,b)=>a+b,0);
+  raw.map((v,i)=>[v-Math.floor(v),i]).sort((a,b)=>b[0]-a[0]||a[1]-b[1]).slice(0,rem).forEach(([,i])=>c[i]++);
+  return { tp:c[0], fn:c[1], fp:c[2], tn:c[3] };
+}
+// Do 1,000 whole-person dots tell the same story as the exact answer? If not (very rare conditions),
+// find the smallest bigger crowd (10x steps) whose whole-person counts do.
+function resolve(m){
+  const c = counts(m, 1000), P = c.tp + c.fp;
+  if(m.post === null) return { N:1000, c, low:false };
+  if(P > 0 && Math.abs(c.tp/P - m.post) <= 0.015) return { N:1000, c, low:false };
+  for(let N = 1e4; N <= 1e12; N *= 10){
+    const d = counts(m, N), Q = d.tp + d.fp;
+    if(Q > 0 && Math.abs(d.tp/Q - m.post) <= 0.005) return { N, c:d, low:true };
+  }
+  return { N:1e12, c:counts(m,1e12), low:true };
+}
+function fmtPct(p){ // p is a probability 0..1
+  const v = p*100;
+  if(v === 0) return '0%';
+  if(v === 100) return '100%';
+  if(v < 0.001) return '<0.001%';
+  if(v >= 99.5) return v.toFixed(2) + '%';
+  return Number(v.toPrecision(3)) + '%';
+}
+// ===== MODEL-END =====
+
+const $ = id => document.getElementById(id), NS = 'http://www.w3.org/2000/svg';
+const N = 1000, COLS = 40, ROWS = 25, CELL = 20, RAD = 7.4;
+const st = { prev:1, sens:90, fpr:10, stage:0, unlocked:false };
+
+// ---- dots ----
+const svg = $('dots'); svg.setAttribute('viewBox', `0 0 ${COLS*CELL} ${ROWS*CELL}`);
+const dots = [];
+for(let i=0;i<N;i++){
+  const c = document.createElementNS(NS,'circle'); c.setAttribute('r',RAD); c.setAttribute('cx',CELL/2); c.setAttribute('cy',CELL/2);
+  svg.appendChild(c); dots.push(c);
+}
+const annot = document.createElementNS(NS,'text'); annot.setAttribute('id','annot'); annot.setAttribute('x',6); annot.style.display='none'; svg.appendChild(annot);
+let hlGroups = null, srT = 0;
+function place(el, idx){ el.style.transform = `translate(${(idx%COLS)*CELL}px,${Math.floor(idx/COLS)*CELL}px)`; }
+
+const NAMES = { tp:'sick, tested positive', fn:'sick, tested negative', fp:'healthy, tested positive (false alarm)', tn:'healthy, tested negative' };
+
+function render(){
+  const m = model(st.prev, st.sens, st.fpr), c = counts(m, N);
+  const A = c.tp, B = c.fp, S = c.tp + c.fn, H = c.fp + c.tn, P = A + B;
+  const R = resolve(m), cd = R.c, Pd = cd.tp + cd.fp, nf = x => x.toLocaleString('en-US');
+  // assign groups in canonical order; position depends on stage
+  const canon = ['tp','fn','fp','tn'], byResult = ['tp','fp','fn','tn'];
+  const order = st.stage >= 2 ? byResult : canon;
+  const start = {}; let o = 0; order.forEach(k => { start[k] = o; o += c[k]; });
+  const seen = {tp:0,fn:0,fp:0,tn:0}; let id = 0;
+  canon.forEach(k => { for(let j=0;j<c[k];j++){
+    const d = dots[id++]; d._g = k; d.setAttribute('class', 'g-'+k);
+    place(d, start[k] + seen[k]++);
+  }});
+  applyHighlight();
+  svg.setAttribute('class','stage'+st.stage);
+  svg.setAttribute('aria-label', `1,000 dots, each one person. ${S} are sick and ${H} are healthy. ${A} sick and ${B} healthy people test positive.`);
+
+  // story text
+  let story;
+  if(st.stage === 0) story = `Picture <b>1,000 people</b>. Each dot is one person. Everyone is about to take the test.`;
+  else if(st.stage === 1) story = S === 0
+      ? (m.pH === 0 ? `With these numbers, <b>nobody</b> has the condition. All 1,000 people are healthy.`
+                    : `Fewer than 1 in 1,000 people have the condition, so <b>no dot is blue</b> at this size. Step 4 zooms out to a bigger crowd.`)
+      :`<b>${S}</b> of the 1,000 people actually ${S===1?'has':'have'} the condition (blue${S<=3?', look for the glow':''}). The other <b>${H}</b> are healthy (grey).`;
+  else if(st.stage === 2) story = `Now test everyone. The test catches <b>${A}</b> of the ${S} sick ${S===1?'person':'people'}. But it also wrongly flags <b>${B}</b> of the ${H} healthy ${H===1?'person':'people'}. Everyone who tested positive has moved to the top.` + (R.low ? ` <span style="color:var(--muted)">(This is rare enough that 1,000 dots round off the picture. Step 4 zooms out.)</span>` : '');
+  else story = m.pE === 0
+      ? `With these numbers <b>nobody tests positive</b>, so there is no positive result to ask about. Try raising the false-positive rate or the sensitivity.`
+      : R.low
+      ? `This is too rare for 1,000 dots to show (they round to ${A} sick and ${B} false alarms). So here's a bigger crowd of <b>${nf(R.N)}</b> people: the test flags <b>${nf(cd.tp)}</b> sick ${cd.tp===1?'person':'people'} and <b>${nf(cd.fp)}</b> healthy ${cd.fp===1?'person':'people'}. You tested positive, so you're one of those <b>${nf(Pd)}</b>, and only <b>${nf(cd.tp)}</b> of them ${cd.tp===1?'is':'are'} really sick.`
+      : `You tested positive, so you're one of the <b>${P}</b> ${P===1?'person':'people'} at the top. ` +
+        (B === 0 ? `All of them are really sick. There are no false alarms.`
+         : A === 0 ? `<b>None</b> of them are really sick. Every one is a false alarm.`
+         : `${A < B ? 'Only ' : ''}<b>${A}</b> of them ${A===1?'is':'are'} really sick, and <b>${B}</b> ${B===1?'is a':'are'} false ${B===1?'alarm':'alarms'}.`);
+  $('story').innerHTML = story;
+  $('stepLab').textContent = `Step ${st.stage+1} of 4`;
+  $('back').disabled = st.stage === 0; $('next').disabled = st.stage === 3;
+
+  // legend
+  const L = (col,txt) => `<span><i style="background:var(${col})"></i>${txt}</span>`;
+  $('legend').innerHTML = st.stage === 0 ? '' : st.stage === 1
+    ? L('--sick',`sick (${S})`) + L('--neutral',`healthy (${H})`)
+    : (st.stage === 3 && R.low
+        ? L('--sick',`sick, positive (${nf(cd.tp)} per ${nf(R.N)})`) + L('--fp',`healthy, false alarm (${nf(cd.fp)} per ${nf(R.N)})`)
+        : L('--sick',`sick, positive (${A})`) + L('--fp',`healthy, false alarm (${B})`)) +
+      (st.stage === 2 ? L('--miss',`sick, missed (${c.fn})`) + L('--neutral',`healthy, negative (${c.tn})`) : '');
+
+  // answer block
+  $('answerwrap').style.display = st.stage === 3 ? 'block' : 'none';
+  if(st.stage === 3){
+    const bar = $('bar').children; bar[0].style.flexGrow = m.pE > 0 ? m.tp/m.pE : 0; bar[1].style.flexGrow = m.pE > 0 ? m.fp/m.pE : 0;   // normalised so the bar always fills its row   // exact shares, not rounded dots
+    bar[0].style.display = m.tp > 0 ? '' : 'none'; bar[1].style.display = m.fp > 0 ? '' : 'none';
+    $('lblA').textContent = `${nf(cd.tp)} really sick`; $('lblB').textContent = `${nf(cd.fp)} false alarms`;
+    if(m.pE === 0){ $('post').textContent = 'n/a'; $('postWords').textContent = 'no one tests positive'; $('verdict').textContent = ''; $('lblA').textContent = $('lblB').textContent = ''; }
+    else {
+      $('post').textContent = fmtPct(m.post); $('postWords').textContent = `of everyone who tests positive, this share is really sick (${nf(cd.tp)} out of ${nf(Pd)}${R.low ? `, in a crowd of ${nf(R.N)}` : ''})`;
+      const eps = 1e-12;   // verdict from exact numbers, never from rounded dots
+      $('verdict').textContent = m.tp < m.fp - eps ? 'Most positive results here are false alarms.' : m.tp > m.fp + eps ? 'Here, most positive results are real.' : 'Here, half of positive results are false alarms.';
+    }
+  }
+  if(st.stage === 3) st.unlocked = true;
+  // direct label on the dot grid
+  if(st.stage === 3 && P > 0){ annot.setAttribute('y', Math.ceil(P/COLS)*CELL + 32); annot.textContent = `↑ these ${nf(P)} tested positive. You're one of them.`; annot.style.display = ''; }
+  else annot.style.display = 'none';
+  // challenge status
+  $('chal').textContent = m.pE === 0 ? 'Nobody tests positive with these numbers, so there is nothing to judge. Try again.'
+    : m.tp > m.fp ? `Yes! Now ${fmtPct(m.post)} of positive results are real. Notice what you changed: more sick people to find, or fewer false alarms to mix them with.`
+    : `Not yet: only ${fmtPct(m.post)} of positive results are real.`;
+  $('chal').style.color = m.pE > 0 && m.tp > m.fp ? 'var(--sick)' : 'var(--ink)';
+  renderFormula(m, cd, R);
+  // one calm screen-reader announcement after the user pauses, not one per slider tick
+  clearTimeout(srT); srT = setTimeout(() => { $('sr').textContent = (st.stage === 3 ? `Answer ${$('post').textContent}. ` : '') + $('story').textContent + ' ' + $('chal').textContent; }, 800);
+}
+
+function renderFormula(m, c, R){
+  $('formulaSec').style.display = st.unlocked ? 'block' : 'none';
+  if(!st.unlocked) return;
+  const A = c.tp, B = c.fp, P = A + B, p = fmtPct, nf = x => x.toLocaleString('en-US');
+  const T = (cls, g, html) => `<span class="term ${cls}" tabindex="0" data-g="${g}">${html}</span>`;
+  const fr = (a,b) => `<span class="frac"><span>${a}</span><span>${b}</span></span>`;
+  $('f1').innerHTML = `<b>${R.low ? `In a crowd of ${nf(R.N)}` : 'In people'}:</b> ` + fr(T('t-a','tp',`${nf(A)} sick &amp; positive`), T('t-all','tp,fp',`${nf(P)} positives in total`)) +
+     (m.post !== null ? ` ${R.low ? '≈' : '='} <b>${p(m.post)}</b>` : ` (no positives, so no answer)`);
+  const pa = m.s*m.pH, pb = m.f*(1-m.pH);
+  $('f2').innerHTML = `<b>In probabilities:</b> P(sick | positive) = ` +
+    fr(T('t-a','tp',`${p(m.s)} × ${p(m.pH)}`),
+       T('t-a','tp',`${p(m.s)} × ${p(m.pH)}`) + ' + ' + T('t-b','fp',`${p(m.f)} × ${p(1-m.pH)}`)) +
+    ` = ` + fr(T('t-a','tp',p(pa)), T('t-all','tp,fp',p(m.pE))) + (m.post === null ? ` (nothing to divide)` : ` = <b>${p(m.post)}</b>`);
+  $('fnote').innerHTML = `Top: sick people who test positive. Bottom: <span class="term t-a">sick &amp; positive</span> + <span class="term t-b">healthy &amp; positive (false alarms)</span>. In words: the share of positives that are real. Statisticians write it P(H|E) = P(E|H)·P(H) / [P(E|H)·P(H) + P(E|not H)·P(not H)].`;
+}
+
+// hover on formula terms highlights dots
+document.addEventListener('mouseover', e => focusTerm(e.target.closest && e.target.closest('.term')));
+document.addEventListener('mouseout', e => { if(e.target.closest && e.target.closest('.term')) focusTerm(null); });
+document.addEventListener('focusin', e => focusTerm(e.target.closest && e.target.closest('.term')));
+document.addEventListener('focusout', () => focusTerm(null));
+function focusTerm(t){
+  const g = t && t.dataset.g ? t.dataset.g.split(',') : null;
+  if((g && hlGroups && g.join() === hlGroups.join()) || (!g && !hlGroups)) return;
+  hlGroups = g;
+  applyHighlight();   // only touch the dots, so the hovered formula term isn't rebuilt under the cursor
+}
+function applyHighlight(){
+  dots.forEach(d => {
+    d.classList.toggle('hl', !!(hlGroups && hlGroups.includes(d._g)));
+    d.classList.toggle('dim', !!(hlGroups && !hlGroups.includes(d._g)));
+  });
+}
+
+// ---- controls ----
+function syncFields(){ for(const k of ['prev','sens','fpr']){ $(k+'-r').value = st[k]; $(k+'-n').value = st[k]; } }
+for(const k of ['prev','sens','fpr']){
+  $(k+'-r').addEventListener('input', e => { st[k] = clampPct(e.target.value); $(k+'-n').value = st[k]; render(); });
+  const n = $(k+'-n');
+  n.addEventListener('input', () => { const v = parseFloat(n.value); if(isFinite(v)){ st[k] = clampPct(v); $(k+'-r').value = st[k]; render(); } });
+  n.addEventListener('change', () => { n.value = st[k]; });   // tidy up empty/out-of-range text on blur
+}
+$('back').onclick = () => { st.stage = Math.max(0, st.stage-1); render(); };
+$('next').onclick = () => { st.stage = Math.min(3, st.stage+1); render(); };
+
+const PRESETS = [
+  ['The test from the question', 1, 90, 10],
+  ['Make the condition common (50%)', 50, 90, 10],
+  ['A much better test, still a rare condition', 0.1, 99, 1],
+  ['A test that never cries wolf', 1, 90, 0],
+  ['A useless test (same for sick and healthy)', 10, 50, 50]
+];
+PRESETS.forEach(([label,p,s,f]) => {
+  const b = document.createElement('button'); b.textContent = label;
+  b.onclick = () => { Object.assign(st,{prev:p,sens:s,fpr:f,stage:3}); syncFields(); render(); };
+  $('presets').appendChild(b);
+});
+
+// guess buttons
+document.querySelectorAll('.guesses button').forEach(b => b.onclick = () => {
+  const g = b.dataset.g;
+  $('gfeed').innerHTML = g === '10'
+    ? `Good instinct! The real answer is about <b>8%</b>, so roughly 1 in 12. Let's see why below.`
+    : `${g==='90' ? 'A very common answer. In classic studies, doctors given a problem like this guessed 70–80% when the true answer was about 8%. ' : ''}The real answer is about <b>8%</b>, much lower than ${g}%. Let's see why below.`;
+});
+
+// explain-it-back
+const EFEED = [
+  `Not quite. Even a good test does this. Look at the dots: the test catches most sick people, but there are so many healthy people that its small mistakes pile up.`,
+  `Yes, that's the whole idea. With the first numbers, 99 healthy people are flagged by mistake and only 9 sick people are caught. Positives come mostly from the big healthy group.`,
+  `Not quite. A positive result does tell you something: in the 1-in-100 question it raised the chance from 1% to about 8%, eight times higher. It just started from a very small number.`
+];
+document.querySelectorAll('#eopts button').forEach(b => b.onclick = () => { $('efeed').textContent = EFEED[+b.dataset.e]; });
+
+// optional deep link: #prev=0&sens=90&fpr=10&stage=3
+(function(){
+  const h = new URLSearchParams(location.hash.slice(1));
+  for(const k of ['prev','sens','fpr']) if(h.has(k)) st[k] = clampPct(h.get(k));
+  if(h.has('stage')) st.stage = Math.min(3, Math.max(0, parseInt(h.get('stage'))||0));
+})();
+syncFields(); render();
+</script>
+</body>
+</html>

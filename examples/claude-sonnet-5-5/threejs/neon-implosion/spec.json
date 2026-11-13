@@ -1,0 +1,8 @@
+{
+  "slug": "threejs/neon-implosion",
+  "prompt": "Create a vivid pointer interactive abstract neon art solar system particle implosion, a 10 second looping animation in three.js, as a single web page.",
+  "mode": "",
+  "brief": "It's for a loop on a portfolio site and social posts. It should look striking full screen on a laptop and a phone.",
+  "check": "Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how vivid and striking it is, whether it clearly reads as a solar system imploding into particles, and craft (colour, glow, motion, timing).",
+  "fixture": null
+}

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Mirror Twins</title>
+<style>
+  :root { --bg:#14111f; --panel:#201b33; --ink:#ece8ff; --dim:#8c85b3; --a:#ff9f5a; --b:#5ad0ff; --wall:#3a3260; --crate:#c9a86a; --haz:#ff4d6d; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--ink); font-family:system-ui,sans-serif; overscroll-behavior:none; }
+  body { display:flex; flex-direction:column; align-items:center; padding:12px; gap:10px; }
+  h1 { margin:0; font-size:22px; letter-spacing:.12em; text-transform:uppercase; }
+  h1 span:first-child { color:var(--a); } h1 span:last-child { color:var(--b); }
+  #bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center; }
+  button { background:var(--panel); color:var(--ink); border:1px solid #3d3566; border-radius:8px; padding:8px 14px; font-size:15px; cursor:pointer; }
+  button:hover { border-color:var(--dim); }
+  #info { color:var(--dim); font-size:15px; min-width:180px; text-align:center; }
+  canvas { background:var(--panel); border-radius:12px; max-width:100%; touch-action:none; }
+  #help { color:var(--dim); font-size:13px; max-width:480px; text-align:center; line-height:1.4; }
+  #menu { position:fixed; inset:0; background:#000c; display:none; align-items:center; justify-content:center; }
+  #menu.open { display:flex; }
+  #menu .box { background:var(--panel); padding:20px; border-radius:14px; max-width:420px; text-align:center; }
+  #grid { display:grid; grid-template-columns:repeat(5,52px); gap:8px; margin:14px 0; }
+  #grid button { padding:12px 0; } #grid button.done { border-color:#6fe0a0; color:#6fe0a0; } #grid button.lock { opacity:.35; cursor:not-allowed; }
+</style>
+</head>
+<body>
+<h1><span>Mirror</span> <span>Twins</span></h1>
+<div id="bar">
+  <button id="undo">↶ Undo</button><button id="reset">⟲ Reset</button>
+  <span id="info"></span>
+  <button id="lv">Levels</button>
+</div>
+<canvas id="c"></canvas>
+<div id="help">Arrow keys / WASD / swipe move <b style="color:var(--a)">both</b> twins — but the blue twin is <b style="color:var(--b)">mirrored left-right</b>. Put each twin on its ring. Push crates; avoid red spikes. Z undo, R reset.</div>
+<div id="menu"><div class="box"><h2 style="margin:0">Levels</h2><div id="grid"></div><button id="close">Close</button></div></div>
+<script>
+/*LEVELS*/
+// # wall  . floor  A/B twins  a/b goals  o crate  x spikes
+const LEVELS = [
+ ["#######",
+  "#A...B#",
+  "#.a.b.#",
+  "#######"],
+ ["#########",
+  "#A..#..B#",
+  "#.#...#.#",
+  "#.#.a.#b#",
+  "#########"],
+ ["#########",
+  "#A.#....#",
+  "#..#.#.B#",
+  "#.##.#..#",
+  "#a....#b#",
+  "#########"],
+ ["#########",
+  "#A..o..B#",
+  "#.......#",
+  "#.#a.b#.#",
+  "#########"],
+ ["#########",
+  "#A.....B#",
+  "#.x.o.x.#",
+  "#.#...#.#",
+  "#..a.b..#",
+  "#########"],
+ ["##########",
+  "#A.#..#.B#",
+  "#..#..#..#",
+  "#.o....o.#",
+  "#a......b#",
+  "##########"],
+ ["#########",
+  "#A..#...#",
+  "#.o.#.B.#",
+  "#...#...#",
+  "#.x.....#",
+  "#a#...#b#",
+  "#########"],
+ ["###########",
+  "#A...#...B#",
+  "#.o..#..o.#",
+  "#..x...x..#",
+  "#.o..#..o.#",
+  "#a...#...b#",
+  "###########"],
+ ["#########",
+  "#A..#.B.#",
+  "#.#.#.#.#",
+  "#.#o.o#.#",
+  "#.#x.x#.#",
+  "#a.....b#",
+  "#########"],
+ ["###########",
+  "#.A.....B.#",
+  "#.#o###o#.#",
+  "#.x..#..x.#",
+  "#..o.#.o..#",
+  "#.#a###b#.#",
+  "###########"]
+];
+/*END*/
+
+function parse(rows){
+  const H=rows.length, W=rows[0].length;
+  const L={W,H,wall:[],haz:[],crates:[],A:null,B:null,ga:null,gb:null};
+  for(let y=0;y<H;y++){ L.wall.push([]); L.haz.push([]);
+    for(let x=0;x<W;x++){ const ch=rows[y][x];
+      L.wall[y][x]=ch==='#'; L.haz[y][x]=ch==='x';
+      if(ch==='A')L.A=[x,y]; if(ch==='B')L.B=[x,y];
+      if(ch==='a')L.ga=[x,y]; if(ch==='b')L.gb=[x,y];
+      if(ch==='o')L.crates.push([x,y]); } }
+  return L;
+}
+// state: {a:[x,y], b:[x,y], c:[[x,y]...]}. returns new state, or null if no one moved. dead:true if hit spikes
+function step(L,s,dx,dy){
+  const st={a:s.a.slice(),b:s.b.slice(),c:s.c.map(p=>p.slice()),dead:false};
+  let moved=false;
+  const crateAt=(x,y)=>st.c.findIndex(p=>p[0]===x&&p[1]===y);
+  const free=(x,y)=>x>=0&&y>=0&&x<L.W&&y<L.H&&!L.wall[y][x]&&crateAt(x,y)<0&&!(st.a[0]===x&&st.a[1]===y)&&!(st.b[0]===x&&st.b[1]===y);
+  for(const [k,sx] of [['a',dx],['b',-dx]]){
+    const p=st[k], nx=p[0]+sx, ny=p[1]+dy;
+    if(nx<0||ny<0||nx>=L.W||ny>=L.H||L.wall[ny][nx])continue;
+    const other=k==='a'?st.b:st.a;
+    if(other[0]===nx&&other[1]===ny)continue;
+    const ci=crateAt(nx,ny);
+    if(ci>=0){ const cx=nx+sx, cy=ny+dy; if(!free(cx,cy)||L.haz[cy][cx])continue; st.c[ci]=[cx,cy]; }
+    p[0]=nx;p[1]=ny;moved=true;
+    if(L.haz[ny][nx])st.dead=true;
+  }
+  return moved?st:null;
+}
+function won(L,s){ return s.a[0]===L.ga[0]&&s.a[1]===L.ga[1]&&s.b[0]===L.gb[0]&&s.b[1]===L.gb[1]; }
+function key(s){ return s.a+'|'+s.b+'|'+s.c.map(p=>p.join()).sort().join(';'); }
+function solve(L){
+  const s0={a:L.A,b:L.B,c:L.crates}; const seen=new Map([[key(s0),0]]); let q=[s0];
+  while(q.length){ const nq=[]; for(const s of q){ if(won(L,s))return seen.get(key(s));
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){ const n=step(L,s,dx,dy); if(!n||n.dead)continue; const k=key(n);
+      if(!seen.has(k)){seen.set(k,seen.get(key(s))+1);nq.push(n);} } } q=nq; }
+  return -1;
+}
+/*GAME*/
+if(typeof document!=='undefined'){
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+const info=document.getElementById('info');
+let prog=JSON.parse(localStorage.getItem('mt-prog')||'{}'); // level -> best moves
+let li=0,L,state,hist,moves,par,dead=false,solved=false,anim=0;
+function load(i){
+  li=i; L=parse(LEVELS[i]); state={a:L.A,b:L.B,c:L.crates.map(p=>p.slice())}; hist=[]; moves=0; dead=false; solved=false;
+  par=solve(L); size(); updateInfo(); draw();
+}
+function updateInfo(){
+  info.innerHTML=`Level ${li+1}/${LEVELS.length} · Moves ${moves} · Par ${par}`+(prog[li]?` · Best ${prog[li]}`:'')+(dead?' · <b style="color:var(--haz)">Spiked! Undo</b>':'')+(solved?' · <b style="color:#6fe0a0">Solved!</b>':'');
+}
+let T=60;
+function size(){
+  T=Math.floor(Math.min((innerWidth-30)/L.W,(innerHeight-190)/L.H,72));
+  const r=devicePixelRatio||1; cv.width=L.W*T*r; cv.height=L.H*T*r; cv.style.width=L.W*T+'px'; cv.style.height=L.H*T+'px'; ctx.setTransform(r,0,0,r,0,0);
+}
+function ring(p,col){ ctx.strokeStyle=col; ctx.lineWidth=T*.08; ctx.setLineDash([T*.12,T*.08]); ctx.beginPath(); ctx.arc((p[0]+.5)*T,(p[1]+.5)*T,T*.36,0,7); ctx.stroke(); ctx.setLineDash([]); }
+function twin(p,col,mirror){
+  const cx=(p[0]+.5)*T, cy=(p[1]+.5)*T;
+  ctx.fillStyle=col; ctx.beginPath(); ctx.arc(cx,cy,T*.3,0,7); ctx.fill();
+  ctx.fillStyle='#14111f'; const ex=T*.1*(mirror?-1:1);
+  ctx.beginPath(); ctx.arc(cx+ex-T*.05,cy-T*.04,T*.05,0,7); ctx.arc(cx+ex+T*.12,cy-T*.04,T*.05,0,7); ctx.fill();
+}
+function draw(){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  for(let y=0;y<L.H;y++)for(let x=0;x<L.W;x++){
+    if(L.wall[y][x]){ ctx.fillStyle='#3a3260'; ctx.fillRect(x*T,y*T,T,T); ctx.fillStyle='#463d75'; ctx.fillRect(x*T+3,y*T+3,T-6,T-6); }
+    else { ctx.fillStyle=(x+y)%2?'#241e3b':'#282143'; ctx.fillRect(x*T,y*T,T,T); }
+    if(L.haz[y][x]){ ctx.fillStyle='#ff4d6d'; for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(x*T+T*(.15+i*.28),(y+.8)*T); ctx.lineTo(x*T+T*(.29+i*.28),(y+.25)*T); ctx.lineTo(x*T+T*(.43+i*.28),(y+.8)*T); ctx.fill(); } }
+  }
+  ring(L.ga,'#ff9f5a'); ring(L.gb,'#5ad0ff');
+  for(const c of state.c){ ctx.fillStyle='#c9a86a'; ctx.fillRect(c[0]*T+T*.12,c[1]*T+T*.12,T*.76,T*.76); ctx.strokeStyle='#8a6d3a'; ctx.lineWidth=3; ctx.strokeRect(c[0]*T+T*.12,c[1]*T+T*.12,T*.76,T*.76);
+    ctx.beginPath(); ctx.moveTo(c[0]*T+T*.12,c[1]*T+T*.12); ctx.lineTo(c[0]*T+T*.88,c[1]*T+T*.88); ctx.moveTo(c[0]*T+T*.88,c[1]*T+T*.12); ctx.lineTo(c[0]*T+T*.12,c[1]*T+T*.88); ctx.stroke(); }
+  twin(state.a,'#ff9f5a',false); twin(state.b,'#5ad0ff',true);
+}
+function move(dx,dy){
+  if(dead||solved)return;
+  const n=step(L,state,dx,dy); if(!n)return;
+  hist.push(state); state={a:n.a,b:n.b,c:n.c}; moves++; dead=n.dead;
+  if(!dead&&won(L,state)){ solved=true; if(!prog[li]||moves<prog[li]){prog[li]=moves;localStorage.setItem('mt-prog',JSON.stringify(prog));}
+    setTimeout(()=>{ if(solved&&li<LEVELS.length-1) load(li+1); else if(solved) info.innerHTML='🎉 All levels complete!'; },900); }
+  updateInfo(); draw();
+}
+function undo(){ if(!hist.length||(solved))return; state=hist.pop(); moves--; dead=false; updateInfo(); draw(); }
+const keys={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1],a:[-1,0],d:[1,0],w:[0,-1],s:[0,1]};
+addEventListener('keydown',e=>{ const k=keys[e.key]||keys[e.key.toLowerCase()];
+  if(k){e.preventDefault();move(...k);} else if(e.key.toLowerCase()==='z')undo(); else if(e.key.toLowerCase()==='r')load(li); });
+let t0=null;
+cv.addEventListener('pointerdown',e=>{t0=[e.clientX,e.clientY];});
+cv.addEventListener('pointerup',e=>{ if(!t0)return; const dx=e.clientX-t0[0],dy=e.clientY-t0[1]; t0=null;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<20)return; Math.abs(dx)>Math.abs(dy)?move(Math.sign(dx),0):move(0,Math.sign(dy)); });
+document.getElementById('undo').onclick=undo;
+document.getElementById('reset').onclick=()=>load(li);
+const menu=document.getElementById('menu'), grid=document.getElementById('grid');
+document.getElementById('lv').onclick=()=>{ grid.innerHTML=''; LEVELS.forEach((_,i)=>{ const b=document.createElement('button'); b.textContent=i+1;
+  const unlocked=i===0||prog[i-1]||prog[i]; if(prog[i])b.className='done'; if(!unlocked)b.className='lock';
+  b.onclick=()=>{ if(unlocked){menu.classList.remove('open');load(i);} }; grid.appendChild(b); }); menu.classList.add('open'); };
+document.getElementById('close').onclick=()=>menu.classList.remove('open');
+addEventListener('resize',()=>{size();draw();});
+let start=0; while(start<LEVELS.length-1&&prog[start])start++;
+load(start);
+}
+</script>
+</body>
+</html>

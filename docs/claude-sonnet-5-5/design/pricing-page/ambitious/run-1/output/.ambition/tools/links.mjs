@@ -1,0 +1,12 @@
+import puppeteer from 'puppeteer-core';
+const b = await puppeteer.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true });
+const p = await b.newPage();
+await p.setViewport({ width: 1280, height: 800 });
+await p.goto('file://' + process.argv[2]);
+const read = () => p.evaluate(() => [...document.querySelectorAll('a[data-plan]')].map(a => a.getAttribute('href')));
+console.log('monthly:', JSON.stringify(await read()));
+await p.click('#yearly');
+console.log('yearly: ', JSON.stringify(await read()));
+await p.click('[data-fit="2"]');
+console.log('fit 26+ ->', await p.evaluate(() => [...document.querySelectorAll('.plan')].map(c => c.classList.contains('fit'))));
+await b.close();

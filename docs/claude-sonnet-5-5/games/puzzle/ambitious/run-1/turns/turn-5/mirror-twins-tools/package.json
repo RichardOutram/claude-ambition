@@ -1,0 +1,1 @@
+{"name":"mirror-twins-tools","private":true,"scripts":{"build":"node build.js","check":"node accept.js","gen":"node gen.js","prune":"node prune.js"},"dependencies":{"puppeteer-core":"*"}}

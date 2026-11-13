@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mirror Twins</title>
+<style>
+:root{--bg:#14161f;--panel:#1d2030;--wall:#3a4060;--a:#4fd1c5;--b:#f6ad55;--t:#e8eaf6}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--t);font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:16px;gap:12px;user-select:none}
+h1{margin:0;font-size:1.6rem;letter-spacing:.08em}
+h1 span:first-child{color:var(--a)}h1 span:last-child{color:var(--b)}
+#info{display:flex;gap:18px;font-size:.95rem;opacity:.9}
+canvas{background:var(--panel);border-radius:12px;max-width:100%;touch-action:none;box-shadow:0 8px 30px #0008}
+#msg{min-height:1.4em;font-weight:600}
+.row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+button{background:var(--panel);color:var(--t);border:1px solid #3a4060;border-radius:8px;padding:8px 14px;font-size:.95rem;cursor:pointer}
+button:hover{border-color:var(--a)}
+#help{max-width:460px;text-align:center;font-size:.85rem;opacity:.7;line-height:1.4}
+</style></head><body>
+<h1><span>MIRROR</span> <span>TWINS</span></h1>
+<div id="info"><span id="lv"></span><span id="mc"></span><span id="best"></span></div>
+<canvas id="c"></canvas>
+<div id="msg"></div>
+<div class="row"><button id="undo">Undo (Z)</button><button id="reset">Restart (R)</button><button id="prev">◀ Prev</button><button id="next">Next ▶</button></div>
+<div id="help">Move with arrow keys / WASD or swipe. The <b style="color:var(--a)">teal</b> twin moves as you steer; the <b style="color:var(--b)">orange</b> twin moves vertically the same way but <b>left and right are mirrored</b>. Walls stop each twin separately. Avoid the pits. Land both twins on their rings at the same time.</div>
+<script>
+const LEVELS=[["#########", "#A.a.b.B#", "#########"], ["#######", "#...a.#", "##.b..#", "#B...A#", "#...#.#", "#######"], ["#########", "#.....#.#", "##b#.a#.#", "#...B.#.#", "#A......#", "#########"], ["#######", "#.a...#", "#b##..#", "#..AB.#", "#######"], ["########", "#x...B##", "#b#a##A#", "#......#", "########"], ["#########", "#...Bb.A#", "#a.#...x#", "#...x...#", "#########"], ["########", "#...A..#", "#a.##..#", "##b##B.#", "##..#..#", "########"], ["#########", "##..#...#", "#ba.xB..#", "##.#A...#", "##...##.#", "#########"], ["#########", "#.a.#.#.#", "#.b..#.x#", "#..xx.BA#", "#.....#.#", "#########"], ["#########", "#a......#", "#.BA....#", "#..xb.#.#", "#..#.#.##", "#########"], ["#########", "#.#.a...#", "##..x.#.#", "##.#B.xA#", "#b..#...#", "#########"]];
+/*LOGIC*/
+function parse(rows){const H=rows.length,W=rows[0].length;const L={W,H,walls:[],pits:[]};
+for(let y=0;y<H;y++){L.walls.push([]);L.pits.push([]);for(let x=0;x<W;x++){const c=rows[y][x];
+L.walls[y][x]=c==='#';L.pits[y][x]=c==='x';
+if(c==='A')L.A=[x,y];if(c==='B')L.B=[x,y];if(c==='a')L.a=[x,y];if(c==='b')L.b=[x,y];}}return L;}
+function mv(L,p,dx,dy){const nx=p[0]+dx,ny=p[1]+dy;
+if(nx<0||ny<0||nx>=L.W||ny>=L.H||L.walls[ny][nx])return p;return [nx,ny];}
+/*END*/
+const cv=document.getElementById('c'),ctx=cv.getContext('2d'),$=id=>document.getElementById(id);
+let li=+localStorage.getItem('mt_level')||0,best=JSON.parse(localStorage.getItem('mt_best')||'{}');
+let L,A,B,hist,moves,won,flash=0,anim=null;
+function load(i){li=Math.max(0,Math.min(LEVELS.length-1,i));localStorage.setItem('mt_level',li);
+L=parse(LEVELS[li]);A=[...L.A];B=[...L.B];hist=[];moves=0;won=false;$('msg').textContent='';size();ui();draw();}
+function ui(){$('lv').textContent='Level '+(li+1)+'/'+LEVELS.length;$('mc').textContent='Moves: '+moves;
+$('best').textContent=best[li]?'Best: '+best[li]:'';}
+let T;function size(){T=Math.floor(Math.min(innerWidth-32,640)/L.W);T=Math.min(T,72);cv.width=T*L.W;cv.height=T*L.H;}
+function move(dx,dy){if(won)return;
+const a=mv(L,A,dx,dy),b=mv(L,B,-dx,dy);
+if(a===A&&b===B)return;
+if(L.pits[a[1]][a[0]]||L.pits[b[1]][b[0]]){$('msg').textContent='A twin fell in a pit!';flash=1;fade();return;}
+hist.push([A,B]);A=a;B=b;moves++;$('msg').textContent='';
+if(A[0]==L.a[0]&&A[1]==L.a[1]&&B[0]==L.b[0]&&B[1]==L.b[1]){won=true;
+if(!best[li]||moves<best[li]){best[li]=moves;localStorage.setItem('mt_best',JSON.stringify(best));}
+$('msg').textContent=li<LEVELS.length-1?'Solved in '+moves+'! Press Enter for next level.':'All levels solved — well done!';}
+ui();draw();}
+function fade(){flash=Math.max(0,flash-.08);draw();if(flash>0)requestAnimationFrame(fade);}
+function undo(){if(!hist.length)return;[A,B]=hist.pop();moves--;won=false;$('msg').textContent='';ui();draw();}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+function draw(){ctx.clearRect(0,0,cv.width,cv.height);
+for(let y=0;y<L.H;y++)for(let x=0;x<L.W;x++){const px=x*T,py=y*T;
+if(L.walls[y][x]){ctx.fillStyle='#3a4060';rr(px+1,py+1,T-2,T-2,6);ctx.fill();}
+else{ctx.fillStyle=(x+y)%2?'#22263a':'#1f2336';ctx.fillRect(px,py,T,T);
+if(L.pits[y][x]){ctx.fillStyle='#07080c';ctx.beginPath();ctx.arc(px+T/2,py+T/2,T*.34,0,7);ctx.fill();
+ctx.strokeStyle='#a33';ctx.lineWidth=2;ctx.stroke();}}}
+const ring=(p,c)=>{ctx.strokeStyle=c;ctx.lineWidth=4;ctx.beginPath();ctx.arc(p[0]*T+T/2,p[1]*T+T/2,T*.36,0,7);ctx.stroke();};
+const tok=(p,c,m)=>{const x=p[0]*T+T/2,y=p[1]*T+T/2;ctx.fillStyle=c;ctx.beginPath();ctx.arc(x,y,T*.28,0,7);ctx.fill();
+ctx.fillStyle='#0008';ctx.beginPath();ctx.arc(x+(m?-1:1)*T*.08,y-T*.05,T*.05,0,7);ctx.fill();};
+ring(L.a,'#4fd1c5');ring(L.b,'#f6ad55');tok(A,'#4fd1c5',0);tok(B,'#f6ad55',1);
+if(flash>0){ctx.fillStyle='rgba(200,40,40,'+flash*.4+')';ctx.fillRect(0,0,cv.width,cv.height);}}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();
+const m={arrowright:[1,0],d:[1,0],arrowleft:[-1,0],a:[-1,0],arrowdown:[0,1],s:[0,1],arrowup:[0,-1],w:[0,-1]}[k];
+if(m){e.preventDefault();move(...m);}else if(k==='z')undo();else if(k==='r')load(li);
+else if(k==='enter'&&won)load(li+1);});
+let sx,sy;cv.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;});
+cv.addEventListener('pointerup',e=>{const dx=e.clientX-sx,dy=e.clientY-sy;if(Math.max(Math.abs(dx),Math.abs(dy))<20)return;
+Math.abs(dx)>Math.abs(dy)?move(Math.sign(dx),0):move(0,Math.sign(dy));});
+$('undo').onclick=undo;$('reset').onclick=()=>load(li);$('prev').onclick=()=>load(li-1);$('next').onclick=()=>load(li+1);
+addEventListener('resize',()=>{size();draw();});
+load(li);
+</script></body></html>

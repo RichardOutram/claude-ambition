@@ -1,0 +1,14 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "A regenerable model with 84/84 checks, sourced Ofgem prices with VAT, Monte Carlo and quote grids; hand-recomputed figures hold. The baseline is a one-off estimate.",
+  "decided_by": "Claude, agreed by the user",
+  "date": "2026-11-13",
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  }
+}

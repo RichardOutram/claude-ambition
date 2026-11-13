@@ -1,0 +1,8 @@
+{
+  "slug": "write/candle-marketing",
+  "prompt": "Write a marketing plan for my handmade candle shop on Etsy, as a Markdown file",
+  "mode": "",
+  "brief": "A one-person shop with about 20 sales a month, a few hours a week for marketing and a small budget. The goal is steady sales, not virality.",
+  "check": "Rubric: whether it fits the time and budget, whether its actions are specific enough to do this week, how it measures what works, Etsy specifics that hold up (search, listings, fees, ads), and whether it finds a real reason buyers choose this shop.",
+  "fixture": null
+}

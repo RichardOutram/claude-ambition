@@ -1,0 +1,11 @@
+const { chromium } = require('playwright-core');const path=require('path');const fs=require('fs');
+(async()=>{const b=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});
+const pg=await b.newPage({viewport:{width:375,height:667}});await pg.goto('file://'+path.resolve('../../prototype.html'));
+await pg.evaluate("S.authed=true;render();mark('signed in');S.tab='record';render();startRide()");await pg.waitForTimeout(2200);
+await pg.evaluate("S.rec.sec=600;S.rec.km=3;finishRide()");await pg.waitForTimeout(400);await pg.click('text=Save & share');await pg.waitForTimeout(400);
+await pg.click('text=See my challenges');await pg.waitForTimeout(300);
+await pg.evaluate("openSettings()");await pg.waitForTimeout(400);await pg.click('text=Session log');await pg.waitForTimeout(500);await pg.screenshot({path:'e1.png'});
+await pg.evaluate("closeModal();openPaywall()");await pg.waitForTimeout(500);await pg.screenshot({path:'e2.png'});
+await pg.evaluate("closeModal();S.stack=[{v:'segment',id:2}];render()");await pg.waitForTimeout(200);await pg.screenshot({path:'e3.png'});
+fs.writeFileSync('sheet5.html','<body style="margin:0;background:#222;display:flex;gap:6px">'+[1,2,3].map(n=>`<img src="e${n}.png" style="height:667px">`).join(''));
+const p=await b.newPage({viewport:{width:1140,height:670}});await p.goto('file://'+process.cwd()+'/sheet5.html');await p.waitForTimeout(300);await p.screenshot({path:'sheet5.png'});await b.close()})();

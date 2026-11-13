@@ -1,0 +1,8 @@
+{
+  "slug": "game/puzzle",
+  "prompt": "Make an original puzzle game I can play in the browser, as a single web page",
+  "mode": "",
+  "brief": "For a few minutes of play on a phone or laptop. It should be easy to learn and hard to master.",
+  "check": "Play it at desktop and phone sizes with mouse, touch and keyboard. No console errors; levels are solvable (solve them, or run any solver it ships). Rubric: originality of the core mechanic, how quickly a new player gets it, difficulty curve, game feel (feedback, animation, sound), and whether you want another go.",
+  "fixture": null
+}

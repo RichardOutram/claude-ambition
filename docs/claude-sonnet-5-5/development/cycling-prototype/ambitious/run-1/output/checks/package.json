@@ -1,0 +1,1 @@
+{ "name": "prototype-checks", "private": true, "dependencies": { "axe-core": "^4", "playwright-core": "^1" } }

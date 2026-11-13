@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Neon Solar Implosion</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  html,body{margin:0;height:100%;background:#02010a;overflow:hidden;cursor:none;touch-action:none}
+  canvas{display:block}
+  #hud{position:fixed;left:18px;bottom:16px;font:11px/1.6 ui-monospace,Menlo,monospace;letter-spacing:.14em;
+       text-transform:uppercase;color:#7fe9ff;text-shadow:0 0 8px #00e5ff;pointer-events:none;user-select:none}
+  #bar{width:180px;height:2px;background:#ffffff22;margin-top:6px}
+  #bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#00f0ff,#ff2bd6);box-shadow:0 0 8px #ff2bd6}
+</style>
+<script type="importmap">
+{"imports":{
+ "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+ "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="hud">move · repel &nbsp;|&nbsp; hold · implode<div id="bar"><i></i></div></div>
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+
+const LOOP = 10; // seconds
+const renderer = new THREE.WebGLRenderer({antialias:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(55,innerWidth/innerHeight,0.1,300);
+
+/* ---------- particle data ---------- */
+const PAL = ['#00f0ff','#ff2bd6','#c6ff00','#ff6a00','#8a3bff','#2bff9a'].map(c=>new THREE.Color(c));
+const A=[],L=[],S=[],R=[],C=[];
+const rnd=Math.random;
+function dir(){let x,y,z,l;do{x=rnd()*2-1;y=rnd()*2-1;z=rnd()*2-1;l=x*x+y*y+z*z}while(l>1||l<1e-4);l=Math.sqrt(l);return [x/l,y/l,z/l]}
+function add(oR,a0,k,tilt, lx,ly,lz, spinK,size, col, dim=1){
+  A.push(oR,a0,k,tilt); L.push(lx,ly,lz); S.push(spinK,size);
+  R.push(rnd(),rnd(),rnd(),rnd()); C.push(col.r*dim,col.g*dim,col.b*dim);
+}
+const tmp=new THREE.Color();
+// Sun
+for(let i=0;i<16000;i++){
+  const d=dir(), r=rnd()<0.6?0.95+rnd()*0.25:Math.pow(rnd(),0.6)*0.95;
+  tmp.copy(PAL[3]).lerp(PAL[2],rnd()).lerp(PAL[1],rnd()*0.35);
+  add(0,0,0,0, d[0]*r,d[1]*r,d[2]*r, 1,1.7, tmp);
+}
+// Planets + trails
+const KS=[5,4,3,3,2,2,1,1,-1];
+for(let i=0;i<9;i++){
+  const oR=2.8+i*1.45, k=KS[i], tilt=(rnd()-0.5)*0.5, a0=rnd()*6.283;
+  const pr=(i===4||i===5)?0.5:0.17+rnd()*0.22, col=PAL[i%PAL.length];
+  for(let j=0;j<3200;j++){
+    const d=dir(), r=pr*(rnd()<0.7?0.88+rnd()*0.12:Math.pow(rnd(),0.5));
+    tmp.copy(col).lerp(PAL[(i+2)%PAL.length],rnd()*0.3);
+    add(oR,a0,k,tilt, d[0]*r,d[1]*r,d[2]*r, i%2?2:-2,1.3, tmp);
+  }
+  if(i===5||i===7||i===2){
+    const ct=0.45+rnd()*0.4;
+    for(let j=0;j<1800;j++){
+      const a=rnd()*6.283, r=pr*(1.6+rnd()*1.0);
+      let x=Math.cos(a)*r, y=(rnd()-0.5)*0.02, z=Math.sin(a)*r;
+      const x2=x*Math.cos(ct)-y*Math.sin(ct), y2=x*Math.sin(ct)+y*Math.cos(ct);
+      tmp.copy(col).lerp(PAL[(i+1)%PAL.length],rnd());
+      add(oR,a0,k,tilt, x2,y2,z, 0,1.0, tmp);
+    }
+  }
+  for(let j=0;j<1800;j++){ // orbit trail
+    tmp.copy(col);
+    add(oR,rnd()*6.283,k,tilt, (rnd()-.5)*.03,(rnd()-.5)*.03,(rnd()-.5)*.03, 0,0.8, tmp,0.55);
+  }
+}
+// Asteroid belt + dust halo
+for(let j=0;j<7000;j++){
+  const rr=9.05+Math.pow(rnd(),1.3)*0.65;
+  tmp.copy(PAL[j%2?0:4]).lerp(PAL[1],rnd()*0.4);
+  add(rr,rnd()*6.283,1,0.04, (rnd()-.5)*.1,(rnd()-.5)*.2,(rnd()-.5)*.1, 0,0.9, tmp,0.7);
+}
+for(let j=0;j<5000;j++){
+  const rr=16+rnd()*4;
+  tmp.copy(PAL[rnd()<.5?4:0]);
+  add(rr,rnd()*6.283,-1,(rnd()-.5)*0.5, (rnd()-.5)*.4,(rnd()-.5)*1.2,(rnd()-.5)*.4, 0,0.8, tmp,0.4);
+}
+const N=A.length/4;
+const geo=new THREE.BufferGeometry();
+geo.setAttribute('position',new THREE.BufferAttribute(new Float32Array(N*3),3));
+geo.setAttribute('aA',new THREE.BufferAttribute(new Float32Array(A),4));
+geo.setAttribute('aL',new THREE.BufferAttribute(new Float32Array(L),3));
+geo.setAttribute('aS',new THREE.BufferAttribute(new Float32Array(S),2));
+geo.setAttribute('aR',new THREE.BufferAttribute(new Float32Array(R),4));
+geo.setAttribute('aC',new THREE.BufferAttribute(new Float32Array(C),3));
+geo.boundingSphere=new THREE.Sphere(new THREE.Vector3(),500);
+
+const uniforms={
+  uT:{value:0}, uM:{value:new THREE.Vector3(0,0,999)}, uMS:{value:1},
+  uPx:{value:innerHeight*renderer.getPixelRatio()*0.5}
+};
+const mat=new THREE.ShaderMaterial({
+  uniforms, transparent:true, depthWrite:false, blending:THREE.AdditiveBlending,
+  vertexShader:`
+    attribute vec4 aA; attribute vec3 aL; attribute vec2 aS; attribute vec4 aR; attribute vec3 aC;
+    uniform float uT,uMS,uPx; uniform vec3 uM;
+    varying vec3 vC; varying float vA;
+    const float TAU=6.28318530718;
+    vec3 rotY(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(c*p.x+s*p.z,p.y,-s*p.x+c*p.z);}
+    vec3 rotX(vec3 p,float a){float c=cos(a),s=sin(a);return vec3(p.x,c*p.y-s*p.z,s*p.y+c*p.z);}
+    void main(){
+      float t=uT;
+      // orbital motion (integer revolutions => seamless loop)
+      float ang=aA.y+TAU*aA.z*t;
+      vec3 ctr=rotX(vec3(cos(ang),0.,sin(ang))*aA.x,aA.w);
+      vec3 p=ctr+rotY(aL,TAU*aS.x*t);
+
+      // implosion timeline
+      float c=smoothstep(0.15,0.5,t)*(1.-smoothstep(0.52,0.78,t));
+      float b=smoothstep(0.5,0.6,t)*(1.-smoothstep(0.6,0.9,t));
+      float ce=c*c*(3.-2.*c);
+      float len=length(p);
+      p=rotY(p,c*(7./(1.+len*0.3)));                       // vortex
+      vec3 rd=normalize(aR.xyz-0.5+1e-4);
+      vec3 core=rotY(rd*(0.05+aR.w*aR.w*0.7),TAU*3.*t+aR.x*6.);
+      p=mix(p,core,ce);
+      p+=rd*b*(1.5+aR.w*aR.w*15.);                          // shock burst
+      p+=cross(rd,vec3(0.,1.,0.))*b*aR.y*3.;
+
+      // pointer force
+      vec3 d=p-uM; float dd=length(d);
+      float f=exp(-dd*dd*0.5);
+      p+=normalize(d+1e-4)*f*uMS*2.2;
+      p+=normalize(cross(vec3(0.,1.,0.),d)+1e-4)*f*0.9;
+
+      vec4 mv=modelViewMatrix*vec4(p,1.);
+      gl_Position=projectionMatrix*mv;
+      float tw=0.75+0.25*sin(TAU*floor(1.+aR.w*4.)*t+aR.x*TAU);
+      float sz=aS.y*(1.+1.6*ce+f*1.5+b*1.2)*tw;
+      gl_PointSize=clamp(sz*uPx*0.045/(-mv.z)*4.,1.,60.);
+      vec3 col=aC*(1.+1.2*ce+f*1.3+b*0.9);
+      col=mix(col,vec3(1.),ce*ce*0.5+f*0.25);
+      vC=col; vA=0.55;
+    }`,
+  fragmentShader:`
+    varying vec3 vC; varying float vA;
+    void main(){
+      float d=length(gl_PointCoord-0.5);
+      if(d>0.5)discard;
+      float a=1.-d*2.; a=a*a;
+      gl_FragColor=vec4(vC*a*vA*1.4,a);
+    }`
+});
+scene.add(new THREE.Points(geo,mat));
+
+// background stars
+{
+  const n=3500,p=new Float32Array(n*3);
+  for(let i=0;i<n;i++){const d=dir(),r=80+rnd()*80;p[i*3]=d[0]*r;p[i*3+1]=d[1]*r;p[i*3+2]=d[2]*r}
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x6a7cff,size:0.35,transparent:true,opacity:0.5,depthWrite:false,blending:THREE.AdditiveBlending})));
+}
+
+// pointer reticle
+const reticle=new THREE.Mesh(new THREE.RingGeometry(0.55,0.6,64),
+  new THREE.MeshBasicMaterial({color:0x66f6ff,transparent:true,opacity:0.9,side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+reticle.rotation.x=-Math.PI/2; scene.add(reticle);
+const dot=new THREE.Mesh(new THREE.CircleGeometry(0.08,24),
+  new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,blending:THREE.AdditiveBlending}));
+dot.rotation.x=-Math.PI/2; scene.add(dot);
+
+/* ---------- postprocessing ---------- */
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),1.2,0.7,0.0);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+
+/* ---------- pointer ---------- */
+const ndc=new THREE.Vector2(0,0), sm=new THREE.Vector2(0,0);
+let pressed=false, hasPointer=false;
+const ray=new THREE.Raycaster(), plane=new THREE.Plane(new THREE.Vector3(0,1,0),0), hit=new THREE.Vector3(0,0,999);
+addEventListener('pointermove',e=>{ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);hasPointer=true});
+addEventListener('pointerdown',e=>{pressed=true;ndc.set(e.clientX/innerWidth*2-1,-(e.clientY/innerHeight)*2+1);hasPointer=true});
+addEventListener('pointerup',()=>pressed=false);
+addEventListener('pointercancel',()=>pressed=false);
+addEventListener('resize',()=>{
+  camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);
+  uniforms.uPx.value=innerHeight*renderer.getPixelRatio()*0.5;
+});
+
+/* ---------- loop ---------- */
+const clock=new THREE.Clock(), bar=document.querySelector('#bar i');
+const mp=new THREE.Vector3(0,0,999), TAU=Math.PI*2;
+let ms=1;
+function frame(){
+  const el=clock.getElapsedTime(), t=(el%LOOP)/LOOP;
+  uniforms.uT.value=t; bar.style.width=(t*100)+'%';
+
+  sm.lerp(ndc,0.08);
+  // camera: periodic drift + pointer parallax
+  const yaw=sm.x*-0.7+0.25*Math.sin(TAU*t);
+  const pitch=0.42-sm.y*0.25+0.06*Math.cos(TAU*t);
+  const imp=Math.sin(Math.PI*Math.min(1,Math.max(0,(t-0.15)/0.7)));
+  const dist=19-3.5*Math.pow(Math.sin(Math.PI*t),3)+0*imp;
+  camera.position.set(Math.sin(yaw)*Math.cos(pitch)*dist,Math.sin(pitch)*dist,Math.cos(yaw)*Math.cos(pitch)*dist);
+  camera.lookAt(0,0,0); camera.updateMatrixWorld();
+
+  if(hasPointer){
+    ray.setFromCamera(ndc,camera);
+    if(ray.ray.intersectPlane(plane,hit)) mp.lerp(hit,0.35);
+  }
+  uniforms.uM.value.copy(mp);
+  ms+=((pressed?-1.4:1)-ms)*0.1; uniforms.uMS.value=ms;
+
+  const pulse=1+0.12*Math.sin(el*6);
+  reticle.position.set(mp.x,0,mp.z===999?999:mp.z); dot.position.copy(reticle.position);
+  reticle.scale.setScalar((pressed?0.55:1)*pulse);
+  reticle.material.color.set(pressed?0xff2bd6:0x66f6ff);
+
+  bloom.strength=1.0+0.9*Math.pow(Math.sin(Math.PI*t),8);
+  composer.render();
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

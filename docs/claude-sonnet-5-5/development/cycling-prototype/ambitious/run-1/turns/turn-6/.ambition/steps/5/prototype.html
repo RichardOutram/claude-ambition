@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cycling Social Fitness App – Clickable Prototype</title>
+<style>
+:root{--bg:#0f1115;--card:#181b22;--card2:#1f232c;--line:#2a2f3a;--tx:#f2f4f8;--mut:#8b93a3;--acc:#ff5a1f;--acc2:#ffb020;--grn:#2ecc71;--blu:#4aa3ff;--pro:#b57bff}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#05060a;color:var(--tx);min-height:100vh;display:flex;align-items:center;justify-content:center;gap:40px;padding:20px}
+.side{max-width:260px;font-size:13px;color:var(--mut);line-height:1.5}
+.side h1{color:var(--tx);font-size:18px;margin-bottom:8px}
+.side li{margin-left:16px;margin-bottom:4px}
+.side button{margin-top:12px;background:var(--card2);color:var(--tx);border:1px solid var(--line);padding:6px 10px;border-radius:8px;cursor:pointer;font-size:12px;margin-right:6px}
+.phone{width:390px;height:812px;max-height:96vh;background:var(--bg);border-radius:44px;border:10px solid #000;box-shadow:0 0 0 2px #333,0 30px 80px #000a;position:relative;overflow:hidden;display:flex;flex-direction:column}
+@media(max-width:700px){.side{display:none}body{padding:0}.phone{width:100vw;height:100vh;max-height:none;border:none;border-radius:0}}
+.status{height:44px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 26px 6px;font-size:13px;font-weight:600;flex:none}
+.screen{flex:1;overflow-y:auto;position:relative;padding-bottom:12px}
+.screen::-webkit-scrollbar{display:none}
+.tabs{height:78px;flex:none;display:flex;background:#12141a;border-top:1px solid var(--line);padding-bottom:16px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:var(--mut);cursor:pointer}
+.tab .i{font-size:20px}
+.tab.on{color:var(--acc)}
+.tab.rec .i{background:#cc3b0a;color:#fff;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-top:-14px;box-shadow:0 4px 14px #ff5a1f66}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 10px;position:sticky;top:0;background:var(--bg);z-index:5}
+.hdr h2{font-size:22px}
+.back{cursor:pointer;color:var(--acc);font-size:15px;display:inline-flex;align-items:center;min-height:44px;min-width:60px;margin:-10px 0}
+.chip{display:inline-block;font-size:11px;padding:3px 8px;border-radius:99px;background:var(--card2);color:var(--mut)}
+.chip[onclick]{display:inline-flex;align-items:center;min-height:44px;padding:0 14px}
+.tl{display:flex;align-items:center;min-height:44px;font-weight:700;cursor:pointer}
+.chip.pro{background:#b57bff22;color:var(--pro);font-weight:700}
+.chip.g{background:#2ecc7122;color:var(--grn)}
+.card{overflow-wrap:anywhere;background:var(--card);border-radius:16px;margin:0 12px 12px;padding:14px;border:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:10px}
+.sp{flex:1}
+.av{color:#0f1115;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none}
+.mut{color:var(--mut);font-size:12px}
+.btn{min-height:46px;background:#cc3b0a;color:#fff;border:none;border-radius:12px;padding:12px 16px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
+.btn.sec{background:var(--card2);color:var(--tx);border:1px solid var(--line)}
+.btn.sm{width:auto;min-height:44px;padding:10px 16px;font-size:13px;border-radius:99px}
+.btn.pro{background:linear-gradient(90deg,#8e5bff,#ff5abf)}
+.stats{display:flex;justify-content:space-between;margin-top:10px}
+.stats div{font-size:11px;color:var(--mut)}
+.stats b{display:block;font-size:17px;color:var(--tx)}
+.map{width:100%;border-radius:12px;background:#1b2530;display:block}
+.actions{display:flex;gap:18px;margin-top:10px;font-size:13px;color:var(--mut)}
+.actions span{cursor:pointer;display:inline-flex;align-items:center;min-height:44px;min-width:44px;padding:0 8px;margin:-12px 0 -12px -8px}
+.actions .on{color:var(--acc)}
+.bar{height:8px;background:var(--card2);border-radius:99px;overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:99px;transition:width .5s}
+.seg{display:flex;background:var(--card2);margin:0 12px 12px;border-radius:10px;padding:3px}
+.seg div{flex:1;text-align:center;padding:15px 7px;font-size:13px;border-radius:8px;cursor:pointer;color:var(--mut)}
+.seg div.on{background:var(--card);color:var(--tx);font-weight:600}
+.sec-t{padding:4px 16px 8px;font-size:13px;color:var(--mut);text-transform:uppercase;letter-spacing:.06em}
+.badges{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;text-align:center;font-size:10px;color:var(--mut)}
+.badges .b{font-size:28px;background:var(--card2);border-radius:14px;padding:10px 0 4px;cursor:pointer}
+.badges .b.lock .e{filter:grayscale(1);opacity:.4}
+.badges .b span{display:block;font-size:10px;margin-top:2px}
+.big{font-size:56px;font-weight:800;text-align:center;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.live{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;margin:8px 12px}
+.live div{background:var(--card);border-radius:14px;padding:8px;font-size:11px;color:var(--mut)}
+.live b{display:block;font-size:24px;color:var(--tx);font-variant-numeric:tabular-nums}
+.lb{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+.lb:last-child{border:none}
+.lb .n{width:22px;color:var(--mut);font-weight:700}
+.lb.me{color:var(--acc);font-weight:700}
+.modal{position:absolute;inset:0;background:#000b;z-index:50;display:flex;align-items:flex-end;animation:f .2s}
+.modal .sheet{background:var(--card);width:100%;border-radius:24px 24px 0 0;padding:22px 18px 30px;max-height:90%;overflow:auto;animation:u .25s}
+.modal.c{align-items:center;justify-content:center}
+.modal.c .sheet{border-radius:24px;width:92%;text-align:center;padding:16px 16px 0;max-height:92%}
+.cta{position:sticky;bottom:0;background:var(--card);padding:10px 0 16px}
+@keyframes f{from{opacity:0}}@keyframes u{from{transform:translateY(60px)}}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.pop{font-size:44px;animation:pop .6s}
+input{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--tx);border-radius:12px;padding:12px;font-size:15px;margin-bottom:10px}
+.toast{position:absolute;top:56px;left:50%;transform:translateX(-50%);background:#fff;color:#000;padding:8px 14px;border-radius:99px;font-size:13px;font-weight:600;z-index:99;animation:f .2s;white-space:nowrap}
+.lockov{position:relative}
+.lockov .blur{filter:blur(5px);pointer-events:none}
+.lockov .lk{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:8px}
+.cmt{overflow-wrap:anywhere;font-size:13px;padding:8px 0;border-bottom:1px solid var(--line)}
+.cmt b{margin-right:6px}
+.hex{display:inline-block}
+</style>
+</head>
+<body>
+<div class="side">
+  <h1>🚴 Cycling Social Fitness App</h1>
+  <p>Clickable prototype based on plan.md (MVP scope). All data is fake and lives in memory.</p>
+  <ul>
+    <li>Sign in → onboarding</li>
+    <li>Feed: kudos, comments, ride detail, segments</li>
+    <li>Record: start / pause / finish → XP, level-up, badge, streak</li>
+    <li>Challenges &amp; streak freeze tokens</li>
+    <li>Clubs: join, club feed, club-vs-club</li>
+    <li>Profile: badges, garage, Pro paywall</li>
+  </ul>
+  <button onclick="reset()">↺ Reset prototype</button>
+  <button onclick="toggleSimNotif()">🔔 Trigger push</button>
+</div>
+<div class="phone">
+  <div class="status"><span id="clock">9:41</span><span>●●● ▮</span></div>
+  <div class="screen" id="screen" tabindex="0"></div>
+  <div class="tabs" id="tabs"></div>
+</div>
+
+<script>
+/* ---------- data ---------- */
+const COLORS=['#ff5a1f','#4aa3ff','#2ecc71','#b57bff','#ffb020','#ff5abf'];
+const fresh=()=>({
+  authed:false, tab:'feed', stack:[], pro:false,
+  me:{name:'Alex Rider',xp:1840,streak:6,freeze:1,bike:'Canyon Grizl'},
+  rides:[
+    {id:1,who:'Maya Chen',c:1,title:'Sunrise gravel loop',type:'gravel',km:62.4,elev:780,time:'3:12:40',spd:19.5,kudos:24,liked:false,t:'2h ago',seed:3,segs:[1],comments:[['Tom','Looks epic! 🔥'],['Priya','Next time invite me']]},
+    {id:2,who:'Tom Okafor',c:2,title:'Hill repeats on Mt. Vista',type:'road',km:38.1,elev:1120,time:'2:05:12',spd:18.3,kudos:41,liked:true,t:'5h ago',seed:7,segs:[1,2],comments:[['Maya','Beast mode']]},
+    {id:3,who:'Priya Nair',c:3,title:'Easy recovery spin',type:'road',km:21.0,elev:120,time:'0:58:03',spd:21.7,kudos:9,liked:false,t:'Yesterday',seed:11,segs:[2],comments:[]},
+    {id:4,who:'Jonas Weber',c:4,title:'Club Saturday paceline',type:'road',km:84.9,elev:640,time:'3:01:22',spd:28.1,kudos:57,liked:false,t:'Yesterday',seed:5,segs:[2],comments:[['Alex','Great pull at the front!']]},
+  ],
+  segments:[
+    {id:1,name:'Vista Switchbacks',kind:'Climb · Cat 3',surface:'paved',km:3.2,grade:'7.4%',lb:[['Tom Okafor','12:41'],['Maya Chen','13:05'],['Jonas Weber','13:48'],['Alex Rider','14:22'],['Priya Nair','15:10']]},
+    {id:2,name:'River Road Sprint',kind:'Sprint',surface:'mixed',km:1.1,grade:'0.5%',lb:[['Jonas Weber','1:29'],['Alex Rider','1:34'],['Tom Okafor','1:36'],['Maya Chen','1:41']]},
+  ],
+  challenges:[
+    {id:1,name:'Weekly 150 km',desc:'Ride 150 km this week',goal:150,val:96,unit:'km',xp:300,pro:false,joined:true},
+    {id:2,name:'Climb 2,000 m',desc:'Gain 2,000 m of elevation',goal:2000,val:1340,unit:'m',xp:400,pro:false,joined:true},
+    {id:3,name:'Ride 4 days',desc:'Complete 4 rides this week',goal:4,val:2,unit:'rides',xp:200,pro:false,joined:false},
+    {id:4,name:'Gravel Grinder',desc:'60 km of gravel',goal:60,val:0,unit:'km',xp:500,pro:true,joined:false},
+  ],
+  clubs:[
+    {id:1,name:'Dawn Patrol CC',members:248,joined:true,desc:'Early-morning road rides, all paces.',km:5120,posts:[['Jonas','Saturday ride leaves 7:00 from the bridge ☕'],['Maya','Who is in for the gravel social?']]},
+    {id:2,name:'Gravel Goblins',members:112,joined:false,desc:'Dirt, mud, snacks.',km:3480,posts:[['Sam','New route dropped: Forest Loop 70k']]},
+    {id:3,name:'Hill Climbers United',members:391,joined:false,desc:'We like it steep.',km:6210,posts:[['Lena','KOM hunting this Sunday 🏔']]},
+  ],
+  badges:[['🌅','Early Bird',1],['💯','First 100 km',1],['🔥','7-Week Streak',0],['⛰️','Everesting 42%',0],['🏆','First KOM',0],['🚵','Gravel Rookie',1],['🤝','Club Member',1],['⚡','Sprinter',0]],
+  rec:{state:'idle',sec:0,km:0,elev:0,spd:0,timer:null,auto:false},
+  ridden:false, feedFilter:'Following', lbTab:'Friends', chTab:'Active', unread:3, set:{zone:true,push:true,units:'km'}
+});
+let S=fresh();
+let T0=Date.now();const LOG=[],MARK={};
+const mark=n=>{if(!(n in MARK))MARK[n]=Date.now()-T0};
+document.addEventListener('click',e=>{if(e.target.closest('[data-nolog]'))return;const el=e.target.closest('button,[onclick]');if(!el)return;const fn=(el.getAttribute('onclick')||'tap').slice(0,40);LOG.push({t:Date.now()-T0,screen:S.stack.length?S.stack[S.stack.length-1].v:(S.authed?S.tab:'auth'),tap:fn})},true);
+const mmss=ms=>{const s=Math.round(ms/100)/10;return Math.floor(s/60)+':'+pad(Math.floor(s%60))+'.'+Math.round((s%1)*10)};
+function logText(){let o='SESSION LOG (taps only; no typed text)\n';for(const k in MARK)o+=`milestone: ${k} @ ${mmss(MARK[k])}\n`;
+if(MARK['signed in']!==undefined&&MARK['challenges viewed after ride']!==undefined)o+=`Core loop (sign in -> challenge check): ${mmss(MARK['challenges viewed after ride']-MARK['signed in'])}\n`;
+let prev=0;LOG.forEach(l=>{const gap=l.t-prev;o+=`${mmss(l.t)}  [${l.screen}] ${l.tap}${gap>=5000&&prev?'   <-- pause '+Math.round(gap/1000)+'s':''}\n`;prev=l.t});return o}
+function showLog(){closeModal();modal(`<h3 style="margin-bottom:8px">Session log</h3><pre id="lg" style="white-space:pre-wrap;font-size:11px;color:var(--mut);max-height:300px;overflow:auto;text-align:left">${esc(logText())}</pre><button class="btn" data-nolog style="margin-top:10px" onclick="copyLog()">Copy log</button><button class="btn sec" data-nolog style="margin-top:8px" onclick="closeModal()">Close</button>`)}
+function copyLog(){const tx=logText();(navigator.clipboard?navigator.clipboard.writeText(tx):Promise.reject()).then(()=>toast('Log copied')).catch(()=>toast('Select the text above and copy it'))}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const level=xp=>Math.floor(xp/500)+1;
+const initials=n=>n.split(' ').map(x=>x[0]).join('');
+const pad=n=>String(n).padStart(2,'0');
+const fmt=s=>`${Math.floor(s/3600)}:${pad(Math.floor(s/60)%60)}:${pad(s%60)}`;
+
+/* deterministic fake route svg */
+function route(seed,h=140,live){
+  let x=20,y=h/2,pts=[],r=seed;
+  const rnd=()=>{r=(r*9301+49297)%233280;return r/233280};
+  for(let i=0;i<24;i++){pts.push([x,y]);x+=(340/24)+(rnd()-.3)*6;y+=(rnd()-.5)*38;y=Math.max(18,Math.min(h-18,y));}
+  const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+','+p[1].toFixed(1)).join(' ');
+  let grid='';for(let i=0;i<9;i++)grid+=`<line x1="${i*45}" y1="0" x2="${i*45}" y2="${h}" stroke="#ffffff08"/>`;
+  for(let i=0;i<4;i++)grid+=`<line x1="0" y1="${i*h/3}" x2="400" y2="${i*h/3}" stroke="#ffffff08"/>`;
+  const last=pts[pts.length-1];
+  return `<svg class="map" viewBox="0 0 380 ${h}" style="height:${h}px">${grid}<path d="${d}" fill="none" stroke="#ff5a1f" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="${pts[0][0]}" cy="${pts[0][1]}" r="5" fill="#2ecc71"/><circle cx="${last[0]}" cy="${last[1]}" r="${live?7:5}" fill="${live?'#4aa3ff':'#fff'}">${live?'<animate attributeName="r" values="6;10;6" dur="1.4s" repeatCount="indefinite"/>':''}</circle></svg>`;
+}
+
+/* ---------- helpers ---------- */
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;$('.phone').appendChild(e);setTimeout(()=>e.remove(),2000)}
+function modal(html,center){const m=document.createElement('div');m.className='modal'+(center?' c':'');m.innerHTML=`<div class="sheet">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};$('.phone').appendChild(m);return m}
+function closeModal(){document.querySelectorAll('.modal').forEach(m=>m.remove())}
+function go(tab){if(S.rec.state!=='idle'&&tab!=='record'&&false)return;S.tab=tab;S.stack=[];render()}
+function push(v,id){S.stack.push({v,id});render()}
+function pop(){S.stack.pop();render()}
+function signOut(){if(S.rec.state!=='idle')return toast('Finish or discard your ride first');S.authed=false;render()}
+function reset(){LOG.length=0;for(const k in MARK)delete MARK[k];T0=Date.now();clearInterval(S.rec.timer);closeModal();S=fresh();render()}
+function toggleSimNotif(){toast('🔔 Tom gave you kudos on "Hill repeats"');S.unread++;if(S.authed)render()}
+function openNotifs(){S.unread=0;render();modal(`<h3 style="margin-bottom:10px">Notifications</h3>
+${[['🧡','Tom gave you kudos on your ride','2h'],['⚡','Jonas beat your time on River Road Sprint','5h'],(S.ridden?['🎯','Your challenge progress was updated','now']:['🔥','Streak at risk: ride before Sunday to keep your '+S.me.streak+'-week streak','1d'])].map(n=>`<div class="lb"><span style="font-size:20px">${n[0]}</span><span style="flex:1;font-size:13px">${n[1]}</span><span class="mut">${n[2]}</span></div>`).join('')}
+<button class="btn sec" style="margin-top:14px" onclick="closeModal()">Close</button>`)}
+function openSettings(){const o=(k,l)=>`<div class="row" style="padding:10px 0;border-bottom:1px solid var(--line)"><span>${l}</span><span class="sp"></span><span class="chip ${S.set[k]?'g':''}" style="cursor:pointer" onclick="toggleSet('${k}')">${S.set[k]?'On':'Off'}</span></div>`;
+closeModal();modal(`<h3 style="margin-bottom:6px">Settings</h3>${o('zone','Home privacy zone (200 m)')}${o('push','Push notifications')}
+<div class="row" style="padding:10px 0"><span>Units</span><span class="sp"></span><span class="chip" style="cursor:pointer" onclick="S.set.units=S.set.units==='km'?'mi':'km';openSettings()">${S.set.units}</span></div>
+<button class="btn sec" data-nolog style="margin-top:10px" onclick="showLog()">📋 Session log (for facilitator)</button><button class="btn sec" style="margin-top:8px" onclick="reset()">↺ Reset demo</button>${S.pro?'<button class="btn sec" style="margin-top:8px" onclick="S.pro=false;closeModal();render();toast(\'Back on Free\')">Switch back to Free</button>':''}<button class="btn" style="margin-top:8px" onclick="closeModal()">Done</button>`)}
+function toggleSet(k){if(k==='zone'&&S.set.zone){closeModal();return void modal(`<h3>Turn off privacy zone?</h3><p class="mut" style="margin:8px 0 16px">Followers will be able to see exactly where your rides start and end, including near your home.</p><button class="btn" onclick="openSettings()">Keep it on</button><button class="btn sec" style="margin-top:8px" onclick="S.set.zone=false;openSettings()">Turn off</button>`)}S.set[k]=!S.set[k];openSettings()}
+function newClub(){modal(`<h3 style="margin-bottom:10px">Create a club</h3><input id="cn" maxlength="40" placeholder="Club name" value="Sunday Spinners"><input id="cd" maxlength="80" placeholder="Short description" value="Easy weekend rides"><button class="btn" onclick="makeClub()">Create club (free)</button>`)}
+function makeClub(){const n=$('#cn').value.trim();if(!n)return toast('Give your club a name');S.clubs.unshift({id:Date.now()%100000+10,name:esc(n),members:1,joined:true,desc:esc($('#cd').value||'New club'),km:0,posts:[['Alex','Welcome to the club! 🎉']]});closeModal();toast('Club created');render()}
+function shareRide(id){const r=S.rides.find(x=>x.id===id);modal(`<h3 style="margin-bottom:10px">Share “${r.title}”</h3>
+<button class="btn sec" style="margin-bottom:8px" onclick="closeModal();toast('Link copied')">🔗 Copy link</button>
+<button class="btn sec" style="margin-bottom:8px" onclick="closeModal();toast('Shared to Dawn Patrol CC')">👥 Share to club</button>
+<button class="btn sec" onclick="closeModal();toast('Saved as image')">🖼 Save as image</button>`)}
+function explain(k){const t={xp:['⭐ XP & levels','You earn XP for every ride: distance, climbing and riding consistently. Every 500 XP is a new level.'],streak:['🔥 Weekly streak','Ride at least once a week to keep your streak. A freeze token (❄️) protects it for one missed week. Sick, injured or the weather is awful? Use one. Rest is part of training.'],pro:['⚡ Pro','Recording, feed, segments and basic clubs are always free. Pro adds training analysis, premium challenges and club admin tools.']}[k];
+modal(`<h3>${t[0]}</h3><p class="mut" style="margin:8px 0 16px;font-size:14px">${t[1]}</p><button class="btn" onclick="closeModal()">Got it</button>`)}
+function openPaywall(){modal(`<div style="text-align:center"><div style="font-size:42px">⚡</div><h2>Go Pro</h2><p class="mut" style="margin:6px 0 14px">Recording, feed, segments &amp; basic clubs stay free forever.</p></div>
+<div style="font-size:14px;line-height:2">📈 Training load &amp; trends<br>⛰ Power &amp; climb analysis<br>🏁 Premium challenges<br>🛠 Club admin tools &amp; analytics</div>
+<div class="row" style="margin:16px 0"><div class="card" style="margin:0;flex:1;text-align:center;border-color:var(--pro)"><b>$5.99</b><div class="mut">per month</div></div><div class="card" style="margin:0;flex:1;text-align:center"><b>$39.99</b><div class="mut">per year · save 44%</div></div></div>
+<p class="mut" style="text-align:center;margin:-6px 0 12px;font-size:11px">Example pricing: free for 7 days, then $5.99/month or $39.99/year. Cancel anytime in your store settings.</p>
+<button class="btn pro" onclick="S.pro=true;closeModal();toast('Welcome to Pro ⚡');render()">Start 7-day free trial</button>
+<p class="mut tl" style="justify-content:center;font-weight:400" onclick="toast('No purchases to restore (demo)')">Restore purchases</p><p class="mut tl" style="justify-content:center;font-weight:400" onclick="closeModal()">Not now</p>`)}
+
+/* ---------- views ---------- */
+function authView(){
+  return `<div style="padding:60px 24px;text-align:center"><div style="font-size:64px">🚴</div><h1 style="font-size:32px;margin:8px 0">PedalQuest</h1><p class="mut" style="margin-bottom:34px">Ride outdoors. Earn XP. Own the climb.</p>
+  <input placeholder="Email" value="alex@example.com"><input type="password" placeholder="Password" value="password">
+  <button class="btn" onclick="signIn()">Sign in</button>
+  <div class="mut" style="margin:14px 0">or</div>
+  <button class="btn sec" style="margin-bottom:10px" onclick="signIn()">  Continue with Apple</button>
+  <button class="btn sec" onclick="signIn()">G  Continue with Google</button></div>`}
+function signIn(){
+  S.authed=true;mark('signed in');
+  modal(`<h2>Welcome, Alex 👋</h2><p class="mut" style="margin:6px 0 14px">What do you ride?</p>
+  <div class="row" style="margin-bottom:14px"><button class="btn sec" onclick="this.style.borderColor='var(--acc)'">🚴 Road</button><button class="btn sec" onclick="this.style.borderColor='var(--acc)'">🌲 Gravel</button></div>
+  <p class="mut" style="margin-bottom:14px">📍 Privacy zone around home is on by default (200 m).</p>
+  <button class="btn" onclick="closeModal()">Let's ride</button>`);
+  render();
+}
+
+function feedCard(r){
+  return `<div class="card"><div class="row"><div class="av" style="background:${COLORS[r.c]}">${initials(r.who)}</div><div><b>${r.who}</b><div class="mut">${r.t} · ${r.type==='gravel'?'🌲 Gravel':'🚴 Road'}</div></div></div>
+  <div class="tl" style="margin:2px 0" onclick="push('ride',${r.id})">${r.title}</div>
+  <div style="cursor:pointer" onclick="push('ride',${r.id})">${route(r.seed,120)}</div>
+  <div class="stats"><div><b>${r.km} km</b>Distance</div><div><b>${r.elev} m</b>Elev</div><div><b>${r.time}</b>Time</div></div>
+  <div class="actions"><span class="${r.liked?'on':''}" onclick="kudos(${r.id})">${r.liked?'🧡':'🤍'} ${r.kudos}</span><span onclick="push('ride',${r.id})">💬 ${r.comments.length}</span><span onclick="shareRide(${r.id})">↗ Share</span></div></div>`}
+function kudos(id){const r=S.rides.find(x=>x.id===id);r.liked=!r.liked;r.kudos+=r.liked?1:-1;render()}
+
+function feedScreen(){
+  const rides=S.feedFilter==='Following'?S.rides:S.rides.filter(r=>r.c<=1||r.who==='Alex Rider');
+  return `<div class="hdr"><h2>Feed</h2><span class="chip" onclick="openNotifs()" style="cursor:pointer">🔔${S.unread?' '+S.unread:''}</span></div>
+  <div class="seg">${['Following','Club'].map(t=>`<div class="${S.feedFilter===t?'on':''}" onclick="S.feedFilter='${t}';render()">${t}</div>`).join('')}</div>
+  <div class="card" style="background:linear-gradient(135deg,#ff5a1f33,#ffb02022);cursor:pointer" onclick="explain('streak')"><div class="row"><div style="font-size:26px">🔥</div><div><b>${S.me.streak}-week streak</b><div class="mut">${S.ridden?'✓ Ride logged this week — streak safe':'Ride before Sunday to keep it alive'}</div></div></div></div>
+  ${rides.map(feedCard).join('')||'<p class="mut" style="padding:20px">Nothing here yet.</p>'}`}
+
+function rideScreen(id){
+  const r=S.rides.find(x=>x.id===id);
+  return `<div class="hdr"><span class="back" onclick="pop()">‹ Back</span><b>Ride</b><span style="width:40px"></span></div>
+  <div class="card"><div class="row"><div class="av" style="background:${COLORS[r.c]}">${initials(r.who)}</div><div><b>${r.who}</b><div class="mut">${r.t}</div></div></div>
+  <h3 style="margin:10px 0">${r.title}</h3>${route(r.seed,200)}
+  <div class="stats"><div><b>${r.km} km</b>Distance</div><div><b>${r.elev} m</b>Elev</div><div><b>${r.time}</b>Time</div><div><b>${r.spd}</b>km/h avg</div></div>
+  <div class="actions"><span class="${r.liked?'on':''}" onclick="kudos(${r.id})">${r.liked?'🧡':'🤍'} ${r.kudos} kudos</span></div></div>
+  <div class="sec-t">Segments</div>
+  ${r.segs.map(s=>{const sg=S.segments.find(x=>x.id===s);return `<div class="card row" style="cursor:pointer" onclick="push('segment',${s})"><div style="font-size:24px">${sg.kind.startsWith('Climb')?'⛰️':'⚡'}</div><div><b>${sg.name}</b><div class="mut">${sg.kind} · ${sg.km} km</div></div><div class="sp"></div>›</div>`}).join('')}
+  <div class="sec-t">Pro analysis</div>
+  <div class="card lockov">${S.pro?proStats():`<div class="blur">${proStats()}</div><div class="lk"><b>Power &amp; climb analysis</b><button class="btn pro sm" onclick="openPaywall()">Unlock with Pro</button></div>`}</div>
+  <div class="sec-t">Comments</div>
+  <div class="card">${r.comments.map(c=>`<div class="cmt"><b>${c[0]}</b>${c[1]}</div>`).join('')||'<div class="mut">Be the first to comment</div>'}
+  <div class="row" style="margin-top:10px"><input id="cin" maxlength="200" placeholder="Add a comment…" style="margin:0" onkeydown="if(event.key==='Enter')addC(${r.id})"><button class="btn sm" onclick="addC(${r.id})">Send</button></div></div>`}
+function proStats(){return `<div class="stats"><div><b>212 W</b>Norm. power</div><div><b>87</b>Training load</div><div><b>VAM 910</b>Climb rate</div></div><div class="bar"><i style="width:68%"></i></div>`}
+function addC(id){const v=$('#cin').value.trim();if(!v)return toast('Type a comment first');S.rides.find(x=>x.id===id).comments.push(['Alex',esc(v)]);render()}
+
+function segmentScreen(id){
+  const s=S.segments.find(x=>x.id===id);
+  const rows=S.lbTab==='Friends'?s.lb:S.lbTab==='Club'?s.lb.filter((_,i)=>i%2===0||s.lb[i][0]==='Alex Rider'):[...s.lb,['Rider #4821','16:02']];
+  return `<div class="hdr"><span class="back" onclick="pop()">‹ Back</span><b>Segment</b><span style="width:40px"></span></div>
+  <div class="card"><h3>${s.name}</h3><div class="mut">${s.kind} · ${s.surface}</div>${route(id*13,150)}
+  <div class="stats"><div><b>${s.km} km</b>Length</div><div><b>${s.grade}</b>Avg grade</div><div><b>${s.surface}</b>Surface</div></div></div>
+  <div class="mut" style="margin:-4px 16px 12px;font-size:12px">⚠️ Segments are on public roads. Obey traffic laws. No leaderboard spot is worth a crash.</div>
+  <div class="seg">${['Friends','Club','Local'].map(t=>`<div class="${S.lbTab===t?'on':''}" onclick="S.lbTab='${t}';render()">${t}</div>`).join('')}</div>
+  <div class="card">${rows.map((r,i)=>`<div class="lb ${r[0]==='Alex Rider'?'me':''}"><span class="n">${i+1}</span><span>${i===0?'👑 ':''}${r[0]}</span><span class="sp"></span><span>${r[1]}</span></div>`).join('')}</div>`}
+
+function recordScreen(){
+  const r=S.rec;
+  if(r.state==='idle')return `<div class="hdr"><h2>Record</h2><span class="chip">GPS ready ●</span></div>
+  <div class="card">${route(21,220)}</div>
+  <div class="card"><div class="mut">Ride type</div><div class="row" style="margin-top:8px"><button class="btn sec" id="tRoad" style="border-color:var(--acc)" onclick="this.style.borderColor='var(--acc)';tGravel.style.borderColor='var(--line)'">🚴 Road</button><button class="btn sec" id="tGravel" onclick="this.style.borderColor='var(--acc)';tRoad.style.borderColor='var(--line)'">🌲 Gravel</button></div>
+  <div class="mut" style="margin-top:12px">Bike: ${S.me.bike} · Background tracking on · Auto-pause on</div></div>
+  <div class="card" style="border-color:var(--blu);background:#4aa3ff14"><b>Demo tip</b><div class="mut" style="margin-top:4px;font-size:13px">Tap <b>Start ride</b>, wait ~10 seconds (the demo ride runs at 1 second = 1 minute), then tap <b>Finish</b> to see what you earn.</div></div>
+  <div style="padding:0 12px"><button class="btn" style="padding:18px;font-size:18px" onclick="startRide()">● Start ride</button></div>`;
+  return `<div class="hdr"><h2>${r.state==='paused'?'Paused':'Recording'}</h2><span class="chip g">${r.state==='paused'?'⏸ auto-pause':'● GPS'}</span></div>
+  <div class="card" style="padding:6px;margin-bottom:6px">${route(21,110,r.state==='running')}</div>
+  <div class="big" id="bt" style="font-size:46px">${fmt(r.sec)}</div><div class="mut" style="text-align:center">Demo speed: 1 second = 1 minute of riding</div>
+  <div class="live"><div><b id="bk">${r.km.toFixed(2)}</b>km</div><div><b id="bs">${r.spd.toFixed(1)}</b>km/h</div><div><b id="be">${Math.round(r.elev)}</b>m elevation</div><div><b id="bx">${xpOf(r.km,r.elev).total}</b>XP earned</div></div>
+  <div class="row" style="padding:0 12px">
+    <button class="btn sec" onclick="togglePause()">${r.state==='paused'?'▶ Resume':'⏸ Pause'}</button>
+    <button class="btn" style="background:#e03131" onclick="finishRide()">■ Finish</button></div>`}
+function xpOf(km,el){const d=Math.floor(km*8),c=Math.floor(el/4),w=20;return {d,c,w,total:d+c+w}}
+function startRide(){const r=S.rec;mark('ride started');r.state='running';r.sec=0;r.km=0;r.elev=0;r.spd=0;
+  clearInterval(r.timer);r.timer=setInterval(()=>{ if(r.state!=='running')return; r.sec+=60;r.spd=24+Math.sin(r.sec/300)*5;r.km+=r.spd/60;r.elev+=3.5;
+    if($('#bt')){$('#bt').textContent=fmt(r.sec);$('#bk').textContent=r.km.toFixed(2);$('#bs').textContent=r.spd.toFixed(1);$('#be').textContent=Math.round(r.elev);$('#bx').textContent=xpOf(r.km,r.elev).total} },1000);
+  render()}
+function togglePause(){S.rec.state=S.rec.state==='paused'?'running':'paused';S.rec.spd=0;render()}
+function finishRide(){
+  const r=S.rec;
+  if(r.sec<60){toast('Ride a few more seconds first');return}
+  clearInterval(r.timer);
+  const km=+r.km.toFixed(1),xp=xpOf(km,r.elev).total;
+  r.state='idle';
+  const m=modal(`<h2>Ride complete 🎉</h2><p class="mut" style="margin:4px 0 8px">Saving… uploading to cloud (offline-safe)</p>${route(21,130)}
+  <div class="stats"><div><b>${km} km</b>Distance</div><div><b>${fmt(r.sec)}</b>Time</div><div><b>${Math.round(r.elev)} m</b>Elev</div></div>
+  <input id="rt" maxlength="60" placeholder="Name your ride" value="Morning ride" style="margin-top:14px">
+  <button class="btn" onclick="saveRide(${km},${Math.round(r.elev)},${r.sec})">Save &amp; share</button>
+  <p class="mut tl" style="justify-content:center;font-weight:400" onclick="confirmDiscard()">Discard</p>`);
+}
+function confirmDiscard(){const sh=document.querySelector('.modal .sheet');window._keep=sh.innerHTML;sh.innerHTML=`<h3>Discard this ride?</h3><p class="mut" style="margin:8px 0 16px">This ride and the XP it earns can't be recovered.</p><button class="btn" onclick="document.querySelector('.modal .sheet').innerHTML=window._keep">Keep ride</button><button class="btn sec" style="margin-top:8px" onclick="closeModal();render()">Discard ride</button>`}
+function saveRide(km,el,sec){mark('ride saved');const X=xpOf(km,el);
+  const title=esc($('#rt').value||'Ride');closeModal();
+  S.rides.unshift({id:Date.now(),who:'Alex Rider',c:0,title,type:'road',km,elev:el,time:fmt(sec),spd:+(km/(sec/3600)).toFixed(1),kudos:0,liked:false,t:'Just now',seed:Math.floor(Math.random()*90)+1,segs:km>=2?[2]:[],comments:[]});
+  const newBadge=!S.badges.some(b=>b[1]==='Fresh Legs');if(newBadge)S.badges.push(['🚴','Fresh Legs',1]);
+  const done=[];S.challenges.forEach(c=>{if(!c.joined)return;const was=c.val;if(c.unit==='km')c.val=Math.min(c.goal,c.val+km);if(c.unit==='m')c.val=Math.min(c.goal,c.val+el);if(c.unit==='rides')c.val=Math.min(c.goal,c.val+1);if(was<c.goal&&c.val>=c.goal)done.push(c)});
+  const xp=X.total+done.reduce((a,c)=>a+c.xp,0),lv0=level(S.me.xp);S.me.xp+=xp;const lv1=level(S.me.xp);S.ridden=true;
+  const nu=S.challenges.filter(c=>c.joined&&c.val<c.goal).sort((a,b)=>b.val/b.goal-a.val/a.goal)[0];const nextLine=`Next up: ${nu?nu.name+' '+Math.round(nu.val/nu.goal*100)+'%':'pick a new challenge'} · ${500-(S.me.xp%500)} XP to Level ${lv1+1}`;
+  S.me.streak+=0; S.tab='feed';S.stack=[];render();
+  modal(`<div class="pop">🏅</div><h2 style="margin:6px 0">+${xp} XP</h2>${lv1>lv0?`<div class="chip g" style="margin:2px 0 6px">🎉 Level ${lv1} reached!</div>`:''}<p class="mut">XP = distance + climbing + weekly ride bonus. Every 500 XP is a new level. <span style="color:var(--acc);cursor:pointer" onclick="explain('xp')">Learn more</span></p>
+  <div class="card" style="margin:10px 0 0;padding:8px;border-color:var(--acc2)">${newBadge?'<div style="font-size:30px">🚴</div><b>Badge unlocked: Fresh Legs</b><div class="mut">First ride logged</div>':'<div style="font-size:30px">✅</div><b>Challenges updated</b>'}</div>
+  <div class="card" style="margin:10px 0;text-align:left;font-size:14px"><div class="lb"><span>Distance (${km} km × 8)</span><span class="sp"></span><b>+${X.d}</b></div><div class="lb"><span>Climbing (${el} m ÷ 4)</span><span class="sp"></span><b>+${X.c}</b></div><div class="lb"><span>Weekly ride bonus</span><span class="sp"></span><b>+${X.w}</b></div>${done.map(c=>`<div class="lb"><span>🎯 Challenge complete: ${c.name}</span><span class="sp"></span><b>+${c.xp}</b></div>`).join('')}
+  <br><b>🔥 Streak: ${S.me.streak} weeks</b><div class="mut">This week is counted. Ride weekly to keep it.</div>
+  ${km>=2?'<br><b>⚡ Segment: River Road Sprint</b><div class="mut">2nd on the friends leaderboard (1:34)</div>':''}</div>
+  <div class="cta"><div class="mut" style="font-size:12px;margin-bottom:8px">${nextLine}</div><button class="btn" onclick="closeModal();go('challenges')">See my challenges →</button>
+  <p class="mut tl" style="justify-content:center;font-weight:400" onclick="closeModal()">Back to feed</p></div>`,true);
+}
+
+function challengesScreen(){
+  const list=S.challenges.filter(c=>S.chTab==='Active'?c.joined:!c.joined);
+  return `<div class="hdr"><h2>Challenges</h2></div>
+  <div class="card"><div class="row"><div style="font-size:28px">❄️</div><div><b>Streak freeze tokens: ${S.me.freeze}</b><div class="mut">Protects your ${S.me.streak}-week streak once</div></div></div>
+  <button class="btn sec sm" style="margin-top:10px" onclick="if(S.me.xp>=200){S.me.xp-=200;S.me.freeze++;render();toast('Freeze bought (−200 XP)')}else toast('Not enough XP')">Buy one · 200 XP</button></div>
+  <div class="seg">${['Active','Discover'].map(t=>`<div class="${S.chTab===t?'on':''}" onclick="S.chTab='${t}';render()">${t}</div>`).join('')}</div>
+  ${list.map(c=>{const p=Math.round(c.val/c.goal*100);return `<div class="card"><div class="row"><b>${c.name}</b>${c.pro?'<span class="chip pro">PRO</span>':''}<span class="sp"></span><span class="chip">+${c.xp} XP</span></div>
+  <div class="mut" style="margin-top:4px">${c.desc}</div><div class="bar"><i style="width:${p}%"></i></div>
+  <div class="row" style="margin-top:8px"><span class="mut">${Math.round(c.val)} / ${c.goal} ${c.unit}</span><span class="sp"></span>${c.joined?(p>=100?'<span class="chip g">Complete ✓</span>':`<span class="mut">${p}%</span>`):`<button class="btn sm" onclick="joinCh(${c.id})">${c.pro&&!S.pro?'🔒 Unlock':'Join'}</button>`}</div></div>`}).join('')||'<p class="mut" style="padding:16px">All joined. Nice!</p>'}
+  <div class="sec-t">Personal goal</div>
+  <div class="card"><b>Ride 5,000 km in 2026</b><div class="bar"><i style="width:58%"></i></div><div class="mut" style="margin-top:6px">2,904 km · on pace</div></div>`}
+function joinCh(id){const c=S.challenges.find(x=>x.id===id);if(c.pro&&!S.pro)return openPaywall();c.joined=true;toast('Joined '+c.name);render()}
+
+function clubsScreen(){
+  return `<div class="hdr"><h2>Clubs</h2><button class="btn sm" onclick="newClub()">+ New</button></div>
+  <div class="card" style="background:linear-gradient(135deg,#4aa3ff22,#2ecc7122)"><b>Club vs Club · November</b>
+  <div class="row" style="margin-top:10px"><div>Dawn Patrol<br><b>5,120 km</b></div><div class="sp"></div><div style="text-align:right">Gravel Goblins<br><b>3,480 km</b></div></div>
+  <div class="bar"><i style="width:60%;background:var(--blu)"></i></div></div>
+  ${S.clubs.map(c=>`<div class="card row" style="cursor:pointer" onclick="push('club',${c.id})"><div class="av" style="background:${COLORS[c.id+1]};border-radius:12px">${initials(c.name)}</div><div><b>${c.name}</b><div class="mut">${c.members} members</div></div><div class="sp"></div>${c.joined?'<span class="chip g">Joined</span>':'›'}</div>`).join('')}`}
+function clubScreen(id){
+  const c=S.clubs.find(x=>x.id===id);
+  return `<div class="hdr"><span class="back" onclick="pop()">‹ Back</span><b>${c.name}</b><span style="width:40px"></span></div>
+  <div class="card"><p>${c.desc}</p><div class="stats"><div><b>${c.members}</b>Members</div><div><b>${c.km.toLocaleString()}</b>km this month</div></div>
+  <button class="btn ${c.joined?'sec':''}" style="margin-top:12px" onclick="toggleClub(${c.id})">${c.joined?'Leave club':'Join club (free)'}</button></div>
+  ${c.joined?`<div class="card lockov"><b>Club admin</b> <span class="chip pro">PRO</span>${S.pro?'<div class="mut" style="margin-top:6px">Analytics: 82 active riders this week · +12% rides</div><button class="btn sec sm" style="margin-top:8px" onclick="toast(\'Custom challenge builder (demo)\')">Create custom challenge</button>':`<div class="lk" style="position:static;margin-top:8px;align-items:flex-start"><div class="mut">Analytics, custom challenges, member management</div><button class="btn pro sm" onclick="openPaywall()">Unlock with Pro</button></div>`}</div>`:''}
+  <div class="sec-t">Club feed</div>
+  <div class="card">${c.posts.map(p=>`<div class="cmt"><b>${p[0]}</b>${p[1]}</div>`).join('')}
+  ${c.joined?`<div class="row" style="margin-top:10px"><input id="cp" maxlength="200" placeholder="Post to club…" style="margin:0"><button class="btn sm" onclick="postClub(${c.id})">Post</button></div>`:'<div class="mut" style="margin-top:8px">Join to post</div>'}</div>`}
+function toggleClub(id){const c=S.clubs.find(x=>x.id===id);c.joined=!c.joined;c.members+=c.joined?1:-1;if(c.joined)toast('Joined '+c.name);render()}
+function postClub(id){const v=$('#cp').value.trim();if(!v)return toast('Type a message first');S.clubs.find(x=>x.id===id).posts.push(['Alex',esc(v)]);render()}
+
+function profileScreen(){
+  const lv=level(S.me.xp),pr=(S.me.xp%500)/5;
+  return `<div class="hdr"><h2>Profile</h2><span style="cursor:pointer;font-size:20px;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin:-8px -10px" onclick="openSettings()">⚙️</span></div>
+  <div class="card"><div class="row"><div class="av" style="background:var(--acc);width:60px;height:60px;font-size:22px">AR</div><div><b style="font-size:18px">${S.me.name}</b> ${S.pro?'<span class="chip pro">PRO</span>':'<span class="chip pro" style="cursor:pointer" onclick="explain(\'pro\')">Free · what is Pro?</span>'}<div class="mut tl" style="font-weight:400" onclick="explain('xp')">Level ${lv} · ${S.me.xp} XP ⓘ</div></div></div>
+  <div class="bar"><i style="width:${pr}%"></i></div><div class="mut" style="margin-top:4px">${500-(S.me.xp%500)} XP to level ${lv+1}</div>
+  <div class="stats"><div><b>🔥 ${S.me.streak}</b>wk streak</div><div><b>${S.rides.filter(r=>r.who==='Alex Rider').length+38}</b>rides</div><div><b>2,904</b>km</div></div></div>
+  <div class="sec-t">Badges</div>
+  <div class="card"><div class="badges">${S.badges.map(b=>`<div class="b ${b[2]?'':'lock'}" onclick="toast('${b[1]}${b[2]?' — earned':' — locked'}')"><i class="e" style="font-style:normal">${b[0]}</i><span>${b[1]}</span></div>`).join('')}</div></div>
+  <div class="sec-t">Training insights</div>
+  <div class="card lockov">${S.pro?proStats()+'<div class="mut" style="margin-top:8px">Fitness trending up +6% over 6 weeks</div>':`<div class="blur">${proStats()}</div><div class="lk"><button class="btn pro sm" onclick="openPaywall()">⚡ Unlock with Pro</button></div>`}</div>
+  <div class="sec-t">Bike garage</div>
+  <div class="card row"><div style="font-size:26px">🚲</div><div><b>${S.me.bike}</b><div class="mut">Gravel · 1,204 km</div></div></div>
+  <div class="card row"><div style="font-size:26px">🚲</div><div><b>Specialized Tarmac</b><div class="mut">Road · 1,700 km</div></div></div>
+  <div class="sec-t">Privacy</div>
+  <div class="card"><div class="row"><span>Home privacy zone (200 m)</span><span class="sp"></span><span class="chip g">On</span></div><div class="row" style="margin-top:10px"><span>Default ride visibility</span><span class="sp"></span><span class="chip">Followers</span></div></div>
+  <div style="padding:0 12px"><button class="btn sec" onclick="signOut()">Sign out</button></div>`}
+
+/* ---------- render ---------- */
+const TABS=[['feed','🏠','Feed'],['challenges','🎯','Challenges'],['record','●','Record'],['clubs','👥','Clubs'],['profile','👤','Profile']];
+function render(){
+  const t=S.stack.length?S.stack[S.stack.length-1]:null;
+  const scr=$('#screen'), top=scr.scrollTop;
+  let h;
+  if(!S.authed)h=authView();
+  else if(t)h={ride:rideScreen,segment:segmentScreen,club:clubScreen}[t.v](t.id);
+  else h={feed:feedScreen,record:recordScreen,challenges:challengesScreen,clubs:clubsScreen,profile:profileScreen}[S.tab]();
+  scr.innerHTML=h;
+  if(S.authed&&!t&&S.tab==='challenges'&&S.ridden)mark('challenges viewed after ride');
+  $('#tabs').style.display=S.authed?'flex':'none';
+  $('#tabs').innerHTML=TABS.map(([k,i,l])=>`<div class="tab ${k==='record'?'rec':''} ${S.tab===k&&!t?'on':''}" onclick="go('${k}')"><span class="i">${i}</span>${l}</div>`).join('');
+  if(S.rec.state!=='idle'&&S.tab!=='record'&&S.authed)$('#tabs').insertAdjacentHTML('beforebegin','');
+}
+setInterval(()=>{const d=new Date();$('#clock').textContent=d.getHours()+':'+pad(d.getMinutes())},10000);
+render();
+</script>
+</body>
+</html>

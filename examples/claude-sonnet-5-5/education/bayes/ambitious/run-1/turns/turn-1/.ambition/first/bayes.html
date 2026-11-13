@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bayes' Theorem, Interactively</title>
+<style>
+:root{
+  --bg:#fafaf9; --surface:#fff; --ink:#1c1b19; --ink2:#55524c; --muted:#8a867e; --line:#e4e1da;
+  --hit:#2160c4;   /* H and E      */
+  --miss:#a9c4ee;  /* H and not E  */
+  --fp:#c4570f;    /* not H and E  */
+  --tn:#e6d9cb;    /* not H and not E */
+  --dim:.22;
+}
+@media (prefers-color-scheme:dark){
+:root{ --bg:#141413; --surface:#1d1c1a; --ink:#f1efe9; --ink2:#bdb9b0; --muted:#8a867e; --line:#34322e;
+  --hit:#5b9bf0; --miss:#27456f; --fp:#f08a45; --tn:#4a3a2c; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:980px;margin:0 auto;padding:32px 20px 64px}
+h1{font-size:2rem;margin:0 0 6px}
+h2{font-size:1.15rem;margin:32px 0 8px}
+p{margin:0 0 12px;color:var(--ink2);max-width:70ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;margin-top:16px}
+.presets{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+button{font:inherit;font-size:.9rem;padding:6px 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+button:hover{border-color:var(--ink2)} button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px}
+.ctl label{display:flex;justify-content:space-between;font-weight:600;font-size:.95rem}
+.ctl output{font-variant-numeric:tabular-nums}
+.ctl small{display:block;color:var(--muted);margin-top:2px;font-size:.82rem}
+input[type=range]{width:100%;accent-color:var(--hit)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:.88rem;color:var(--ink2);margin:10px 0}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+svg{width:100%;height:auto;display:block}
+.hero{display:flex;flex-wrap:wrap;gap:24px;align-items:baseline}
+.big{font-size:3rem;font-weight:700;color:var(--hit);font-variant-numeric:tabular-nums;line-height:1}
+.formula{font-size:1.1rem;overflow-x:auto;padding:4px 0;font-variant-numeric:tabular-nums}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 4px}
+.frac>span:first-child{border-bottom:1.5px solid var(--ink);padding:0 6px 2px}
+.frac>span:last-child{padding:2px 6px 0}
+.c-h{color:var(--hit);font-weight:600}.c-f{color:var(--fp);font-weight:600}
+.toggle{display:flex;gap:8px;align-items:center;font-size:.92rem;color:var(--ink2)}
+#tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);padding:6px 10px;border-radius:6px;font-size:.82rem;opacity:0;transition:opacity .1s;z-index:9;max-width:240px}
+table{border-collapse:collapse;width:100%;font-size:.9rem;font-variant-numeric:tabular-nums}
+td,th{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+.dot{transition:opacity .25s}
+.rect{transition:opacity .25s}
+</style>
+</head>
+<body>
+<main>
+<h1>Bayes' theorem</h1>
+<p>Bayes' theorem tells you how to update a belief when you see new evidence. Start with how likely a hypothesis <b>H</b> was before (the <i>prior</i>), see how well the evidence <b>E</b> fits each possibility, and out comes the <i>posterior</i>: how likely H is now that you've seen E.</p>
+
+<div class="presets" role="group" aria-label="Example scenarios" id="presets"></div>
+
+<section class="card">
+  <div class="controls">
+    <div class="ctl"><label for="prior">Prior P(H) <output id="o-prior"></output></label>
+      <input id="prior" type="range" min="0.1" max="90" step="0.1"><small id="d-prior"></small></div>
+    <div class="ctl"><label for="sens">Hit rate P(E | H) <output id="o-sens"></output></label>
+      <input id="sens" type="range" min="1" max="100" step="1"><small id="d-sens"></small></div>
+    <div class="ctl"><label for="fpr">False-alarm rate P(E | not H) <output id="o-fpr"></output></label>
+      <input id="fpr" type="range" min="0" max="100" step="0.5"><small id="d-fpr"></small></div>
+  </div>
+</section>
+
+<h2>1. A crowd of 1,000 cases</h2>
+<p>Each dot is one case out of 1,000. Evidence-positive cases (E) are grouped at the top. Bayes' theorem asks: <b>of the dots in that group, what share are blue?</b> Hover a dot for details.</p>
+<section class="card">
+  <div class="legend" id="legend1"></div>
+  <svg id="dots" role="img" aria-label="Grid of 1000 dots coloured by group"></svg>
+</section>
+
+<h2>2. The same thing as areas</h2>
+<p>Width is the prior: the left column is H, the right is not-H. Within each column, height is how often E happens. Multiplying width × height gives each rectangle's area, a joint probability. The posterior is the blue area as a fraction of all the top (E) area.</p>
+<section class="card">
+  <label class="toggle"><input type="checkbox" id="cond"> Condition on E (fade everything where E didn't happen)</label>
+  <svg id="mosaic" viewBox="0 0 800 330" role="img" aria-label="Area diagram of Bayes' theorem"></svg>
+</section>
+
+<h2>3. The answer</h2>
+<section class="card">
+  <div class="hero">
+    <div><div class="big" id="post"></div><div style="color:var(--ink2)">P(H | E), the posterior</div></div>
+    <div id="shift" style="color:var(--ink2);max-width:36ch"></div>
+  </div>
+  <p class="formula" id="formula" style="margin-top:18px"></p>
+  <table id="tbl"><thead><tr><th>Group</th><th>Joint probability</th><th>Per 1,000</th></tr></thead><tbody></tbody></table>
+</section>
+
+<h2>What to try</h2>
+<p>Drag the prior down while keeping a very accurate test: the posterior collapses, because false alarms from the huge not-H group swamp the few true hits. This is the <i>base-rate fallacy</i>. Then set the false-alarm rate equal to the hit rate: the evidence says nothing, and the posterior equals the prior.</p>
+</main>
+<div id="tip"></div>
+
+<script>
+const $=id=>document.getElementById(id), NS='http://www.w3.org/2000/svg';
+const PRESETS=[
+ {n:'Medical test',prior:1,sens:90,fpr:9,H:'has the disease',E:'tests positive'},
+ {n:'Spam filter',prior:40,sens:95,fpr:2,H:'is spam',E:'contains "free"'},
+ {n:'Rare & precise',prior:0.1,sens:99,fpr:1,H:'is a fraudster',E:'is flagged'},
+ {n:'Useless evidence',prior:30,sens:50,fpr:50,H:'is H',E:'shows E'}
+];
+let ctx=PRESETS[0];
+const pct=(x,d=1)=>(x*100).toFixed(d).replace(/\.0+$/,'')+'%';
+const COL={tp:'var(--hit)',fn:'var(--miss)',fp:'var(--fp)',tn:'var(--tn)'};
+const tip=$('tip');
+function showTip(e,t){tip.textContent=t;tip.style.opacity=1;tip.style.left=Math.min(e.clientX+12,innerWidth-250)+'px';tip.style.top=(e.clientY+14)+'px'}
+function hideTip(){tip.style.opacity=0}
+
+// presets
+PRESETS.forEach((p,i)=>{const b=document.createElement('button');b.textContent=p.n;b.onclick=()=>{ctx=p;$('prior').value=p.prior;$('sens').value=p.sens;$('fpr').value=p.fpr;update()};b.dataset.i=i;$('presets').appendChild(b)});
+
+function state(){
+  const pH=+$('prior').value/100, s=+$('sens').value/100, f=+$('fpr').value/100;
+  const tp=pH*s, fn=pH*(1-s), fp=(1-pH)*f, tn=(1-pH)*(1-f), pE=tp+fp;
+  return {pH,s,f,tp,fn,fp,tn,pE,post:pE?tp/pE:0};
+}
+// dots
+const COLS=50,ROWS=20,R=7,GAP=16;
+const dotsSvg=$('dots');dotsSvg.setAttribute('viewBox',`0 0 ${COLS*GAP} ${ROWS*GAP}`);
+const dots=[];
+for(let i=0;i<COLS*ROWS;i++){const c=document.createElementNS(NS,'circle');
+ c.setAttribute('cx',(i%COLS)*GAP+GAP/2);c.setAttribute('cy',Math.floor(i/COLS)*GAP+GAP/2);c.setAttribute('r',R);c.setAttribute('class','dot');
+ c.addEventListener('mousemove',e=>showTip(e,c._t));c.addEventListener('mouseleave',hideTip);
+ dotsSvg.appendChild(c);dots.push(c)}
+
+function mosaic(S){
+  const W=800,Hh=330,L=40,T=30,w=W-L-10,h=Hh-T-20,svg=$('mosaic'),cond=$('cond').checked;
+  svg.innerHTML='';
+  const mk=(t,a,tx)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(tx!==undefined)e.textContent=tx;svg.appendChild(e);return e};
+  const wH=w*S.pH, wN=w-wH;
+  const boxes=[
+   {k:'tp',x:L,w:wH,y:T,h:h*S.s,lab:'H and E',p:S.tp},
+   {k:'fn',x:L,w:wH,y:T+h*S.s,h:h*(1-S.s),lab:'H, no E',p:S.fn},
+   {k:'fp',x:L+wH,w:wN,y:T,h:h*S.f,lab:'not H, but E',p:S.fp},
+   {k:'tn',x:L+wH,w:wN,y:T+h*S.f,h:h*(1-S.f),lab:'not H, no E',p:S.tn}];
+  boxes.forEach(b=>{
+    const dim=cond&&(b.k==='fn'||b.k==='tn');
+    const r=mk('rect',{x:b.x+1,y:b.y+1,width:Math.max(b.w-2,0),height:Math.max(b.h-2,0),rx:3,fill:COL[b.k],class:'rect',opacity:dim?'.15':'1'});
+    r.addEventListener('mousemove',e=>showTip(e,`${b.lab}: ${pct(b.p,2)} of all cases`));r.addEventListener('mouseleave',hideTip);
+  });
+  mk('text',{x:L,y:T-10,fill:'var(--ink2)','font-size':13},`H  (width = prior ${pct(S.pH)})`);
+  mk('text',{x:L+w,y:T-10,fill:'var(--ink2)','font-size':13,'text-anchor':'end'},`not H  (${pct(1-S.pH)})`);
+  mk('text',{x:L-8,y:T+12,fill:'var(--ink2)','font-size':12,'text-anchor':'end'},'E');
+  mk('text',{x:L-8,y:T+h-2,fill:'var(--ink2)','font-size':12,'text-anchor':'end'},'no E');
+  // direct labels
+  const lab=(b,txt,c)=>{if(b.w>70&&b.h>26)mk('text',{x:b.x+b.w/2,y:b.y+b.h/2+5,'text-anchor':'middle','font-size':14,'font-weight':600,fill:c,opacity:cond&&(b.k==='fn'||b.k==='tn')?.3:1},txt)};
+  lab(boxes[0],`${pct(S.tp,2)}`,'#fff');lab(boxes[2],`${pct(S.fp,2)}`,'#fff');
+  lab(boxes[1],`${pct(S.fn,2)}`,'var(--ink)');lab(boxes[3],`${pct(S.tn,2)}`,'var(--ink)');
+}
+
+function update(){
+  const S=state();
+  $('o-prior').textContent=pct(S.pH);$('o-sens').textContent=pct(S.s,0);$('o-fpr').textContent=pct(S.f);
+  $('d-prior').textContent=`Before any evidence, how common is it that something ${ctx.H}?`;
+  $('d-sens').textContent=`If it ${ctx.H}, how often does it ${ctx.E}?`;
+  $('d-fpr').textContent=`If it doesn't, how often does it still ${ctx.E}?`;
+  document.querySelectorAll('#presets button').forEach(b=>b.setAttribute('aria-pressed',PRESETS[b.dataset.i]===ctx&&+$('prior').value===ctx.prior&&+$('sens').value===ctx.sens&&+$('fpr').value===ctx.fpr));
+  // counts, largest-remainder rounding to 1000
+  const keys=['tp','fp','fn','tn'],raw=keys.map(k=>S[k]*1000),cnt=raw.map(Math.floor);
+  let rem=1000-cnt.reduce((a,b)=>a+b,0);
+  raw.map((v,i)=>[v-Math.floor(v),i]).sort((a,b)=>b[0]-a[0]).slice(0,rem).forEach(([,i])=>cnt[i]++);
+  const names={tp:'H and E',fp:'not H but E',fn:'H but no E',tn:'not H, no E'};
+  let idx=0;keys.forEach((k,j)=>{for(let n=0;n<cnt[j];n++){const d=dots[idx++];d.setAttribute('fill',COL[k]);d._t=`${names[k]} (${cnt[j]} of 1,000 cases)`}});
+  $('legend1').innerHTML=keys.map((k,j)=>`<span><i style="background:${COL[k]}"></i>${names[k]}: <b>${cnt[j]}</b></span>`).join('')+
+    `<span style="margin-left:auto">E group: ${cnt[0]+cnt[1]} dots, ${cnt[0]} blue</span>`;
+  mosaic(S);
+  $('post').textContent=pct(S.post);
+  const d=S.post-S.pH;
+  $('shift').textContent=`Seeing that it ${ctx.E} moves your belief from ${pct(S.pH)} to ${pct(S.post)}${Math.abs(d)<5e-4?' (no change)':d>0?` (${(S.post/S.pH).toFixed(1)}× higher)`:' (lower)'}.`;
+  const fr=(a,b)=>`<span class="frac"><span>${a}</span><span>${b}</span></span>`;
+  $('formula').innerHTML=`<span class="c-h">P(H|E)</span> = ${fr('P(E|H) · P(H)','P(E|H) · P(H) + P(E|¬H) · P(¬H)')} = `+
+   fr(`${pct(S.s,0)} × ${pct(S.pH)}`,`${pct(S.s,0)} × ${pct(S.pH)} + ${pct(S.f)} × ${pct(1-S.pH)}`)+` = ${fr(pct(S.tp,2),pct(S.pE,2))} = <b class="c-h">${pct(S.post)}</b>`;
+  $('tbl').tBodies[0].innerHTML=[['tp','H and E'],['fp','not H and E'],['fn','H and no E'],['tn','not H and no E']].map(([k,l])=>`<tr><td>${l}</td><td>${pct(S[k],3)}</td><td>${(S[k]*1000).toFixed(1)}</td></tr>`).join('');
+}
+['prior','sens','fpr'].forEach(i=>$(i).addEventListener('input',update));
+$('cond').addEventListener('change',update);
+$('prior').value=ctx.prior;$('sens').value=ctx.sens;$('fpr').value=ctx.fpr;
+update();
+</script>
+</body>
+</html>

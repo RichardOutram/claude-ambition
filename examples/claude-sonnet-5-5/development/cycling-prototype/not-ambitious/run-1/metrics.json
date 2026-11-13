@@ -1,0 +1,51 @@
+{
+  "slug": "dev/cycling-prototype",
+  "arm": "not-ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-12T22:53:20Z",
+  "session_id": "f9c0b121-7eaf-4371-b734-122717be4ef3",
+  "exchanges": 2,
+  "cost_usd": 0.4218,
+  "client_cost_usd": 0.0797,
+  "wall_ms": 194367,
+  "duration_ms": 176487,
+  "num_turns": 6,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 14,
+      "outputTokens": 27058,
+      "thinkingTokens": 4801,
+      "cacheReadInputTokens": 161249,
+      "cacheCreationInputTokens": 33757,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 33757,
+      "webSearchRequests": 0,
+      "costUSD": 0.42176090000000005
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 1.38,
+      "cost_usd": 0.2008
+    },
+    {
+      "n": 2,
+      "minutes": 3.19,
+      "cost_usd": 0.4218
+    }
+  ],
+  "plain_push_after": 1,
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  },
+  "plugin_commit": "ccf02d5",
+  "claude_version": "2.1.322"
+}

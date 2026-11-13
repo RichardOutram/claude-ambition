@@ -1,0 +1,1 @@
+That's the watch I set expiring after its 6m 40s. It isn't a message from you, and I don't need to re-arm it, because the full check run already finished with ALL PASS. The report above stands, and the four open decisions are waiting on you.

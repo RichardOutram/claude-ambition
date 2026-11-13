@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cycling Social Fitness — Prototype</title>
+<style>
+:root{--bg:#0f1115;--card:#1a1d24;--card2:#232732;--txt:#f2f4f8;--mut:#8b93a5;--acc:#ff5a1f;--acc2:#ffb020;--ok:#2ecc71;--blue:#3b82f6;--r:16px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#07080b;color:var(--txt);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+.phone{width:390px;height:800px;max-height:calc(100vh - 32px);background:var(--bg);border-radius:44px;border:10px solid #000;box-shadow:0 20px 80px rgba(255,90,31,.15);position:relative;overflow:hidden;display:flex;flex-direction:column}
+@media(max-width:430px){body{padding:0}.phone{width:100vw;height:100vh;max-height:none;border:0;border-radius:0}}
+.status{height:30px;display:flex;justify-content:space-between;padding:10px 24px 0;font-size:12px;font-weight:600;flex:none}
+.screen{flex:1;overflow-y:auto;padding:12px 16px 20px;scrollbar-width:none}
+.screen::-webkit-scrollbar{display:none}
+.tabs{flex:none;display:flex;background:#12141a;border-top:1px solid #222733;padding:6px 0 14px}
+.tab{flex:1;text-align:center;font-size:10px;color:var(--mut);cursor:pointer;padding:4px 0}
+.tab .i{font-size:20px;display:block;margin-bottom:2px}
+.tab.on{color:var(--acc)}
+.tab.rec .i{background:var(--acc);color:#fff;width:42px;height:42px;line-height:42px;border-radius:50%;margin:-14px auto 2px;box-shadow:0 4px 14px rgba(255,90,31,.5)}
+h1{font-size:24px;margin-bottom:12px}h2{font-size:16px;margin:16px 0 8px}
+.card{background:var(--card);border-radius:var(--r);padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}.sp{justify-content:space-between}
+.av{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.mut{color:var(--mut);font-size:12px}.b{font-weight:700}
+.btn{background:var(--acc);color:#fff;border:0;border-radius:12px;padding:12px 16px;font-weight:700;font-size:15px;cursor:pointer;width:100%}
+.btn.sec{background:var(--card2)}.btn.sm{width:auto;padding:6px 12px;font-size:13px}.btn.ghost{background:none;border:1px solid #333a49}
+.btn:active{transform:scale(.98)}
+.map{height:130px;border-radius:12px;margin:10px 0;position:relative;overflow:hidden;background:#1d2a24}
+.map svg{width:100%;height:100%}
+.stats{display:flex;gap:6px}.stats div{flex:1}.stats b{font-size:17px;display:block}
+.act{display:flex;gap:18px;margin-top:10px;font-size:14px;color:var(--mut)}
+.act span{cursor:pointer}.act .on{color:var(--acc)}
+.bar{height:8px;background:var(--card2);border-radius:4px;overflow:hidden;margin:6px 0}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--acc2));border-radius:4px;transition:width .5s}
+.pill{display:inline-block;background:var(--card2);padding:3px 9px;border-radius:20px;font-size:11px;color:var(--mut)}
+.pill.pro{background:linear-gradient(90deg,#8b5cf6,#ec4899);color:#fff;font-weight:700}
+.seg{display:flex;background:var(--card);border-radius:12px;padding:3px;margin-bottom:12px}
+.seg div{flex:1;text-align:center;padding:8px;border-radius:10px;font-size:13px;cursor:pointer;color:var(--mut)}
+.seg .on{background:var(--card2);color:var(--txt);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.badge{background:var(--card);border-radius:14px;padding:12px 4px;text-align:center;font-size:11px}
+.badge .e{font-size:30px;display:block;margin-bottom:4px}.badge.lock{opacity:.35;filter:grayscale(1)}
+.back{color:var(--acc);cursor:pointer;margin-bottom:8px;display:inline-block;font-size:14px}
+.big{font-size:56px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums}
+.lb .row{padding:8px 0;border-bottom:1px solid #232732}.lb .row:last-child{border:0}
+.me{background:rgba(255,90,31,.12);border-radius:8px;padding-left:6px}
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.8);z-index:10;display:flex;align-items:center;justify-content:center;padding:24px;animation:f .2s}
+.modal .card{width:100%;text-align:center;margin:0;padding:24px}
+@keyframes f{from{opacity:0}}@keyframes pop{0%{transform:scale(.3)}60%{transform:scale(1.2)}100%{transform:scale(1)}}
+.pop{font-size:70px;animation:pop .6s}
+.toast{position:absolute;top:44px;left:16px;right:16px;background:var(--ok);color:#000;padding:10px 14px;border-radius:12px;font-weight:600;font-size:13px;z-index:20;animation:f .2s}
+input{width:100%;background:var(--card);border:1px solid #2b3140;color:var(--txt);padding:12px;border-radius:12px;margin-bottom:10px;font-size:15px}
+.cmt{font-size:13px;padding:6px 0;border-bottom:1px solid #232732}
+.chk{width:20px;height:20px;border-radius:50%;border:2px solid var(--mut);display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.chk.on{background:var(--ok);border-color:var(--ok);color:#000}
+
+.bell{position:relative;font-size:22px;cursor:pointer;padding:4px}.bell b{position:absolute;top:0;right:0;background:var(--acc);font-size:10px;border-radius:10px;padding:1px 5px}
+.dots{display:flex;gap:6px;justify-content:center;margin:20px 0}.dots i{width:8px;height:8px;border-radius:50%;background:#333a49}.dots i.on{background:var(--acc)}
+.opt{background:var(--card);border:2px solid transparent;border-radius:14px;padding:16px;margin-bottom:10px;cursor:pointer;display:flex;gap:12px;align-items:center}.opt.on{border-color:var(--acc);background:rgba(255,90,31,.1)}
+.nrow{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid #232732;cursor:pointer}.nrow.u{font-weight:600}.nrow .dot{width:8px;height:8px;border-radius:50%;background:var(--acc);margin-top:6px;flex:none}
+.tog{width:42px;height:24px;background:#333a49;border-radius:12px;position:relative;cursor:pointer;flex:none;transition:.2s}.tog:after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}.tog.on{background:var(--ok)}.tog.on:after{left:20px}
+.hex{cursor:pointer;transition:fill .3s}.hex:hover{stroke:#fff}
+.cf{position:absolute;top:-10px;width:8px;height:12px;animation:fall 2.2s linear forwards;z-index:30}@keyframes fall{to{transform:translateY(820px) rotate(540deg);opacity:.2}}
+.xpf{animation:xp 1s ease-out}@keyframes xp{from{width:0}}
+select{width:100%;background:var(--card);border:1px solid #2b3140;color:var(--txt);padding:12px;border-radius:12px;margin-bottom:10px;font-size:15px}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <div class="status"><span id="clock">9:41</span><span>5G ▮▮▮</span></div>
+  <div class="screen" id="screen"></div>
+  <div class="tabs" id="tabs"></div>
+</div>
+
+<script>
+// ---------- Data ----------
+const me={name:"You",ini:"Y",color:"#ff5a1f",level:7,xp:1340,next:1800,streak:5,freeze:1,pro:false};
+const riders={
+  maya:{name:"Maya Chen",ini:"M",color:"#3b82f6"},
+  tom:{name:"Tom Becker",ini:"T",color:"#8b5cf6"},
+  ana:{name:"Ana Silva",ini:"A",color:"#10b981"},
+  leo:{name:"Leo Martin",ini:"L",color:"#f59e0b",bio:"Gravel nerd · 412 km this month"},
+  priya:{name:"Priya Nair",ini:"P",color:"#ec4899",bio:"Climbing specialist · Cat 2 KOM holder"},
+  you:{name:"You",ini:"Y",color:"#ff5a1f"}
+};
+Object.keys(riders).forEach(k=>riders[k].follow=["maya","tom","ana"].includes(k));
+riders.maya.bio="Early-morning gravel addict";riders.tom.bio="Hill repeats, always";riders.ana.bio="Recovery rides & coffee";
+let rides=[
+  {id:1,who:"maya",title:"Sunrise Gravel Loop",type:"gravel",dist:62.4,elev:780,time:"3:12:08",when:"2h ago",kudos:14,kd:false,comments:[["Tom","Great pace! 🔥"],["Ana","Which tyres?"]],path:"M10,100 C40,40 70,110 110,60 S170,30 200,70 S260,100 300,40"},
+  {id:2,who:"tom",title:"Hill repeats – Col du Vent",type:"road",dist:38.1,elev:1120,time:"2:05:44",when:"Yesterday",kudos:23,kd:true,comments:[["Maya","Beast mode 💪"]],path:"M10,110 L60,90 L90,100 L140,50 L170,70 L230,20 L300,35"},
+  {id:3,who:"ana",title:"Easy recovery spin",type:"road",dist:24.7,elev:120,time:"1:10:02",when:"2d ago",kudos:6,kd:false,comments:[],path:"M20,70 C60,20 100,20 140,70 S220,120 260,70 S290,40 300,60"}
+];
+let challenges=[
+  {id:1,name:"Weekly 150 km",goal:150,cur:98,unit:"km",xp:300,pro:false,joined:true},
+  {id:2,name:"Climb 2,000 m",goal:2000,cur:1250,unit:"m",xp:400,pro:false,joined:true},
+  {id:3,name:"Ride 4 days",goal:4,cur:3,unit:"rides",xp:200,pro:false,joined:true},
+  {id:4,name:"Gran Fondo Month",goal:500,cur:0,unit:"km",xp:1200,pro:true,joined:false},
+  {id:5,name:"Everesting Prep",goal:8849,cur:0,unit:"m",xp:1500,pro:true,joined:false}
+];
+let clubs=[
+  {id:1,name:"Dawn Patrol CC",members:248,joined:true,score:1820,emoji:"🌅"},
+  {id:2,name:"Gravel Goblins",members:112,joined:false,score:1450,emoji:"🧌"},
+  {id:3,name:"Hill Climbers United",members:391,joined:false,score:1710,emoji:"⛰️"}
+];
+const badges=[["🚴","First Ride",1],["💯","First 100 km",1],["🌅","Early Bird",1],["🔥","5-Week Streak",1],["⛰️","Everesting 40%",1],["👑","First KOM",0],["🪨","Gravel 200 km",0],["🌧️","Rain Rider",0],["🏔️","Cat 1 Climb",0]];
+const segments=[
+  {id:1,name:"Col du Vent",kind:"Climb Cat 3",surface:"paved",len:"4.2 km",grad:"6.1%",lb:[["Tom Becker","14:22"],["Maya Chen","14:51"],["You","15:40"],["Ana Silva","16:05"]]},
+  {id:2,name:"River Road Sprint",kind:"Sprint",surface:"paved",len:"0.8 km",grad:"0.4%",lb:[["Maya Chen","1:02"],["You","1:07"],["Tom Becker","1:09"]]},
+  {id:3,name:"Quarry Gravel Kicker",kind:"Climb Cat 4",surface:"gravel",len:"1.9 km",grad:"7.8%",lb:[["Ana Silva","8:14"],["You","8:40"]]}
+];
+
+// ---------- State ----------
+let tab="feed",view=null,sub={ch:"active",lb:"friends",pf:"stats"},rec={st:"idle",t:0,d:0,iv:null,elev:0};
+let authed=false,onb=0,goalSel=150;
+sub.fd="rides";
+rec.type="road";
+let notifs=[
+ {ic:"🔥",t:"Streak at risk! Ride before Sunday to keep your 5-week streak.",time:"1h",u:1,to:["record"]},
+ {ic:"👑",t:"Tom beat your time on Quarry Gravel Kicker",time:"Yesterday",u:1,to:["feed",{seg:3}]},
+ {ic:"🎯",t:"You're 65% through Weekly 150 km",time:"2d",u:0,to:["challenges"]}];
+let nset={kudos:1,challenge:1,streak:1,segment:1};
+let hexes=Array.from({length:42},(_,i)=>[0,8,9,15,16,22,23,29].includes(i)?1:[5,6,12,13,19,20,26,27,34,35].includes(i)?2:0);
+const unread=()=>notifs.filter(n=>n.u).length;
+function addNotif(ic,t,to){notifs.unshift({ic,t,time:"now",u:1,to:to||["feed"]});toast(ic+" "+t);if(tab==="feed"&&!view)render()}
+function addXP(n){me.xp+=n;let up=0;while(me.xp>=me.next){me.xp-=me.next;me.level++;me.next=Math.round(me.next*1.25);up=1}return up}
+function confetti(){const ph=$("#phone");for(let i=0;i<40;i++){const c=document.createElement("i");c.className="cf";c.style.left=Math.random()*100+"%";c.style.background=["#ff5a1f","#ffb020","#3b82f6","#2ecc71","#ec4899"][i%5];c.style.animationDelay=Math.random()*.6+"s";ph.appendChild(c);setTimeout(()=>c.remove(),3200)}}
+const $=s=>document.querySelector(s),scr=$("#screen");
+
+function toast(m){const t=document.createElement("div");t.className="toast";t.textContent=m;$("#phone").appendChild(t);setTimeout(()=>t.remove(),2200)}
+function modal(html){const m=document.createElement("div");m.className="modal";m.innerHTML=`<div class="card">${html}</div>`;m.onclick=e=>{if(e.target===m)m.remove()};$("#phone").appendChild(m);return m}
+function av(r,s=40){return `<div class="av" style="background:${r.color};width:${s}px;height:${s}px">${r.ini}</div>`}
+function fmt(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return (h?h+":":"")+String(m).padStart(h?2:1,"0")+":"+String(s%60).padStart(2,"0")}
+function go(t,v){tab=t;view=v||null;render()}
+
+// ---------- Components ----------
+function mapSvg(path){return `<div class="map"><svg viewBox="0 0 310 130" preserveAspectRatio="none"><g stroke="#2a3a32" stroke-width="1">${[20,50,80,110].map(y=>`<line x1="0" x2="310" y1="${y}" y2="${y}"/>`).join("")}${[50,110,170,230,280].map(x=>`<line y1="0" y2="130" x1="${x}" x2="${x}"/>`).join("")}</g><path d="${path}" fill="none" stroke="#ff5a1f" stroke-width="4" stroke-linecap="round"/></svg></div>`}
+
+function rideCard(r,detail){
+  const w=riders[r.who];
+  return `<div class="card" ${detail?"":`onclick="go('feed',{ride:${r.id}})" style="cursor:pointer"`}>
+  <div class="row"><span onclick="event.stopPropagation();go('feed',{rider:'${r.who}'})" style="cursor:pointer">${av(w)}</span><div><div class="b">${w.name}</div><div class="mut">${r.when} · ${r.type==="gravel"?"Gravel":"Road"}</div></div></div>
+  <div class="b" style="margin-top:10px">${r.title}</div>${mapSvg(r.path)}
+  <div class="stats"><div><span class="mut">Distance</span><b>${r.dist} km</b></div><div><span class="mut">Elev</span><b>${r.elev} m</b></div><div><span class="mut">Time</span><b>${r.time}</b></div></div>
+  <div class="act"><span class="${r.kd?"on":""}" onclick="event.stopPropagation();kudos(${r.id})">👍 ${r.kudos}</span><span>💬 ${r.comments.length}</span></div></div>`}
+
+function kudos(id){const r=rides.find(x=>x.id===id);r.kd=!r.kd;r.kudos+=r.kd?1:-1;if(navigator.vibrate)navigator.vibrate(10);render()}
+
+// ---------- Screens ----------
+const S={};
+S.auth=()=>`<div style="text-align:center;padding-top:50px"><div style="font-size:70px">🚴</div><h1 style="margin:10px 0 4px">PedalQuest</h1><p class="mut" style="margin-bottom:30px">Ride. Level up. Own the climbs.</p>
+<input placeholder="Email" value="rider@example.com"><input type="password" placeholder="Password" value="password">
+<button class="btn" onclick="login()">Sign in</button>
+<button class="btn sec" style="margin-top:10px" onclick="login()"> Continue with Apple</button>
+<button class="btn sec" style="margin-top:10px" onclick="login()">G&nbsp; Continue with Google</button>
+<p class="mut" style="margin-top:20px">Prototype — any button signs you in</p></div>`;
+function login(){authed=true;onb=0;render()}
+S.onb=()=>{
+ const dots=`<div class="dots">${[0,1,2].map(i=>`<i class="${i===onb?"on":""}"></i>`).join("")}</div>`;
+ if(onb===0)return `<div style="padding-top:30px"><h1>What do you ride?</h1><p class="mut" style="margin-bottom:16px">We tune climbs, badges and segments to your style.</p>
+ ${[["road","🚴","Road","Tarmac, climbs, sprints"],["gravel","🪨","Gravel","Mixed surfaces & long days"]].map(o=>`<div class="opt ${rec.type===o[0]?"on":""}" onclick="rec.type='${o[0]}';render()"><span style="font-size:32px">${o[1]}</span><div><div class="b">${o[2]}</div><div class="mut">${o[3]}</div></div></div>`).join("")}
+ <p class="mut">Indoor &amp; MTB coming later.</p>${dots}<button class="btn" onclick="onb=1;render()">Continue</button></div>`;
+ if(onb===1)return `<div style="padding-top:30px"><h1>Weekly distance goal</h1><p class="mut" style="margin-bottom:16px">You can change this anytime.</p>
+ ${[[75,"Casual"],[150,"Regular"],[250,"Hardcore"]].map(o=>`<div class="opt ${goalSel===o[0]?"on":""}" onclick="goalSel=${o[0]};render()"><b style="font-size:22px;width:80px">${o[0]} km</b><span class="mut">${o[1]}</span></div>`).join("")}
+ ${dots}<button class="btn" onclick="challenges[0].goal=goalSel;challenges[0].name='Weekly '+goalSel+' km';onb=2;render()">Continue</button></div>`;
+ return `<div style="padding-top:30px"><h1>Find your crew</h1><p class="mut" style="margin-bottom:16px">Follow riders to fill your feed.</p>
+ ${["leo","priya"].map(k=>`<div class="card row sp">${av(riders[k])}<div style="flex:1"><div class="b">${riders[k].name}</div><div class="mut">${riders[k].bio}</div></div><button class="btn sm ${riders[k].follow?"sec":""}" onclick="riders.${k}.follow=!riders.${k}.follow;render()">${riders[k].follow?"Following":"Follow"}</button></div>`).join("")}
+ <div class="card"><div class="b">📍 Location access</div><div class="mut">Used in the background only while you record a ride.</div></div>
+ ${dots}<button class="btn" onclick="onb=3;render();toast('Welcome aboard! 🚴')">Allow location &amp; finish</button></div>`};
+
+S.feed=()=>{
+  if(view&&view.ride){const r=rides.find(x=>x.id===view.ride);
+    return `<span class="back" onclick="go('feed')">‹ Feed</span>${rideCard(r,true)}
+    <div class="card"><div class="b" style="margin-bottom:6px">Segments</div>${segments.slice(0,2).map(s=>`<div class="row sp" style="padding:6px 0;cursor:pointer" onclick="go('feed',{seg:${s.id}})"><span>${s.name}</span><span class="pill">${s.kind}</span></div>`).join("")}</div>
+    <div class="card"><div class="b">Comments</div>${r.comments.map(c=>`<div class="cmt"><b>${c[0]}</b> ${c[1]}</div>`).join("")||'<p class="mut">No comments yet</p>'}
+    <div class="row" style="margin-top:10px"><input id="ci" style="margin:0" placeholder="Add a comment…"><button class="btn sm" onclick="addC(${r.id})">Post</button></div></div>
+    <div class="card"><div class="row sp"><span class="b">Power &amp; climb analysis</span><span class="pill pro">PRO</span></div><p class="mut" style="margin:6px 0 10px">Training load, power curves and climb breakdown.</p><button class="btn sec" onclick="paywall()">Unlock</button></div>`}
+  if(view&&view.seg)return S.segment(view.seg,"feed");
+  if(view&&view.notif)return S.notif();
+  if(view&&view.rider)return S.rider(view.rider);
+  const head=`<div class="row sp"><h1>Feed</h1><div class="bell" onclick="go('feed',{notif:1})">🔔${unread()?`<b>${unread()}</b>`:""}</div></div>
+  <div class="seg">${[["rides","Rides"],["segments","Segments"]].map(k=>`<div class="${sub.fd===k[0]?"on":""}" onclick="sub.fd='${k[0]}';render()">${k[1]}</div>`).join("")}</div>`;
+  if(sub.fd==="segments")return head+segments.map(s=>{const rk=s.lb.findIndex(e=>e[0]==="You")+1;return `<div class="card" style="cursor:pointer" onclick="go('feed',{seg:${s.id}})"><div class="row sp"><span class="b">${s.name}</span><span class="pill">${s.kind}</span></div><div class="mut" style="margin:4px 0">${s.len} · ${s.grad} · ${s.surface}</div><div class="row sp"><span>Your rank</span><b>${rk?"#"+rk+" · "+s.lb[rk-1][1]:"—"}</b></div></div>`}).join("")+`<button class="btn ghost" onclick="createSeg()">+ Create a segment</button>`;
+  const fl=rides.filter(r=>r.who==="you"||riders[r.who].follow);
+  const sug=["leo","priya"].filter(k=>!riders[k].follow);
+  return head+`<div class="card row sp" style="cursor:pointer" onclick="go('challenges')"><div><div class="b">🔥 ${me.streak}-week streak</div><div class="mut">Ride this week to keep it alive</div></div><span class="pill">❄️ ${me.freeze} freeze</span></div>`+fl.map(r=>rideCard(r)).join("")+(sug.length?`<h2>Suggested riders</h2>`+sug.map(k=>`<div class="card row sp">${av(riders[k])}<div style="flex:1"><div class="b">${riders[k].name}</div><div class="mut">${riders[k].bio}</div></div><button class="btn sm" onclick="riders.${k}.follow=true;toast('Following ${riders[k].name}');render()">Follow</button></div>`).join(""):"")};
+S.rider=w=>{const r=riders[w];return `<span class="back" onclick="go('feed')">‹ Feed</span><div style="text-align:center;margin-bottom:12px">${av(r,72).replace('class="av"','class="av" style="margin:0 auto 8px;font-size:28px"')}<h1 style="margin:0">${r.name}</h1><div class="mut">${r.bio||""}</div>
+ ${w==="you"?"":`<button class="btn sm ${r.follow?"sec":""}" style="margin-top:10px" onclick="riders.${w}.follow=!riders.${w}.follow;render()">${r.follow?"Following ✓":"Follow"}</button>`}</div>
+ <div class="card stats" style="text-align:center"><div><span class="mut">Rides</span><b>${rides.filter(x=>x.who===w).length+30}</b></div><div><span class="mut">Followers</span><b>${120+w.length*17}</b></div><div><span class="mut">KOMs</span><b>${w.length%4}</b></div></div>
+ <h2>Recent rides</h2>${rides.filter(x=>x.who===w).map(x=>rideCard(x)).join("")||'<p class="mut">No recent rides.</p>'}`};
+S.notif=()=>{const tg=(k,l)=>`<div class="row sp" style="padding:8px 0"><span>${l}</span><div class="tog ${nset[k]?"on":""}" onclick="nset.${k}=!nset.${k};render()"></div></div>`;
+ const h=`<span class="back" onclick="go('feed')">‹ Feed</span><div class="row sp"><h1>Notifications</h1><span class="mut" style="cursor:pointer" onclick="notifs.forEach(n=>n.u=0);render()">Mark all read</span></div>
+ <div class="card" style="padding:4px 14px">${notifs.map((n,i)=>`<div class="nrow ${n.u?"u":""}" onclick="openN(${i})"><span style="font-size:22px">${n.ic}</span><div style="flex:1;font-size:14px">${n.t}<div class="mut">${n.time}</div></div>${n.u?'<span class="dot"></span>':""}</div>`).join("")}</div>
+ <h2>Push settings</h2><div class="card">${tg("kudos","Kudos &amp; comments")}${tg("challenge","Challenge progress")}${tg("streak","Streak at risk")}${tg("segment","Segment beaten")}</div>`;return h};
+function openN(i){const n=notifs[i];n.u=0;go(n.to[0],n.to[1])}
+function createSeg(){const m=modal(`<h2>New segment</h2><input id="sn" placeholder="Segment name" value="My Local Climb"><select id="ss"><option>paved</option><option>gravel</option><option>mixed</option></select><button class="btn" id="sgo">Create</button>`);
+ m.querySelector("#sgo").onclick=()=>{const n=m.querySelector("#sn").value||"Untitled",su=m.querySelector("#ss").value;segments.push({id:Date.now(),name:n,kind:"Climb Cat 4",surface:su,len:"2.4 km",grad:"5.2%",lb:[["You","9:12"]]});m.remove();sub.fd="segments";go("feed");toast("Segment created — you hold the KOM! 👑")}}
+function addC(id){const v=$("#ci").value.trim();if(!v)return;rides.find(x=>x.id===id).comments.push(["You",v]);render()}
+
+S.segment=(id,back)=>{const s=segments.find(x=>x.id===id);
+  return `<span class="back" onclick="go('${back}')">‹ Back</span><h1>${s.name}</h1>
+  <div class="row" style="gap:6px;margin-bottom:10px"><span class="pill">${s.kind}</span><span class="pill">${s.surface}</span><span class="pill">${s.len}</span><span class="pill">${s.grad}</span></div>
+  ${mapSvg("M10,110 C60,100 90,60 150,55 S250,30 300,15")}
+  <div class="seg">${["friends","club","local"].map(k=>`<div class="${sub.lb===k?"on":""}" onclick="sub.lb='${k}';render()">${k[0].toUpperCase()+k.slice(1)}</div>`).join("")}</div>
+  <div class="card lb">${(sub.lb==="club"?s.lb.filter(e=>e[0]!=="Ana Silva"):sub.lb==="local"?[["Rider #812","13:58"],["Rider #204","14:10"],...s.lb]:s.lb).map((e,i)=>`<div class="row sp ${e[0]==="You"?"me":""}"><span>${["👑","🥈","🥉"][i]||i+1+"."} ${e[0]}</span><b>${e[1]}</b></div>`).join("")}</div>`};
+
+S.record=()=>{
+  if(view&&view.summary){const s=view.summary;return `<div style="text-align:center"><div style="font-size:50px">🏁</div><h1>Ride complete!</h1></div>${mapSvg("M10,100 C50,30 90,110 140,60 S220,20 300,70")}
+  <div class="card stats"><div><span class="mut">Distance</span><b>${s.d} km</b></div><div><span class="mut">Time</span><b>${fmt(s.t)}</b></div><div><span class="mut">Elev</span><b>${s.e} m</b></div></div>
+  <div class="card"><div class="b">+${s.xp} XP earned</div><div class="mut">Segment matched: Col du Vent (3rd)</div></div>
+  <input id="rt" value="Afternoon ${s.type==="gravel"?"Gravel":"Road"} Ride"><button class="btn sec" style="margin-bottom:8px" onclick="createSeg()">＋ Create segment from this ride</button><button class="btn" onclick="saveRide(${s.d},${s.t},${s.e},${s.xp})">Save &amp; share</button><button class="btn ghost" style="margin-top:8px" onclick="go('record')">Discard</button>`}
+  const st=rec.st;
+  return `<h1>Record</h1><div class="map"><svg viewBox="0 0 310 130" preserveAspectRatio="none"><path id="rp" d="M10,100 C50,30 90,110 140,60 S220,20 300,70" fill="none" stroke="#ff5a1f" stroke-width="4" stroke-linecap="round" stroke-dasharray="1 0"/><circle id="rdot" r="7" fill="#fff" stroke="#ff5a1f" stroke-width="3"/></svg></div>
+  <div class="big" id="rt1">${fmt(rec.t)}</div><div class="mut" style="text-align:center;margin-bottom:12px">${st==="idle"?"Ready · GPS locked 🛰️":st==="run"?"Recording…":"Paused"}</div>
+  <div class="card stats" style="text-align:center"><div><span class="mut">km</span><b id="rd">${rec.d.toFixed(2)}</b></div><div><span class="mut">km/h</span><b id="rs">${st==="run"?(24+Math.random()*4).toFixed(1):"0.0"}</b></div><div><span class="mut">elev m</span><b id="re">${Math.round(rec.elev)}</b></div></div>
+  ${st==="idle"?`<div class="seg">${["road","gravel"].map(k=>`<div class="${rec.type===k?"on":""}" onclick="rec.type='${k}';render()">${k[0].toUpperCase()+k.slice(1)}</div>`).join("")}</div><button class="btn" onclick="recGo()">▶ Start ride</button>`
+   :`<div class="row"><button class="btn sec" onclick="recGo()">${st==="run"?"⏸ Pause":"▶ Resume"}</button><button class="btn" onclick="recFin()">⏹ Finish</button></div>`}
+  <p class="mut" style="text-align:center;margin-top:10px">Auto-pause on · points saved offline</p>`};
+function recGo(){if(rec.st==="run"){rec.st="pause";clearInterval(rec.iv)}else{rec.st="run";clearInterval(rec.iv);rec.iv=setInterval(()=>{rec.t+=1;rec.d+=0.0075*8;rec.elev+=.35;if(rec.t===15)toast("📍 Segment ahead: Col du Vent");if(rec.t===30)toast("⛰️ Segment started — go!");updDot();if(tab==="record"&&!view&&$("#rt1")){$("#rt1").textContent=fmt(rec.t);$("#rd").textContent=rec.d.toFixed(2);$("#re").textContent=Math.round(rec.elev);$("#rs").textContent=(24+Math.random()*4).toFixed(1)}},125)}render()}
+function updDot(){const p=$("#rp"),c=$("#rdot");if(p&&c){const pt=p.getPointAtLength(p.getTotalLength()*((rec.t%120)/120));c.setAttribute("cx",pt.x);c.setAttribute("cy",pt.y)}}
+function recFin(){const ty=rec.type;clearInterval(rec.iv);const s={d:+(rec.d+12.3).toFixed(1),t:rec.t+2400,e:Math.round(rec.elev+210),xp:Math.round(rec.d*10+150),type:ty};rec={st:"idle",t:0,d:0,iv:null,elev:0,type:ty};go("record",{summary:s})}
+function saveRide(d,t,e,xp){const sm=view.summary,title=$("#rt").value||"Ride";
+  rides.unshift({id:Date.now(),who:"you",title,type:sm.type,dist:d,elev:e,time:fmt(t),when:"Just now",kudos:0,kd:false,comments:[],path:"M10,100 C50,30 90,110 140,60 S220,20 300,70"});
+  const up=addXP(xp);challenges.forEach(c=>{if(!c.joined)return;if(c.unit==="km")c.cur=Math.min(c.goal,c.cur+d);if(c.unit==="m")c.cur=Math.min(c.goal,c.cur+e);if(c.unit==="rides")c.cur=Math.min(c.goal,c.cur+1)});
+  const bd=badges.find(b=>!b[2]);if(bd)bd[2]=1;sub.fd="rides";go("feed");
+  notifs.forEach(n=>{if(n.ic==="🔥")n.u=0});
+  const m=modal(`<div class="pop">${up?"🎉":"🏅"}</div><h2>${up?"Level "+me.level+"!":"Ride saved!"}</h2><p class="mut">+${xp} XP · Streak extended 🔥</p>
+  ${bd?`<div class="card" style="background:var(--card2);margin:14px 0"><span style="font-size:34px">${bd[0]}</span><div class="b">Badge unlocked: ${bd[1]}</div></div>`:""}
+  <div class="bar"><i class="xpf" style="width:${me.xp/me.next*100}%"></i></div><div class="mut" style="margin-bottom:14px">${me.xp} / ${me.next} XP to next level</div><button class="btn" onclick="this.closest('.modal').remove()">Nice!</button>`);
+  confetti();
+  setTimeout(()=>{riders.maya.follow&&nset.kudos&&addNotif("👍","Maya Chen gave kudos to your ride",["feed"])},5000);
+  setTimeout(()=>{nset.segment&&addNotif("⚡","You moved up to #2 on River Road Sprint",["feed",{seg:2}])},12000)}
+
+S.challenges=()=>{
+  const list=challenges.filter(c=>sub.ch==="active"?c.joined:!c.joined);
+  return `<h1>Challenges</h1><div class="card"><div class="row sp"><span class="b">Level ${me.level}</span><span class="mut">${me.xp} / ${me.next} XP</span></div><div class="bar"><i style="width:${me.xp/me.next*100}%"></i></div>
+  <div class="row sp"><span>🔥 ${me.streak}-week streak</span><span>❄️ ${me.freeze} freeze token</span></div></div>
+  <div class="seg">${[["active","My challenges"],["discover","Discover"]].map(k=>`<div class="${sub.ch===k[0]?"on":""}" onclick="sub.ch='${k[0]}';render()">${k[1]}</div>`).join("")}</div>
+  ${list.map(c=>`<div class="card"><div class="row sp"><span class="b">${c.name}</span>${c.pro?'<span class="pill pro">PRO</span>':`<span class="pill">+${c.xp} XP</span>`}</div>
+  <div class="bar"><i style="width:${Math.min(100,c.cur/c.goal*100)}%"></i></div><div class="row sp"><span class="mut">${Math.round(c.cur)} / ${c.goal} ${c.unit}</span>
+  ${c.joined?"":`<button class="btn sm" onclick="joinC(${c.id})">Join</button>`}</div></div>`).join("")||'<p class="mut">Nothing here yet.</p>'}
+  <h2>Personal goal</h2><div class="card row sp"><span>2,500 km in 2026</span><span class="pill">68%</span></div>`};
+function joinC(id){const c=challenges.find(x=>x.id===id);if(c.pro&&!me.pro)return paywall();c.joined=true;toast("Challenge joined!");render()}
+
+S.clubs=()=>{
+  if(view&&view.club){const c=clubs.find(x=>x.id===view.club);
+    return `<span class="back" onclick="go('clubs')">‹ Clubs</span><div class="row"><div style="font-size:40px">${c.emoji}</div><div><h1 style="margin:0">${c.name}</h1><div class="mut">${c.members} members</div></div></div>
+    <div class="card" style="margin-top:12px"><div class="b">Club vs Club — November</div><div class="row sp" style="margin-top:8px"><span>${c.name}</span><b>${c.score} km</b></div><div class="bar"><i style="width:${c.score/20}%"></i></div><div class="row sp"><span>Hill Climbers United</span><b>1710 km</b></div><div class="bar"><i style="width:85%;background:var(--blue)"></i></div></div>
+    <h2>Club feed</h2>${rides.slice(0,2).map(r=>rideCard(r)).join("")}
+    <div class="card row sp"><div><div class="b">Admin tools</div><div class="mut">Analytics · custom challenges</div></div><span class="pill pro" onclick="paywall()" style="cursor:pointer">PRO</span></div>`}
+  return `<h1>Clubs</h1>`+clubs.map(c=>`<div class="card row sp"><div class="row" style="cursor:pointer;flex:1" onclick="go('clubs',{club:${c.id}})"><div style="font-size:32px">${c.emoji}</div><div><div class="b">${c.name}</div><div class="mut">${c.members} members</div></div></div>
+  <button class="btn sm ${c.joined?"sec":""}" onclick="tg(${c.id})">${c.joined?"Joined ✓":"Join"}</button></div>`).join("")+`<button class="btn ghost" onclick="toast('Club created (demo)')">+ Create a club</button>`};
+function tg(id){const c=clubs.find(x=>x.id===id);c.joined=!c.joined;render()}
+
+S.labs=()=>{const R=6,W=Math.sqrt(3)*R*4,s=24,w=Math.sqrt(3)*s;const mine=hexes.filter(x=>x===1).length;
+ const poly=(cx,cy)=>[0,1,2,3,4,5].map(k=>{const a=Math.PI/180*(60*k-30);return (cx+s*Math.cos(a)).toFixed(1)+","+(cy+s*Math.sin(a)).toFixed(1)}).join(" ");
+ return `<div class="card"><span class="pill">v2 preview</span><div class="b" style="margin:6px 0">Territory capture</div><div class="mut">Ride through a hex to claim it. Tap a neutral hex to simulate.</div></div>
+ <svg viewBox="0 0 ${7*w+w/2} ${5*s*1.5+s*2}" style="width:100%;background:#12171a;border-radius:14px">${hexes.map((v,i)=>{const r=Math.floor(i/7),c=i%7,cx=c*w+w/2+(r%2?w/2:0),cy=r*s*1.5+s;return `<polygon class="hex" points="${poly(cx,cy)}" fill="${v===1?"#ff5a1f":v===2?"#3b82f6":"#232732"}" stroke="#0f1115" stroke-width="2" onclick="claim(${i})"/>`}).join("")}</svg>
+ <div class="row sp" style="margin-top:10px"><span><span style="color:#ff5a1f">⬢</span> You: <b>${mine}</b></span><span><span style="color:#3b82f6">⬢</span> Dawn Patrol rivals: <b>${hexes.filter(x=>x===2).length}</b></span></div>
+ <div class="card" style="margin-top:12px"><div class="b">Also coming in v2</div><div class="mut" style="line-height:1.8">👥 Group rides with live location<br>❤️ Bluetooth HR / power sensors<br>🛡️ Crash detection &amp; live share</div></div>`};
+function claim(i){if(hexes[i]===1)return toast("Already yours");const rival=hexes[i]===2;hexes[i]=1;addXP(rival?25:10);toast(rival?"⚔️ Captured a rival hex! +25 XP":"⬢ Hex claimed! +10 XP");render()}
+S.profile=()=>{
+  const body=sub.pf==="stats"?`<div class="card stats" style="text-align:center"><div><span class="mut">Rides</span><b>${rides.filter(r=>r.who==="you").length+42}</b></div><div><span class="mut">Distance</span><b>1,702 km</b></div><div><span class="mut">Climb</span><b>21.4 km</b></div></div>
+  <div class="card"><div class="row sp"><b>Weekly distance &amp; training load</b><span class="pill pro">PRO</span></div><div style="${me.pro?"":"filter:blur(5px);"}margin:10px 0"><svg viewBox="0 0 300 100" style="width:100%">${[80,120,95,150,110,170,98].map((v,i)=>`<rect x="${i*42+8}" y="${100-v*.55}" width="28" height="${v*.55}" rx="5" fill="${i===6?"#ff5a1f":"#3b82f6"}"/>`).join("")}<polyline points="${[40,55,50,70,62,85,60].map((v,i)=>i*42+22+","+(100-v)).join(" ")}" fill="none" stroke="#ffb020" stroke-width="2.5"/></svg>${me.pro?'<div class="mut">Bars: km/week · Line: fitness trend (CTL)</div>':""}</div>${me.pro?"":`<button class="btn sec" onclick="paywall()">Unlock advanced stats</button>`}</div>`
+  :sub.pf==="labs"?S.labs()
+  :sub.pf==="badges"?`<div class="grid">${badges.map(b=>`<div class="badge ${b[2]?"":"lock"}"><span class="e">${b[0]}</span>${b[1]}</div>`).join("")}</div>`
+  :`<div class="card"><div class="b">Cannondale Synapse</div><div class="mut">Road · 3,420 km</div></div><div class="card"><div class="b">Salsa Warbird</div><div class="mut">Gravel · 1,210 km</div></div><button class="btn ghost" onclick="toast('Bike added (demo)')">+ Add bike</button>
+  <h2>Privacy</h2><div class="card row sp"><span>Hide start/end (200 m zone)</span><span class="chk on">✓</span></div><button class="btn ghost" style="margin-top:8px" onclick="authed=false;render()">Sign out</button>`;
+  return `<div style="text-align:center;margin-bottom:12px"><div class="av" style="background:var(--acc);width:72px;height:72px;font-size:28px;margin:0 auto 8px">Y</div><h1 style="margin:0">You ${me.pro?'<span class="pill pro">PRO</span>':""}</h1><div class="mut">Level ${me.level} · ${me.xp} XP</div></div>
+  <div class="seg">${[["stats","Stats"],["badges","Badges"],["garage","Garage"],["labs","Labs"]].map(k=>`<div class="${sub.pf===k[0]?"on":""}" onclick="sub.pf='${k[0]}';render()">${k[1]}</div>`).join("")}</div>${body}`};
+
+function paywall(){const m=modal(`<div style="font-size:44px">⚡</div><h2 style="margin:6px 0">PedalQuest Pro</h2>
+<div style="text-align:left;margin:12px 0;line-height:2">📈 Advanced stats &amp; training load<br>🏆 Premium challenges<br>🛠️ Club admin tools</div>
+<p class="mut" style="margin-bottom:12px">Recording, feed &amp; core games stay free forever.</p>
+<button class="btn" id="sub">$4.99 / month — Start free trial</button><button class="btn ghost" style="margin-top:8px" onclick="toast('No purchases found (demo)')">Restore purchases</button>`);
+m.querySelector("#sub").onclick=()=>{me.pro=true;challenges.forEach(c=>c.pro=false);m.remove();toast("Welcome to Pro! 🎉");render()}}
+
+// ---------- Render ----------
+const TABS=[["feed","🏠","Feed"],["challenges","🎯","Challenges"],["record","●","Record"],["clubs","👥","Clubs"],["profile","👤","Profile"]];
+function render(){
+  if(!authed){$("#tabs").style.display="none";scr.innerHTML=S.auth();return}
+  if(onb<3){$("#tabs").style.display="none";scr.innerHTML=S.onb();return}
+  $("#tabs").style.display="flex";
+  $("#tabs").innerHTML=TABS.map(t=>`<div class="tab ${t[0]===tab?"on":""} ${t[0]==="record"?"rec":""}" onclick="go('${t[0]}')"><span class="i">${t[1]}</span>${t[2]}</div>`).join("");
+  const y=scr.scrollTop;scr.innerHTML=S[tab]();scr.scrollTop=y;updDot();
+}
+setInterval(()=>{const d=new Date();$("#clock").textContent=d.getHours()+":"+String(d.getMinutes()).padStart(2,"0")},1000);
+render();
+</script>
+</body>
+</html>

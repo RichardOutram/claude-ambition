@@ -1,0 +1,5 @@
+const pp=require('puppeteer-core'),fs=require('fs');(async()=>{const b=await pp.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:'new'});
+const p=await b.newPage();await p.setViewport({width:900,height:640});await p.goto('file:///Volumes/My Shared Files/work/mirror-twins.html');const names=[];
+for(const i of [4,7,8,10,14,9]){await p.evaluate(i=>window.__mt.load(i),i);await new Promise(r=>setTimeout(r,350));const c=await p.$('#c');await c.screenshot({path:'lv'+i+'.png'});names.push('lv'+i);}
+fs.writeFileSync('sheet5.html','<body style="margin:0;background:#0b0d1f;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:8px;width:1200px">'+names.map((n,k)=>'<div style="color:#9aa0cf;font:12px sans-serif">L'+[5,8,9,11,15,10][k]+'<br><img src="'+n+'.png" style="width:100%"></div>').join('')+'</body>');
+const s=await b.newPage();await s.setViewport({width:1200,height:620});await s.goto('file:///Volumes/My Shared Files/work/.ambition/tools/sheet5.html');await new Promise(r=>setTimeout(r,300));await s.screenshot({path:'sheet5.png'});await b.close();})();

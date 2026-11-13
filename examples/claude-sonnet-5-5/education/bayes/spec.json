@@ -1,0 +1,8 @@
+{
+  "slug": "learn/bayes",
+  "prompt": "Explain Bayes' theorem with an interactive visualisation, as a single web page",
+  "mode": "",
+  "brief": "For someone who has heard of it but finds the formula opaque; the classic medical test example confuses them.",
+  "check": "Open it at desktop and phone sizes and use every control. No console errors; the numbers it shows are correct (check several settings by hand). Rubric: whether someone would understand base rates after using it, clarity, and craft.",
+  "fixture": null
+}

@@ -1,0 +1,7 @@
+{
+  "identical": true,
+  "against": "examples/claude-sonnet-5-5/games/puzzle/not-ambitious/run-1/transcript/session.jsonl",
+  "same_shape": true,
+  "same_params": true,
+  "same_messages": true
+}

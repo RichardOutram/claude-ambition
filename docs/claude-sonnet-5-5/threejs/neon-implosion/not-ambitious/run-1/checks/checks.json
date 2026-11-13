@@ -1,0 +1,46 @@
+[
+  {
+    "page": "solar-implosion.html",
+    "screenshots": {
+      "mobile": "solar-implosion-mobile.webp",
+      "desktop": "solar-implosion-desktop.png"
+    },
+    "lighthouse": {
+      "scores": {
+        "performance": 99,
+        "accessibility": 100,
+        "best-practices": 93,
+        "seo": 90
+      },
+      "metrics": {
+        "largest-contentful-paint": "0.6\u00a0s",
+        "cumulative-layout-shift": "0",
+        "total-blocking-time": "130\u00a0ms",
+        "total-byte-weight": "Total size was 279\u00a0KiB"
+      },
+      "failed_accessibility_audits": []
+    }
+  },
+  {
+    "page": ".plain/first/solar-implosion.html",
+    "screenshots": {
+      "mobile": ".plain_first_solar-implosion-mobile.webp",
+      "desktop": ".plain_first_solar-implosion-desktop.png"
+    },
+    "lighthouse": {
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 93,
+        "seo": 90
+      },
+      "metrics": {
+        "largest-contentful-paint": "0.6\u00a0s",
+        "cumulative-layout-shift": "0",
+        "total-blocking-time": "80\u00a0ms",
+        "total-byte-weight": "Total size was 274\u00a0KiB"
+      },
+      "failed_accessibility_audits": []
+    }
+  }
+]

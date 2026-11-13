@@ -1,0 +1,8 @@
+{
+ "L1": "☰ | LEVEL 1 · MIRROR | 0 moves · par 2 | ↶ | ⟲ | ◀▶ mirrored | ▲▼ same | Land the round teal twin and the square orange twin on their rings. Teal follows your arrows. Orange moves the same up and down, but mirrored left and right. The badges above show its current rule.",
+ "L2": "☰ | LEVEL 2 · MIRROR | 0 moves · par 7 | ↶ | ⟲ | ◀▶ mirrored | ▲▼ same | Walls stop each twin on its own. One can be stuck while the other keeps moving.",
+ "L3": "☰ | LEVEL 3 · FLIP | 0 moves · par 6 | ↶ | ⟲ | ◀▶ mirrored | ▲▼ same | Purple ⇄ pads flip orange’s left–right rule whenever a twin steps onto one.",
+ "L8": "☰ | LEVEL 8 · PITS | 0 moves · par 8 | ↶ | ⟲ | ◀▶ mirrored | ▲▼ same | Pits are off-limits: a move that would drop either twin in is refused.",
+ "L12": "☰ | LEVEL 12 · AXIS | 0 moves · par 8 | ↶ | ⟲ | ◀▶ mirrored | ▲▼ same | Green ⇅ pads flip orange’s up–down rule, just like purple pads do for left–right.",
+ "map": "◀ Title | LEVELS | Share | 1 · MIRROR | Teal goes where you steer. Orange mirrors you left–right. | 1 | ★★★ | 2 | ★★★ | 2 · FLIP | Pads change the rules mid-level. | 3 | ★★★ | 4 | ★★★ | 5 | ★★★ | 6 | ★★★ | 7 | ★★★ | 3 · PITS | Some moves are refused. | 8 | ★★★ | 9 | ★★★ | 10 | ★★★ | 11 | ★★★ | 4 · AXIS | Now up and down can flip too. | 12 | ★★★ | 13 | ★★★ | 14 | ★★★ | 15 | ★★★ | 16 | ★★★"
+}

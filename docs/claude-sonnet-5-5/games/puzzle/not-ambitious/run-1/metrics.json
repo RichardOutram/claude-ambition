@@ -1,0 +1,51 @@
+{
+  "slug": "game/puzzle",
+  "arm": "not-ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-13T00:00:15Z",
+  "session_id": "ccde1f7e-71eb-4de5-83ca-ead46624694a",
+  "exchanges": 2,
+  "cost_usd": 0.4424,
+  "client_cost_usd": 0.0776,
+  "wall_ms": 1727324,
+  "duration_ms": 1711578,
+  "num_turns": 22,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 42,
+      "outputTokens": 23157,
+      "thinkingTokens": 4698,
+      "cacheReadInputTokens": 704201,
+      "cacheCreationInputTokens": 35090,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 35090,
+      "webSearchRequests": 0,
+      "costUSD": 0.44243409999999994
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 1.33,
+      "cost_usd": 0.1677
+    },
+    {
+      "n": 2,
+      "minutes": 28.73,
+      "cost_usd": 0.4424
+    }
+  ],
+  "plain_push_after": 1,
+  "plugin": {
+    "commit": "ccf02d5",
+    "dirty": false,
+    "hash": "b9fcc97f4a4c"
+  },
+  "plugin_commit": "ccf02d5",
+  "claude_version": "2.1.322"
+}

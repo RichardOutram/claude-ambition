@@ -1,0 +1,34 @@
+const {parse,solve,strip}=require('./logic.js');
+let seed=+process.argv[2]||7;const r=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;const ri=n=>Math.floor(r()*n);
+// chapter specs: [target, pads(chars), pitCount, req]
+const SPEC=[
+ // ch1 Mirror
+ {t:6,pads:'',pits:0,req:'walls'},{t:10,pads:'',pits:0,req:'walls'},
+ // ch2 Flip
+ {t:6,pads:'f',pits:0,req:'pads'},{t:9,pads:'f',pits:0,req:'pads'},{t:12,pads:'ff',pits:0,req:'pads'},{t:15,pads:'ff',pits:0,req:'pads'},{t:18,pads:'fff',pits:0,req:'pads'},
+ // ch3 Pits
+ {t:8,pads:'',pits:3,req:'pits'},{t:12,pads:'f',pits:3,req:'pits'},{t:16,pads:'ff',pits:3,req:'pits'},{t:20,pads:'ff',pits:4,req:'pits'},
+ // ch4 Both axes
+ {t:8,pads:'g',pits:0,req:'g'},{t:12,pads:'gf',pits:0,req:'g'},{t:16,pads:'gg',pits:2,req:'g'},{t:20,pads:'gfg',pits:2,req:'g'},{t:24,pads:'gfg',pits:3,req:'g'}];
+const out=[];const ONLY=process.env.ONLY;
+SPEC.forEach((sp,si)=>{if(ONLY!==undefined&&+ONLY!==si){out.push(null);return;}let cands=[];
+ for(let i=0;i<120000&&cands.length<25;i++){
+  const W=7+ri(2),H=5+ri(2);const g=[];
+  for(let y=0;y<H;y++){g.push([]);for(let x=0;x<W;x++){const e=x==0||y==0||x==W-1||y==H-1;g[y][x]=e?'#':(r()<0.16?'#':'.');}}
+  const free=[];for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(g[y][x]==='.')free.push([x,y]);
+  const need=4+sp.pads.length+sp.pits;if(free.length<need+4)continue;
+  const put=c=>{const j=ri(free.length);const [x,y]=free.splice(j,1)[0];g[y][x]=c;};
+  for(const c of 'ABab')put(c);for(const c of sp.pads)put(c);for(let k=0;k<sp.pits;k++)put('x');
+  const rows=g.map(a=>a.join(''));const L=parse(rows);const s=solve(L);
+  if(s.d<sp.t||s.d>sp.t+1)continue;
+  let ok=true;
+  if(sp.req==='pads'){ok=solve(strip(L,{pads:true})).d===-1;}
+  if(sp.req==='g'){ok=solve(strip(L,{pads:'g'})).d===-1;}
+  if(sp.req==='pits'){const w=solve(strip(L,{pits:true}));ok=w.d>0&&w.d<s.d;}
+  if(sp.req==='walls'){ok=true;}
+  if(!ok)continue;
+  const objs=rows.join('').replace(/[^#fgx]/g,'').length;
+  cands.push({rows,d:s.d,count:s.count,score:s.count*4+objs});}
+ cands.sort((a,b)=>a.score-b.score);out.push(cands[0]);
+ console.error(sp.t,cands.length,cands[0]&&cands[0].d,cands[0]&&cands[0].count);});
+require('fs').writeFileSync('levels.json',JSON.stringify(out.map(o=>o&&o.rows)));

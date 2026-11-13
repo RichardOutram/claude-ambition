@@ -1,0 +1,1 @@
+{"compilerOptions":{"strict":true,"jsx":"react-jsx","module":"esnext","moduleResolution":"bundler","target":"es2022","lib":["es2022"],"skipLibCheck":true,"noEmit":true,"types":["react-native"]},"include":["App.tsx","src/**/*.ts"]}

@@ -1,0 +1,51 @@
+{
+  "slug": "threejs/neon-implosion",
+  "arm": "not-ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-12T08:24:01Z",
+  "session_id": "6efc7c2b-06e0-4c00-9509-9c70dfd6e4f0",
+  "exchanges": 2,
+  "cost_usd": 0.2264,
+  "client_cost_usd": 0.0704,
+  "wall_ms": 141081,
+  "duration_ms": 121268,
+  "num_turns": 4,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 10,
+      "outputTokens": 15632,
+      "thinkingTokens": 6209,
+      "cacheReadInputTokens": 90433,
+      "cacheCreationInputTokens": 15246,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 15246,
+      "webSearchRequests": 0,
+      "costUSD": 0.22636730000000002
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 1.66,
+      "cost_usd": 0.1609
+    },
+    {
+      "n": 2,
+      "minutes": 2.3,
+      "cost_usd": 0.2264
+    }
+  ],
+  "plain_push_after": 1,
+  "plugin": {
+    "commit": "a40046b",
+    "dirty": true,
+    "hash": "679cf3ff2672"
+  },
+  "plugin_commit": "a40046b",
+  "claude_version": "2.1.322"
+}

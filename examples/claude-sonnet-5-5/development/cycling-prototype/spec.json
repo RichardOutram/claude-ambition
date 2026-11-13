@@ -1,0 +1,8 @@
+{
+  "slug": "dev/cycling-prototype",
+  "prompt": "Build a clickable prototype of the app in plan.md that I can open as a single html file",
+  "mode": "",
+  "brief": "To feel the app's core loop on a phone-sized screen before committing to the Expo build, and to show a couple of riders.",
+  "check": "Open it at phone size (and desktop). No console errors; every tap target leads somewhere; the core loop (record a ride \u2192 save \u2192 reward \u2192 feed \u2192 club) works end to end with believable data. Rubric: how true it is to the plan, how much it feels like a real native app, how well the gamification lands, and whether it surfaces problems in the plan.",
+  "fixture": "plain Claude's first cycling-app plan"
+}

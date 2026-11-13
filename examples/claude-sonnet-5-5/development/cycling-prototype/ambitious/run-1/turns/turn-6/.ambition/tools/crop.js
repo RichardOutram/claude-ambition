@@ -1,0 +1,1 @@
+const { chromium } = require('playwright-core');(async()=>{const b=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'});const p=await b.newPage({viewport:{width:375,height:667}});await p.goto('file://'+process.cwd()+'/h3.png');await p.screenshot({path:'h3c.png',clip:{x:0,y:300,width:375,height:200}});await b.close()})();

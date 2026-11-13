@@ -1,0 +1,8 @@
+{
+  "slug": "dev/url-shortener-architecture",
+  "prompt": "Design the architecture for a URL shortener that handles 10k requests a second, as a Markdown file",
+  "mode": "",
+  "brief": "A small team will build and run it on AWS. Reads far outnumber writes; links must never break.",
+  "check": "Recompute the capacity and storage arithmetic. Check that each component is justified by the load, the failure modes (cache stampede, hot keys, region outage, ID collisions), cost per month, and abuse handling. Rubric: whether a senior engineer would sign it off and whether the team could build from it.",
+  "fixture": null
+}

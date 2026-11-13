@@ -1,0 +1,87 @@
+{
+  "slug": "plan/cycling-app",
+  "arm": "ambitious",
+  "model": "claude-sonnet-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-13T11:16:33Z",
+  "session_id": "08431a84-1759-442b-a364-db779bbb909f",
+  "exchanges": 7,
+  "cost_usd": 3.0566,
+  "client_cost_usd": 0.2246,
+  "wall_ms": 1193474,
+  "duration_ms": 1149351,
+  "num_turns": 84,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-sonnet-5-5": {
+      "inputTokens": 162,
+      "outputTokens": 137724,
+      "thinkingTokens": 56139,
+      "cacheReadInputTokens": 8298907,
+      "cacheCreationInputTokens": 206776,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 206776,
+      "webSearchRequests": 0,
+      "costUSD": 3.0345587
+    },
+    "claude-haiku-5-5": {
+      "inputTokens": 146387,
+      "outputTokens": 14887,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.0220822,
+      "thinkingTokens": 8479,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 0
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 0.93,
+      "cost_usd": 0.1899
+    },
+    {
+      "n": 2,
+      "minutes": 1.07,
+      "cost_usd": 0.198
+    },
+    {
+      "n": 3,
+      "minutes": 1.23,
+      "cost_usd": 0.2074
+    },
+    {
+      "n": 4,
+      "minutes": 1.4,
+      "cost_usd": 0.2176
+    },
+    {
+      "n": 5,
+      "minutes": 1.57,
+      "cost_usd": 0.2285
+    },
+    {
+      "n": 6,
+      "minutes": 1.82,
+      "cost_usd": 0.2473
+    },
+    {
+      "n": 7,
+      "minutes": 19.89,
+      "cost_usd": 3.0566
+    }
+  ],
+  "plain_push_after": null,
+  "plugin": {
+    "commit": "c59ebef",
+    "dirty": false,
+    "hash": "64d580e673b3"
+  },
+  "plugin_commit": "c59ebef",
+  "claude_version": "2.1.322"
+}

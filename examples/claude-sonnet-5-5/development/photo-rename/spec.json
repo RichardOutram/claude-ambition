@@ -1,0 +1,8 @@
+{
+  "slug": "dev/photo-rename",
+  "prompt": "Write a Python script that renames my photos by the date they were taken",
+  "mode": "",
+  "brief": "A few thousand photos from phones and a camera in one folder, some without EXIF, some HEIC. On macOS. Nothing must be lost or overwritten.",
+  "check": "Run it on a test folder with JPEG, HEIC and PNG files, missing and broken EXIF, two photos taken in the same second and a name that already exists. No file lost or overwritten; a dry run by default or an undo. Rubric: safety, clarity of output, and ease of use.",
+  "fixture": null
+}

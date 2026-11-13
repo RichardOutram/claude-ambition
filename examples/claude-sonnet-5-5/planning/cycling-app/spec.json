@@ -1,0 +1,8 @@
+{
+  "slug": "plan/cycling-app",
+  "prompt": "Make a plan for a react native expo social gamified fitness tracker app for the cycling niche, and save it to disk",
+  "mode": "plan",
+  "brief": "None: the prompt is all there is, typed with plan mode on, as people usually ask Claude Code for a plan. Plan mode is on for the prompt only: the user approves the plan, which ends plan mode and lets Claude save it, then carries on in the chat. Review the plan on how well it serves someone who typed exactly this.",
+  "check": "Rubric: whether it finds a real reason for cyclists to switch (a wedge Strava and Zwift don't cover) rather than generic badges and leaderboards; whether the Expo specifics hold up (background GPS and battery, BLE sensors such as power meters and heart-rate straps, HealthKit and Health Connect, Strava import, what needs a dev build rather than Expo Go, EAS); app store risks (background location review, privacy zones around home); an MVP small enough for one or two people with measurable milestones; how the gamification avoids rewarding unsafe riding; and how the plan would be checked against real riders before building it all.",
+  "fixture": null
+}
