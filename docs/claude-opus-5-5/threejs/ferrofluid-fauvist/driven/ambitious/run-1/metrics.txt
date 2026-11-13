@@ -1,0 +1,4 @@
+cost $6.0206 · 5982s · 1 messages typed
+Metrics (cost: /cost, or total_cost_usd in headless JSON)
+total   in 150 · out 126.1k (think 53.9k) · cache read 10.13M · write 183.8k · hit 98% · 75 calls
+model   opus-5-5: in 150 · out 126.1k (think 53.9k) · cache read 10.13M · write 183.8k · hit 98% · 75 calls

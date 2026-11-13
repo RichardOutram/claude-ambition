@@ -1,0 +1,8 @@
+{
+  "slug": "threejs/ferrofluid-fauvist",
+  "prompt": "Pointer-guided ferrofluid spikes in wild fauvist orange and violet, flickering through zoetrope frames as magnets pull, a 10 second looping animation in three.js, as a single web page.",
+  "mode": "",
+  "brief": "Made from random scraped fragments: ferrofluid \u00b7 fauvism \u00b7 zoetrope. To see how the method handles an odd, open-ended art brief.",
+  "check": "Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how striking it is, whether every named element reads on screen, and craft (colour, motion, timing).",
+  "fixture": null
+}

@@ -1,0 +1,54 @@
+{
+  "view": "desktop",
+  "steps": [
+    {
+      "i": 0,
+      "label": "Opened",
+      "did": "opened",
+      "file": "walk-00.webp"
+    },
+    {
+      "i": 1,
+      "label": "Play / Start",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 2,
+      "label": "key ArrowRight x2",
+      "did": "pressed ArrowRight \u00d72",
+      "file": "walk-02.webp"
+    },
+    {
+      "i": 3,
+      "label": "Next",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 4,
+      "label": "key ArrowUp x2",
+      "did": "pressed ArrowUp \u00d72",
+      "file": "walk-04.webp"
+    },
+    {
+      "i": 5,
+      "label": "key ArrowLeft x2",
+      "did": "pressed ArrowLeft \u00d72",
+      "file": "walk-05.webp"
+    },
+    {
+      "i": 6,
+      "label": "key ArrowDown x2",
+      "did": "pressed ArrowDown \u00d72",
+      "file": "walk-06.webp"
+    },
+    {
+      "i": 7,
+      "label": "Levels / Level select",
+      "did": "clicked \u201cLevels\u201d",
+      "file": "walk-07.webp"
+    }
+  ],
+  "errors": []
+}

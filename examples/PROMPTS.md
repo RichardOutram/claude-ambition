@@ -6,6 +6,7 @@ The examples the bench runs. Each has three parts:
 - **Mode** (optional): `plan` sends the prompt with plan mode on in both runs, the way people ask Claude Code for a plan (shift+tab, then the prompt). Only the prompt's turn is in plan mode; the user carries on in the chat after the first plan.
 - **Brief:** what the user knows but didn't type. It's context for us when reviewing. The stand-in user never sees it, so both runs get exactly the same information.
 - **Check:** what we look at when we review. Objective checks come first, then a rubric.
+- **Walk** (optional): for pages whose substance is behind clicks (apps, games, lessons), a fixed path the review clicks through on every version, taking a screenshot after each step. Start with `phone ·` or `desktop ·` for the screen size. Steps are separated by `→`. A step is button or link text, with alternatives separated by ` / ` (the first visible match is clicked, ignoring case), and ` x4` after it clicks again while a match still shows, up to 4 times, for onboarding with several screens; `key ArrowRight x3` presses a key; `scroll` moves down one screen; `wait 3` waits 3 seconds. A step a version has no match for is shown as not in that version, and the walk carries on.
 
 Prompts are deliberately ordinary, the way people actually ask.
 
@@ -20,6 +21,11 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 **Brief:** It's for a loop on a portfolio site and social posts. It should look striking full screen on a laptop and a phone.
 **Check:** Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how vivid and striking it is, whether it clearly reads as a solar system imploding into particles, and craft (colour, glow, motion, timing).
 
+### threejs/ferrofluid-fauvist
+**Prompt:** Pointer-guided ferrofluid spikes in wild fauvist orange and violet, flickering through zoetrope frames as magnets pull, a 10 second looping animation in three.js, as a single web page.
+**Brief:** Made from random scraped fragments: ferrofluid · fauvism · zoetrope. To see how the method handles an odd, open-ended art brief.
+**Check:** Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how striking it is, whether every named element reads on screen, and craft (colour, motion, timing).
+
 ---
 
 ## Games
@@ -28,6 +34,7 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 **Prompt:** Make an original puzzle game I can play in the browser, as a single web page
 **Brief:** For a few minutes of play on a phone or laptop. It should be easy to learn and hard to master.
 **Check:** Play it at desktop and phone sizes with mouse, touch and keyboard. No console errors; levels are solvable (solve them, or run any solver it ships). Rubric: originality of the core mechanic, how quickly a new player gets it, difficulty curve, game feel (feedback, animation, sound), and whether you want another go.
+**Walk:** desktop · Play / Start → key ArrowRight x2 → Next → key ArrowUp x2 → key ArrowLeft x2 → key ArrowDown x2 → Levels / Level select
 
 ---
 
@@ -52,6 +59,7 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 **Prompt:** Build a clickable prototype of the app in plan.md that I can open as a single html file *(fixture: plain Claude's first cycling-app plan)*
 **Brief:** To feel the app's core loop on a phone-sized screen before committing to the Expo build, and to show a couple of riders.
 **Check:** Open it at phone size (and desktop). No console errors; every tap target leads somewhere; the core loop (record a ride → save → reward → feed → club) works end to end with believable data. Rubric: how true it is to the plan, how much it feels like a real native app, how well the gamification lands, and whether it surfaces problems in the plan.
+**Walk:** phone · Sign in / Log in → Allow location / Look around first / Get started / Skip / Not now / Continue x4 → Challenges → Clubs → Profile / You → Record → Start / Start ride / Go → wait 5 → Finish / Stop / End → Save / Save ride / Done
 
 ### dev/photo-rename
 **Prompt:** Write a Python script that renames my photos by the date they were taken
@@ -167,3 +175,4 @@ Slugs map to `examples/<model>/<category>/<slug>/<arm>/`.
 **Prompt:** Explain Bayes' theorem with an interactive visualisation, as a single web page
 **Brief:** For someone who has heard of it but finds the formula opaque; the classic medical test example confuses them.
 **Check:** Open it at desktop and phone sizes and use every control. No console errors; the numbers it shows are correct (check several settings by hand). Rubric: whether someone would understand base rates after using it, clarity, and craft.
+**Walk:** desktop · scroll → About 10% / Observe E → Next → Next → Next → scroll → scroll

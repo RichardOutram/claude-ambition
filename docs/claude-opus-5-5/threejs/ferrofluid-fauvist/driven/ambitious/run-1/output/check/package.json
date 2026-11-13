@@ -1,0 +1,6 @@
+{
+  "name": "ferrofluid-check",
+  "private": true,
+  "scripts": { "test": "node accept.js" },
+  "dependencies": { "puppeteer-core": "23.11.1" }
+}

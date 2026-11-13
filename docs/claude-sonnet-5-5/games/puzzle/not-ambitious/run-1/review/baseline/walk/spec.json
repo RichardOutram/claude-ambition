@@ -1,0 +1,45 @@
+{
+  "view": "desktop",
+  "steps": [
+    {
+      "label": "Play / Start",
+      "click": [
+        "Play",
+        "Start"
+      ]
+    },
+    {
+      "label": "key ArrowRight x2",
+      "key": "ArrowRight",
+      "times": 2
+    },
+    {
+      "label": "Next",
+      "click": [
+        "Next"
+      ]
+    },
+    {
+      "label": "key ArrowUp x2",
+      "key": "ArrowUp",
+      "times": 2
+    },
+    {
+      "label": "key ArrowLeft x2",
+      "key": "ArrowLeft",
+      "times": 2
+    },
+    {
+      "label": "key ArrowDown x2",
+      "key": "ArrowDown",
+      "times": 2
+    },
+    {
+      "label": "Levels / Level select",
+      "click": [
+        "Levels",
+        "Level select"
+      ]
+    }
+  ]
+}

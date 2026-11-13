@@ -1,0 +1,42 @@
+{
+  "view": "desktop",
+  "steps": [
+    {
+      "label": "scroll",
+      "scroll": true
+    },
+    {
+      "label": "About 10% / Observe E",
+      "click": [
+        "About 10%",
+        "Observe E"
+      ]
+    },
+    {
+      "label": "Next",
+      "click": [
+        "Next"
+      ]
+    },
+    {
+      "label": "Next",
+      "click": [
+        "Next"
+      ]
+    },
+    {
+      "label": "Next",
+      "click": [
+        "Next"
+      ]
+    },
+    {
+      "label": "scroll",
+      "scroll": true
+    },
+    {
+      "label": "scroll",
+      "scroll": true
+    }
+  ]
+}

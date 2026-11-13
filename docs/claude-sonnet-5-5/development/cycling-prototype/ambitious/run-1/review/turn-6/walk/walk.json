@@ -1,0 +1,72 @@
+{
+  "view": "phone",
+  "steps": [
+    {
+      "i": 0,
+      "label": "Opened",
+      "did": "opened",
+      "file": "walk-00.webp"
+    },
+    {
+      "i": 1,
+      "label": "Sign in / Log in",
+      "did": "clicked \u201cSign in\u201d",
+      "file": "walk-01.webp"
+    },
+    {
+      "i": 2,
+      "label": "Allow location / Look around first / Get started / Skip / Not now / Continue",
+      "did": "clicked \u201cLook around first\u201d",
+      "file": "walk-02.webp"
+    },
+    {
+      "i": 3,
+      "label": "Challenges",
+      "did": "clicked \u201cChallenges\u201d",
+      "file": "walk-03.webp"
+    },
+    {
+      "i": 4,
+      "label": "Clubs",
+      "did": "clicked \u201cClubs\u201d",
+      "file": "walk-04.webp"
+    },
+    {
+      "i": 5,
+      "label": "Profile / You",
+      "did": "clicked \u201cProfile\u201d",
+      "file": "walk-05.webp"
+    },
+    {
+      "i": 6,
+      "label": "Record",
+      "did": "clicked \u201cRecord\u201d",
+      "file": "walk-06.webp"
+    },
+    {
+      "i": 7,
+      "label": "Start / Start ride / Go",
+      "did": "clicked \u201cStart\u201d",
+      "file": "walk-07.webp"
+    },
+    {
+      "i": 8,
+      "label": "wait 5",
+      "did": "waited 5 s",
+      "file": "walk-08.webp"
+    },
+    {
+      "i": 9,
+      "label": "Finish / Stop / End",
+      "did": "clicked \u201cFinish\u201d",
+      "file": "walk-09.webp"
+    },
+    {
+      "i": 10,
+      "label": "Save / Save ride / Done",
+      "did": "clicked \u201cSave\u201d",
+      "file": "walk-10.webp"
+    }
+  ],
+  "errors": []
+}

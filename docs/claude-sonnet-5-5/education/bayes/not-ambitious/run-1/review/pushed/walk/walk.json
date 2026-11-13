@@ -1,0 +1,54 @@
+{
+  "view": "desktop",
+  "steps": [
+    {
+      "i": 0,
+      "label": "Opened",
+      "did": "opened",
+      "file": "walk-00.webp"
+    },
+    {
+      "i": 1,
+      "label": "scroll",
+      "did": "scrolled one screen",
+      "file": "walk-01.webp"
+    },
+    {
+      "i": 2,
+      "label": "About 10% / Observe E",
+      "did": "clicked \u201cObserve E\u201d",
+      "file": "walk-02.webp"
+    },
+    {
+      "i": 3,
+      "label": "Next",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 4,
+      "label": "Next",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 5,
+      "label": "Next",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 6,
+      "label": "scroll",
+      "did": "scrolled one screen",
+      "file": "walk-06.webp"
+    },
+    {
+      "i": 7,
+      "label": "scroll",
+      "did": "scrolled one screen",
+      "file": "walk-07.webp"
+    }
+  ],
+  "errors": []
+}

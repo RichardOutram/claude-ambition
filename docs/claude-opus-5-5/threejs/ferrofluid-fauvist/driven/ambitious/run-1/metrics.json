@@ -1,0 +1,58 @@
+{
+  "slug": "threejs/ferrofluid-fauvist",
+  "arm": "ambitious",
+  "model": "claude-opus-5-5",
+  "effort": "medium",
+  "isolation": "vm",
+  "driven": true,
+  "environment": "ambition-bench (macOS, Apple paravirtual GPU)",
+  "started": "2026-11-13T14:04:46Z",
+  "session_id": "1bbdd20f-2cfe-482e-80d6-e2f7640755c2",
+  "exchanges": 1,
+  "cost_usd": 6.0206,
+  "client_cost_usd": 0,
+  "wall_ms": 5982164,
+  "duration_ms": 0,
+  "num_turns": 0,
+  "errors": [],
+  "permission_denials": [],
+  "by_model": {
+    "claude-haiku-5-5": {
+      "inputTokens": 1227,
+      "outputTokens": 222,
+      "thinkingTokens": 197,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 0,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 0,
+      "webSearchRequests": 0,
+      "costUSD": 0.0002337
+    },
+    "claude-opus-5-5": {
+      "inputTokens": 150,
+      "outputTokens": 126126,
+      "thinkingTokens": 53892,
+      "cacheReadInputTokens": 10133640,
+      "cacheCreationInputTokens": 183819,
+      "cacheCreationEphemeral5mInputTokens": 0,
+      "cacheCreationEphemeral1hInputTokens": 183819,
+      "webSearchRequests": 0,
+      "costUSD": 6.020399999999999
+    }
+  },
+  "exchange_log": [
+    {
+      "n": 1,
+      "minutes": 0.0,
+      "cost_usd": 0.0
+    }
+  ],
+  "plain_push_after": null,
+  "plugin": {
+    "commit": "a8245bf",
+    "dirty": false,
+    "hash": "64d580e673b3"
+  },
+  "plugin_commit": "a8245bf",
+  "claude_version": "2.1.322"
+}

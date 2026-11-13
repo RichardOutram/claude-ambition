@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ferrofluid Zoetrope</title>
+<style>
+  :root { --ink:#14042b; --butter:#ffd9a8; --orange:#ff6a00; }
+  html,body { margin:0; height:100%; overflow:hidden; background:var(--ink); cursor:crosshair; }
+  body {
+    /* the painted room the fluid sits in (and reflects) */
+    background:
+      radial-gradient(60% 55% at 50% 60%, #ff7a1a 0%, #e0306e 30%, #5a12b8 60%, #14042b 100%);
+    touch-action:pan-y;   /* taps and sideways drags steer; vertical swipes still scroll an embedding page */
+  }
+  canvas { display:block; position:fixed; inset:0; }
+  #drum { pointer-events:none; mix-blend-mode:multiply; }
+  #shutter { position:fixed; inset:0; pointer-events:none; background:#0c0020; opacity:0; }
+  #flash { position:fixed; inset:0; pointer-events:none; background:#ffb347; mix-blend-mode:screen; opacity:0; }
+  #vignette {
+    position:fixed; inset:0; pointer-events:none;
+    background: radial-gradient(78% 72% at 50% 52%, transparent 58%, rgba(12,0,30,.8) 100%);
+  }
+  #hud {
+    position:fixed; left:16px; bottom:14px; right:16px; display:flex; justify-content:space-between; gap:12px;
+    align-items:flex-end;
+    font:600 11px/1.35 ui-monospace, "SF Mono", Menlo, monospace; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--butter); text-shadow:0 0 8px #ff6a00; pointer-events:none; opacity:.85;
+  }
+  #reveal {
+    pointer-events:auto; cursor:pointer; font:inherit; letter-spacing:inherit; text-transform:inherit;
+    color:inherit; background:rgba(20,2,45,.35); border:1px solid rgba(255,217,168,.45);
+    border-radius:999px; padding:6px 12px; text-shadow:inherit;
+  }
+  #reveal[aria-pressed="true"] { background:rgba(255,106,0,.35); }
+  #reveal:focus-visible { outline:2px solid var(--butter); outline-offset:3px; }
+  #legend { display:none; max-width:30ch; }
+  body.reveal #legend { display:block; }
+  .hint { text-align:right; }
+  .hint .short { display:none; }
+  @media (max-width:520px){ #hud { font-size:10px; } .hint .long { display:none; } .hint .short { display:inline; } }
+</style>
+</head>
+<body>
+<canvas id="drum"></canvas>
+<div id="shutter"></div>
+<div id="flash"></div>
+<div id="vignette"></div>
+<div id="hud">
+  <div>
+    <div id="legend">isolines of |H| · gold line: critical field H<sub>c</sub>, where the flat pool goes unstable and spikes appear</div>
+    <span id="frame">frame 001 / 120</span>
+  </div>
+  <button id="reveal" aria-pressed="false" title="Show the magnetic field (F)">reveal the field</button>
+  <span class="hint"><span class="long">move the pointer · you are the magnet · press to pull hard</span><span class="short">touch · you are<br>the magnet</span></span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/*
+  Ferrofluid Zoetrope
+  - The fluid is near-black (ultramarine-violet, the fauves' substitute for black). All of its colour is
+    reflected from a painted room: a homage to Matisse's "Open Window, Collioure" (1905) hangs on the
+    right-hand wall and is visible only in the flanks of the spikes.
+  - Spikes follow a Rosensweig-style law: none below a critical field Hc, height ~ sqrt(H - Hc). Each
+    magnet carries its own hexagonal lattice, so spikes travel with their magnet instead of blinking in place.
+  - The brush texture on the fluid runs along the field lines and is redrawn every frame, the way an
+    animator's line "boils".
+  - Images step at 12 fps (120 frames = exactly 10 s); the drum slits sweep continuously at display rate.
+    With the pointer idle, every frame is a pure function of its frame number, so the loop is exact.
+*/
+(() => {
+  const FPS = 12, LOOP = 10, FRAMES = FPS * LOOP;
+  const TAU = Math.PI * 2;
+  const BEAT = 2.5;                // four pulls per loop
+  const SNAP = 0.18;               // fraction of a beat spent in anticipation
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let lastFrame = -1;
+  const fail = (why) => { document.body.insertAdjacentHTML('beforeend',
+    '<p style="position:fixed;inset:auto 16px 50% 16px;text-align:center;font:600 14px/1.5 ui-monospace,monospace;color:#ffd9a8">' + why + '</p>'); };
+  if (!window.THREE) { fail('three.js could not load. Check the connection and reload.'); return; }
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ antialias: false, alpha: true }); }
+  catch (e) { fail('This piece needs WebGL, which this browser has turned off.'); return; }
+
+  renderer.setClearColor(0x000000, 0);
+  document.body.prepend(renderer.domElement);
+  renderer.domElement.style.touchAction = 'pan-y';
+  renderer.domElement.setAttribute('role', 'img');
+  renderer.domElement.setAttribute('aria-label',
+    'Animated ferrofluid in a dish: black liquid spikes rising toward three hovering magnets, reflecting orange and violet light, seen through the slits of a turning zoetrope. The pointer acts as a fourth magnet.');
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+
+  // ---------- ferrofluid ----------
+  const geo = new THREE.PlaneGeometry(10, 10, 640, 640);
+  const v4 = () => new THREE.Vector4();
+  const uniforms = {
+    uMag:    { value: [v4(), v4(), v4()] },   // x, z, strength, lattice rotation
+    uBeat:   { value: [v4(), v4(), v4()] },   // seconds since snap, ripple amplitude
+    uFrame:  { value: 0 },
+    uFlick:  { value: 1 },
+    uReveal: { value: 0 },
+    uCam:    { value: new THREE.Vector3() }
+  };
+
+  const common = `
+    uniform vec4 uMag[3];
+    uniform vec4 uBeat[3];
+    uniform float uFrame;
+    const float S  = 0.36;   // spike spacing (the capillary length sets this in real fluid)
+    const float HC = 0.30;   // critical field
+
+    float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    mat2 rot(float a){ float c = cos(a), s = sin(a); return mat2(c, -s, s, c); }
+    float hexDist(vec2 q, out vec2 id){
+      vec2 r = vec2(1.0, 1.7320508); vec2 h = r * 0.5;
+      vec2 a = mod(q, r) - h; vec2 b = mod(q - h, r) - h;
+      vec2 g = dot(a, a) < dot(b, b) ? a : b;
+      id = q - g;
+      return length(g);
+    }
+
+    vec3 surf(vec2 p, out float fTot, out vec2 lean){
+      fTot = 0.0; lean = vec2(0.0);
+      float ks[3]; float kmax = 1e-4; float ripple = 0.0;
+      for (int i = 0; i < 3; i++){
+        vec2 d = uMag[i].xy - p;
+        float r2 = dot(d, d), r = sqrt(r2);
+        float k = uMag[i].z / (1.0 + r2 * 3.6);
+        ks[i] = k; fTot += k; kmax = max(kmax, k);
+        lean += d / (r + 0.25) * k;
+        float v = uBeat[i].x;                       // capillary ring after each snap
+        if (v > 0.0 && v < 3.0) {
+          float front = 1.0 - smoothstep(v * 1.7 - 0.1, v * 1.7 + 0.35, r);
+          ripple += uBeat[i].y * sin(r * 24.0 - v * 17.0) * exp(-v * 2.6) * exp(-r * 1.5) * front;
+        }
+      }
+      float mask = smoothstep(4.7, 3.7, length(p));
+      fTot *= mask;
+
+      // below the critical field the pool is flat: skip the lattice work (most of the dish, most of the time)
+      if (fTot <= HC) {
+        float hgt0 = 0.16 * fTot + ripple * mask;
+        vec2 off0 = lean * 0.085 * hgt0 * mask;
+        return vec3(p.x + off0.x, hgt0, p.y + off0.y);
+      }
+
+      // each magnet carries its own lattice; where fields overlap, lattices crowd together
+      float shape = 0.0;
+      for (int i = 0; i < 3; i++){
+        vec2 id;
+        float dd = hexDist(rot(uMag[i].w) * (p - uMag[i].xy) / S, id);
+        float jit = hash(id + float(i) * 17.0);
+        float boil = 0.95 + 0.1 * hash(id + vec2(uFrame * 0.731, float(i)));
+        float c = max(0.0, 1.0 - dd / 0.58);
+        float dom = smoothstep(0.2, 0.85, ks[i] / kmax);
+        shape = max(shape, c * dom * (0.8 + 0.4 * jit) * boil * (1.0 + uBeat[i].z));   // z: smear on the snap frame
+      }
+
+      float a = min(sqrt(max(fTot - HC, 0.0)) * 0.9, 1.1) * smoothstep(HC, HC + 0.3, fTot);     // normal-field instability
+      float sharp = mix(1.25, 2.3, clamp(a, 0.0, 1.0));            // tips get keener as H rises
+      float hgt = 0.16 * fTot + 0.56 * a * pow(shape, sharp) + ripple * mask;
+      vec2 off = lean * 0.085 * hgt * mask;
+      return vec3(p.x + off.x, hgt, p.y + off.y);
+    }
+  `;
+
+  const vert = common + `
+    varying vec2 vP;
+    void main(){
+      float f; vec2 l;
+      vec3 P = surf(position.xy, f, l);
+      vP = position.xy;
+      gl_Position = projectionMatrix * viewMatrix * vec4(P, 1.0);
+    }
+  `;
+
+  const frag = common + `
+    uniform vec3 uCam; uniform float uFlick; uniform float uReveal;
+    varying vec2 vP;
+
+    // The painted room. Flat colour planes, as a fauve would lay them in.
+    vec3 room(vec3 R){
+      float el = asin(clamp(R.y, -1.0, 1.0));
+      float az = atan(R.x, -R.z);                    // 0 = far wall, + = right
+      if (R.y < -0.03) return vec3(0.06, 0.02, 0.16);          // floor
+      // walls blend softly (hard edges would shatter into mud on a rippling mirror); only the window is hard-edged
+      float aa = abs(az);
+      vec3 far = mix(vec3(1.0, 0.46, 0.05), vec3(0.94, 0.17, 0.48), smoothstep(0.30, 0.70, el));
+      far = mix(far, vec3(0.42, 0.10, 0.80), smoothstep(0.72, 1.05, el));
+      vec3 side = az > 0.0 ? vec3(1.0, 0.40, 0.04) : vec3(0.88, 0.13, 0.48);
+      vec3 c = mix(far, side, smoothstep(0.85, 1.15, aa));
+      c = mix(c, vec3(0.12, 0.04, 0.36), smoothstep(2.0, 2.4, aa));   // behind the viewer
+      c = mix(c, vec3(0.24, 0.06, 0.55), smoothstep(1.05, 1.4, el));  // ceiling, deep violet
+
+      // the open window (after Matisse, Collioure 1905), on the orange wall to the right
+      vec2 w = vec2(az - 1.55, el - 0.40);
+      vec2 hw = vec2(0.30, 0.30);
+      if (abs(w.x) < hw.x + 0.16 && abs(w.y) < hw.y) {
+        c = vec3(0.98, 0.22, 0.30);                              // shutters, vermilion-rose
+        if (abs(w.x) < hw.x) {
+          if (w.y > -0.02) {                                      // sky over the harbour
+            c = mix(vec3(1.0, 0.52, 0.10), vec3(1.0, 0.82, 0.42), smoothstep(-0.02, 0.28, w.y));
+          } else {                                                // sea, with rose and orange boats
+            c = vec3(0.28, 0.16, 0.86);
+            float boats = step(0.82, fract(az * 9.0 + floor(el * 14.0) * 0.37)) * step(0.5, fract(el * 14.0));
+            c = mix(c, mix(vec3(1.0, 0.45, 0.6), vec3(1.0, 0.55, 0.1), step(0.5, fract(az * 3.0))), boats);
+          }
+          if (abs(w.x) < 0.012 || abs(w.y + 0.02) < 0.01) c = vec3(0.70, 0.12, 0.55); // mullions
+        }
+        if (abs(abs(w.x) - hw.x) < 0.02 || abs(abs(w.y) - hw.y) < 0.02) c = vec3(0.95, 0.30, 0.55); // frame
+      }
+      return c;
+    }
+
+    void main(){
+      float rad = length(vP);
+      if (rad > 4.92) discard;
+
+      float f, f1; vec2 lean, l1;
+      float e = 0.0035;
+      vec3 P  = surf(vP, f, lean);
+      vec3 Px = surf(vP + vec2(e, 0.0), f1, l1);
+      vec3 Pz = surf(vP + vec2(0.0, e), f1, l1);
+      vec3 n = normalize(cross(Pz - P, Px - P));                // per-pixel: keeps the tips knife-sharp
+
+      vec3 V = normalize(uCam - P);
+      float ndv = max(dot(n, V), 0.0);
+      vec3 R = reflect(-V, n);
+
+      // the fauves' black: ultramarine-violet, never neutral
+      vec3 Lw = normalize(vec3(0.92, 0.39, -0.02));              // light from the window
+      float lam = max(dot(n, Lw), 0.0);
+      vec3 col = vec3(0.035, 0.010, 0.085) * (0.5 + 0.8 * lam);
+
+      // oily dielectric: Schlick Fresnel, with a painter's floor so the colour always speaks
+      float F = 0.42 + 0.58 * pow(1.0 - ndv, 3.0);
+
+      // brushwork that runs along the field lines and is redrawn every frame
+      vec2 ld = normalize(lean + 1e-5);
+      vec2 pr = vec2(-ld.y, ld.x);
+      float seed = hash(vec2(mod(uFrame, 7.0), 3.1));
+      float stroke = sin(dot(P.xz, pr) * 70.0 + seed * 6.28 + sin(dot(P.xz, ld) * 9.0 + seed * 4.0) * 2.0);
+      stroke *= smoothstep(-0.4, 0.6, sin(dot(P.xz, ld) * 13.0 + seed * 9.0 + floor(dot(P.xz, pr) * 70.0 / 6.28)));
+      vec3 refl = room(R) * (0.9 + 0.14 * stroke);
+
+      col += refl * F;
+
+      // hard wet highlight from the window, and a violet kicker from behind
+      float s1 = pow(max(dot(R, Lw), 0.0), 160.0);
+      col = mix(col, vec3(1.0, 0.95, 0.82), smoothstep(0.25, 0.45, s1));
+      float s2 = pow(max(dot(R, normalize(vec3(-0.7, 0.35, 0.6))), 0.0), 60.0);
+      col += vec3(0.55, 0.25, 1.0) * smoothstep(0.3, 0.6, s2) * 0.6;
+
+      // ultramarine contour where the form turns away, as Matisse drew it
+      col = mix(col, vec3(0.13, 0.03, 0.40), smoothstep(0.10, 0.03, ndv) * 0.7);
+
+      // dish lip
+      float lip = smoothstep(4.70, 4.74, rad);
+      vec3 lipC = mix(vec3(1.0, 0.42, 0.05), vec3(0.85, 0.15, 0.45), smoothstep(4.78, 4.92, rad));
+      col = mix(col, lipC, lip);
+
+      // reveal: isolines of |H| and the critical field
+      if (uReveal > 0.0) {
+        float x = f * 7.0;
+        float iso = abs(fract(x + 0.5) - 0.5);
+        float line = 1.0 - smoothstep(0.0, fwidth(x) * 1.3, iso);
+        float crit = 1.0 - smoothstep(0.0, fwidth(f) * 2.2, abs(f - HC));
+        col = mix(col, vec3(0.8, 0.7, 1.0), line * 0.55 * uReveal * (1.0 - lip));
+        col = mix(col, vec3(1.0, 0.82, 0.2), crit * uReveal * (1.0 - lip));
+      }
+
+      gl_FragColor = vec4(col * uFlick, 1.0);
+    }
+  `;
+
+  const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: vert, fragmentShader: frag, side: THREE.DoubleSide });
+  mat.extensions.derivatives = true;
+  const surface = new THREE.Mesh(geo, mat);
+  surface.frustumCulled = false;
+  scene.add(surface);
+
+  // ---------- magnets ----------
+  function makeMagnet(color) {
+    const g = new THREE.Group();
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.2, 0.045, 10, 40), new THREE.MeshBasicMaterial({ color }));
+    ring.rotation.x = Math.PI / 2;
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.075, 16, 12), new THREE.MeshBasicMaterial({ color: 0x2a0870 }));
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 1, 6),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45 }));
+    g.add(ring, core, stem);
+    g.userData = { ring, stem };
+    scene.add(g);
+    return g;
+  }
+  const markers = [makeMagnet(0xffd060), makeMagnet(0xff6a00), makeMagnet(0xb066ff)];
+
+  // ---------- pointer magnet ----------
+  const ray = new THREE.Raycaster();
+  const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const ndc = new THREE.Vector2(), hit = new THREE.Vector3();
+  const pointer = { x: 0, z: 0, last: -1e9, down: false, plucked: -1 };
+  const pm = { x: 0, z: 0, vx: 0, vz: 0, s: 1, vs: 0, w: 0, pluckV: 99 };
+
+  function aim(e) {
+    ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    ray.setFromCamera(ndc, camera);
+    if (ray.ray.intersectPlane(plane, hit)) {
+      const r = Math.hypot(hit.x, hit.z), lim = 4.0, k = r > lim ? lim / r : 1;
+      pointer.x = hit.x * k; pointer.z = hit.z * k;
+      pointer.last = performance.now();
+    }
+  }
+  addEventListener('pointermove', aim);
+  addEventListener('pointerdown', (e) => {
+    if (e.target.closest && e.target.closest('button')) return;
+    aim(e); pointer.down = true; pointer.plucked = 1;
+  });
+  addEventListener('pointerup', () => { pointer.down = false; });
+  addEventListener('pointercancel', () => { pointer.down = false; });
+  addEventListener('pointerleave', () => { pointer.last = -1e9; pointer.down = false; });
+
+  // ---------- reveal ----------
+  const revealBtn = document.getElementById('reveal');
+  let revealOn = false;
+  function toggleReveal() {
+    revealOn = !revealOn;
+    revealBtn.setAttribute('aria-pressed', String(revealOn));
+    document.body.classList.toggle('reveal', revealOn);
+    uniforms.uReveal.value = revealOn ? 1 : 0;
+    lastFrame = -1;
+  }
+  revealBtn.addEventListener('click', toggleReveal);
+  addEventListener('keydown', (e) => { if (e.key === 'f' || e.key === 'F') toggleReveal(); });
+
+  // ---------- drum (zoetrope slits, continuous) ----------
+  const drum = document.getElementById('drum');
+  const dctx = drum.getContext('2d');
+  function resize() {
+    // pixel budget: every pixel solves the surface three times, so cap the drawing buffer near 8 Mpx
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2, 1e9));
+    renderer.setSize(innerWidth, innerHeight);
+    camera.aspect = innerWidth / innerHeight;
+    camera.fov = camera.aspect < 0.8 ? 60 : 38;
+    camera.updateProjectionMatrix();
+    drum.width = innerWidth; drum.height = innerHeight;
+    lastFrame = -1;
+  }
+  addEventListener('resize', resize);
+
+  const SLITS = 28, SLIT_STEPS = 7;   // the drum turns 7 slit-spacings per loop, so it loops too
+  function drawDrum(t) {
+    const W = drum.width, H = drum.height, cx = W / 2, Rd = W * 0.6;
+    dctx.clearRect(0, 0, W, H);
+    const rotA = reduceMotion ? 0 : (t / LOOP) * (TAU / SLITS) * SLIT_STEPS;
+    dctx.fillStyle = 'rgba(30,6,70,0.2)';
+    for (let k = 0; k < SLITS; k++) {
+      let th = (k / SLITS) * TAU + rotA;
+      th = Math.atan2(Math.sin(th), Math.cos(th));
+      if (Math.abs(th) > Math.PI / 2) continue;
+      const c = Math.cos(th), x = cx + Rd * Math.sin(th), bw = 3 + 6 * c;
+      dctx.fillRect(x - bw / 2, 0, bw, H);
+    }
+    // the drum's rims, bowed by perspective
+    const bow = Math.min(34, H * 0.05);
+    dctx.fillStyle = 'rgba(20,2,45,0.55)';
+    for (const top of [true, false]) {
+      dctx.beginPath();
+      dctx.moveTo(0, top ? 0 : H);
+      for (let x = 0; x <= W; x += 16) {
+        const u = (x - cx) / cx, y = bow * (1 - 0.65 * u * u);
+        dctx.lineTo(x, top ? y : H - y);
+      }
+      dctx.lineTo(W, top ? 0 : H);
+      dctx.closePath(); dctx.fill();
+    }
+  }
+
+  // ---------- timing ----------
+  const shutter = document.getElementById('shutter');
+  const flash = document.getElementById('flash');
+  const frameEl = document.getElementById('frame');
+  const hash = (n) => { const s = Math.sin(n * 91.345 + 7.13) * 43758.5453; return s - Math.floor(s); };
+
+  // a pull: slump (anticipation) -> snap -> overshoot and ring -> settle. g(0) = g(1) = 0, so it loops.
+  function beat(tq, offset) {
+    const u = (((tq - offset) / BEAT) % 1 + 1) % 1;
+    if (u < SNAP) return { g: -0.35 * Math.sin(Math.PI * u / SNAP), v: 99 };
+    const v = (u - SNAP) * BEAT;
+    const g = ((1 - Math.exp(-v * 12)) + 0.45 * Math.sin(v * 18) * Math.exp(-v * 4.5))
+            * (1 - smooth(1.2, (1 - SNAP) * BEAT, v));
+    return { g, v };
+  }
+  function smooth(a, b, x) { const t = Math.min(Math.max((x - a) / (b - a), 0), 1); return t * t * (3 - 2 * t); }
+
+  function step(frame, wake = 1) {
+    const tq = frame / FPS, ph = TAU * tq / LOOP;
+
+    const b0 = beat(tq, 0), b1 = beat(tq, BEAT / 2), b2 = beat(tq, BEAT / 4);
+    const m0 = { x: 2.4 * Math.cos(ph), z: 2.4 * Math.sin(ph), s: 1.25 * (0.72 + 0.42 * b0.g), r: 0.0, b: b0 };
+    const m1 = { x: 1.7 * Math.cos(-2 * ph + 1.3), z: 1.3 * Math.sin(-2 * ph + 1.3), s: 1.0 * (0.72 + 0.42 * b1.g), r: 0.35, b: b1 };
+    const auto = { x: 1.3 * Math.sin(3 * ph), z: 1.0 * Math.sin(2 * ph + 0.5), s: 1.1 * (0.72 + 0.42 * b2.g) };
+
+    // pointer magnet: a damped spring (stateful), blended in only while the pointer is in use
+    const active = performance.now() - pointer.last < 2500 || pointer.down;
+    pm.w += ((active ? 1 : 0) - pm.w) * 0.35;
+    if (pm.w < 0.002) pm.w = 0;
+    const tx = active ? pointer.x : auto.x, tz = active ? pointer.z : auto.z;
+    const ts = pointer.down ? 2.1 : 1.55;
+    if (pm.w === 0) { pm.x = auto.x; pm.z = auto.z; pm.vx = pm.vz = 0; pm.s = ts; pm.vs = 0; }
+    pm.vx = pm.vx * 0.45 + (tx - pm.x) * 0.5; pm.x += pm.vx;
+    pm.vz = pm.vz * 0.45 + (tz - pm.z) * 0.5; pm.z += pm.vz;
+    pm.vs = pm.vs * 0.55 + (ts - pm.s) * 0.45; pm.s += pm.vs;
+    if (pointer.plucked > 0) { pm.pluckV = 0; pointer.plucked = 0; } else pm.pluckV += 1 / FPS;
+
+    const w = pm.w;
+    const m2 = {
+      x: auto.x + (pm.x - auto.x) * w, z: auto.z + (pm.z - auto.z) * w,
+      s: auto.s + (pm.s - auto.s) * w, r: 0.7,
+      b: w > 0.5 && pm.pluckV < 3 ? { v: pm.pluckV } : b2
+    };
+
+    [m2, m0, m1].forEach((m, i) => {
+      m.s *= wake;
+      uniforms.uMag.value[i].set(m.x, m.z, m.s, m.r);
+      const smear = m.b.v >= 0 && m.b.v < 1 / FPS ? 0.3 : (m.b.v < 2 / FPS ? 0.1 : 0);   // smear, then follow-through
+      uniforms.uBeat.value[i].set(m.b.v, 0.0035 * Math.min(m.s, 1.6), reduceMotion ? 0 : smear, 0);
+      const g = markers[i];
+      const y = 1.95 - 0.6 * Math.min(m.s, 1.8) / 1.8;
+      g.position.set(m.x, y, m.z);
+      g.userData.ring.scale.setScalar(0.75 + 0.35 * m.s);
+      g.userData.stem.scale.y = y; g.userData.stem.position.y = -y / 2;
+    });
+
+    // camera: a slow periodic sway plus a little gate weave, as in a hand-cranked projector
+    const weave = reduceMotion ? 0 : 0.03;
+    camera.position.set(0.9 * Math.sin(ph) + (hash(frame) - 0.5) * weave,
+                        3.9 + 0.25 * Math.cos(2 * ph) + (hash(frame + 31) - 0.5) * weave, 9.8);
+    camera.lookAt(0, 0.1, 0.7);
+    uniforms.uCam.value.copy(camera.position);
+    uniforms.uFrame.value = frame;
+
+    // Photosensitive safety (WCAG 2.3.1, measured per screen region): luminance steps stay under 0.04 of the
+    // 0.1 flash threshold, and snap flashes come at most 0.4 times a second.
+    uniforms.uFlick.value = reduceMotion ? 1 : 0.965 + 0.05 * hash(frame + 7);
+    const snapFrame = b0.v >= 0 && b0.v < 1 / FPS;
+    flash.style.opacity = reduceMotion ? '0' : (snapFrame ? 0.16 : 0).toFixed(3);
+
+    frameEl.textContent = 'frame ' + String(frame + 1).padStart(3, '0') + ' / ' + FRAMES;
+  }
+
+  resize();
+  const start = performance.now();
+  // render only while on screen (an embedded piece shouldn't burn a phone's battery from below the fold)
+  let onScreen = true;
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; }).observe(renderer.domElement);
+  }
+  document.addEventListener('visibilitychange', () => { lastFrame = -1; });
+
+  function loop(now) {
+    requestAnimationFrame(loop);
+    if (!onScreen) return;
+    const real = (now - start) / 1000;
+    const t = real % LOOP;
+    let frame = Math.floor(t * FPS) % FRAMES;
+    // the crank-up: for the first moments the drum turns slowly (every 4th, then every 2nd image),
+    // and the pool wakes from a flat mirror as the magnets engage
+    let wake = 1;
+    if (real < 1.8) {
+      const k = real < 0.75 ? 4 : real < 1.3 ? 2 : 1;
+      frame = Math.floor(frame / k) * k;
+      wake = smooth(0.1, 1.7, real);
+    }
+    if (frame !== lastFrame) {
+      lastFrame = frame;
+      step(frame, wake);
+      renderer.render(scene, camera);
+    }
+    // between images, the drum keeps turning and the shutter dips a little: the zoetrope's own flicker
+    drawDrum(t);
+    if (!reduceMotion) {
+      const fp = (t * FPS) % 1;
+      shutter.style.opacity = (0.05 * (1 - smooth(0, 0.3, fp))).toFixed(3);
+    }
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

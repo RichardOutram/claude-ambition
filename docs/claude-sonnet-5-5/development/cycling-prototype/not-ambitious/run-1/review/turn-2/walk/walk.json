@@ -1,0 +1,72 @@
+{
+  "view": "phone",
+  "steps": [
+    {
+      "i": 0,
+      "label": "Opened",
+      "did": "opened",
+      "file": "walk-00.webp"
+    },
+    {
+      "i": 1,
+      "label": "Sign in / Log in",
+      "did": "clicked \u201cSign in\u201d",
+      "file": "walk-01.webp"
+    },
+    {
+      "i": 2,
+      "label": "Allow location / Look around first / Get started / Skip / Not now / Continue",
+      "did": "clicked \u201cContinue\u201d",
+      "file": "walk-02.webp"
+    },
+    {
+      "i": 3,
+      "label": "Challenges",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 4,
+      "label": "Clubs",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 5,
+      "label": "Profile / You",
+      "did": "clicked \u201cYou\u201d",
+      "file": "walk-05.webp"
+    },
+    {
+      "i": 6,
+      "label": "Record",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 7,
+      "label": "Start / Start ride / Go",
+      "did": "clicked \u201cGo\u201d",
+      "file": "walk-07.webp"
+    },
+    {
+      "i": 8,
+      "label": "wait 5",
+      "did": "waited 5 s",
+      "file": "walk-08.webp"
+    },
+    {
+      "i": 9,
+      "label": "Finish / Stop / End",
+      "did": "not in this version",
+      "file": null
+    },
+    {
+      "i": 10,
+      "label": "Save / Save ride / Done",
+      "did": "not in this version",
+      "file": null
+    }
+  ],
+  "errors": []
+}

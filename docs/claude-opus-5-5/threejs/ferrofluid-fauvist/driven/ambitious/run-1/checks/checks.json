@@ -1,0 +1,46 @@
+[
+  {
+    "page": "ferrofluid-zoetrope.html",
+    "screenshots": {
+      "mobile": "ferrofluid-zoetrope-mobile.webp",
+      "desktop": "ferrofluid-zoetrope-desktop.png"
+    },
+    "lighthouse": {
+      "scores": {
+        "performance": 98,
+        "accessibility": 100,
+        "best-practices": 93,
+        "seo": 90
+      },
+      "metrics": {
+        "largest-contentful-paint": "0.8\u00a0s",
+        "cumulative-layout-shift": "0",
+        "total-blocking-time": "170\u00a0ms",
+        "total-byte-weight": "Total size was 142\u00a0KiB"
+      },
+      "failed_accessibility_audits": []
+    }
+  },
+  {
+    "page": ".ambition/first/ferrofluid-zoetrope.html",
+    "screenshots": {
+      "mobile": ".ambition_first_ferrofluid-zoetrope-mobile.webp",
+      "desktop": ".ambition_first_ferrofluid-zoetrope-desktop.png"
+    },
+    "lighthouse": {
+      "scores": {
+        "performance": 100,
+        "accessibility": 100,
+        "best-practices": 93,
+        "seo": 90
+      },
+      "metrics": {
+        "largest-contentful-paint": "0.6\u00a0s",
+        "cumulative-layout-shift": "0",
+        "total-blocking-time": "0\u00a0ms",
+        "total-byte-weight": "Total size was 130\u00a0KiB"
+      },
+      "failed_accessibility_audits": []
+    }
+  }
+]

@@ -1,0 +1,85 @@
+{
+  "view": "phone",
+  "steps": [
+    {
+      "label": "Sign in / Log in",
+      "click": [
+        "Sign in",
+        "Log in"
+      ],
+      "times": 1
+    },
+    {
+      "label": "Allow location / Look around first / Get started / Skip / Not now / Continue x4",
+      "click": [
+        "Allow location",
+        "Look around first",
+        "Get started",
+        "Skip",
+        "Not now",
+        "Continue"
+      ],
+      "times": 4
+    },
+    {
+      "label": "Challenges",
+      "click": [
+        "Challenges"
+      ],
+      "times": 1
+    },
+    {
+      "label": "Clubs",
+      "click": [
+        "Clubs"
+      ],
+      "times": 1
+    },
+    {
+      "label": "Profile / You",
+      "click": [
+        "Profile",
+        "You"
+      ],
+      "times": 1
+    },
+    {
+      "label": "Record",
+      "click": [
+        "Record"
+      ],
+      "times": 1
+    },
+    {
+      "label": "Start / Start ride / Go",
+      "click": [
+        "Start",
+        "Start ride",
+        "Go"
+      ],
+      "times": 1
+    },
+    {
+      "label": "wait 5",
+      "wait": 5.0
+    },
+    {
+      "label": "Finish / Stop / End",
+      "click": [
+        "Finish",
+        "Stop",
+        "End"
+      ],
+      "times": 1
+    },
+    {
+      "label": "Save / Save ride / Done",
+      "click": [
+        "Save",
+        "Save ride",
+        "Done"
+      ],
+      "times": 1
+    }
+  ]
+}

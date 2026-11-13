@@ -25,7 +25,8 @@
 <section class="hero ex">
   <p class="eyebrow">threejs/neon-implosion</p>
   <h1>“Create a vivid pointer interactive abstract neon art solar system particle implosion, a 10 second looping animation in three.js, as a single web page.”</h1>
-  <p class="lede">Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.</p>
+  <p class="lede"><b>Autopilot:</b> no person drove these runs. Vanilla Claude (the same model, with no plugin) plays the user: it types the prompt, answers any questions, including the plugin's interview, and says “Push it further.” at the checkpoint. Both sides got exactly this prompt, then the same words to go on: “Push it further.” The baseline goes on as plain Claude; the plugin runs its method. The plugin's turn 1 is sent exactly what the baseline was sent, checked from the transcripts, so it's a second plain sample. The plugin passes only if its final beats the baseline, the plain push and its own first version.</p>
+  
   <details class="context"><summary>What we look for</summary><p>Open it and watch several loops at desktop and phone sizes. It must render without errors, loop seamlessly every 10 seconds with no visible jump, and hold a smooth frame rate. Rubric: how vivid and striking it is, whether it clearly reads as a solar system imploding into particles, and craft (colour, glow, motion, timing).</p></details>
 </section>
 <section class="term-section" aria-label="Session replays">
@@ -37,7 +38,7 @@
 </section>
 <section class="run-block" id="run-1">
   <h2>/be-ambitious, run 1</h2>
-  <div class="banner warn"><b>Outdated.</b> This run used plugin ccf02d5; the plugin has changed since, so it may not reflect what you'd get today.</div>
+  <p class="hint">Made with plugin ccf02d5, the current plugin.</p>
   <div class="banner good">
   <div class="badges"><span class="badge good">Beats the baseline</span><span class="badge good">Gate pass</span><span class="badge muted">preview worth it</span><span class="badge muted">pushing on worth it</span></div>
   <p>Only the final reads as a scene: the baseline, the plain push and the plugin&#x27;s own first version blow out to white bloom in the captured frames; the final shows orbits, a particle ring and trails, seamless loop, 0 console errors.</p>
@@ -72,6 +73,7 @@
   <p class="open"><a href="ambitious/run-1/output/solar-implosion.html" target="_blank" rel="noopener">Open it live ↗</a> <code>solar-implosion.html</code></p>
   <details class="live"><summary>Play it here</summary><div class="frame"><iframe loading="lazy" sandbox="allow-scripts" src="ambitious/run-1/output/solar-implosion.html" title="Final"></iframe></div></details>
 </article></div>
+  
   
   <details class="steps" data-md-on-open open><summary>What each step did</summary><p class="hint">Our summary of each step from the run's own reports and the work it left after each step: what it did, what it added, what it found and what it removed.</p><div class="md" data-md="ambitious/run-1/steps.md"></div></details>
   <h3 class="label">How it got there</h3>
@@ -109,14 +111,31 @@
 </article></div>
   <h3 class="label">Where the time and money went</h3>
   <div class="grid2"><div class="card"><h3>Cost by step</h3><div class="bars"><div class="bar-row"><span class="bar-label">Baseline · plain prompt</span><span class="bar-track"><span class="bar not-ambitious" style="width:22.5%"></span></span><span class="bar-val">$0.16</span></div><div class="bar-row"><span class="bar-label">Baseline + plain push</span><span class="bar-track"><span class="bar not-ambitious" style="width:31.6%"></span></span><span class="bar-val">$0.23</span></div><div class="bar-row"><span class="bar-label">Turn 1 · first version + checkpoint</span><span class="bar-track"><span class="bar first" style="width:27.4%"></span></span><span class="bar-val">$0.20</span></div><div class="bar-row"><span class="bar-label">Turn 2 · Altitude</span><span class="bar-track"><span class="bar ambitious" style="width:8.1%"></span></span><span class="bar-val">$0.058</span></div><div class="bar-row"><span class="bar-label">Turn 3 · Depth</span><span class="bar-track"><span class="bar ambitious" style="width:87.2%"></span></span><span class="bar-val">$0.62</span></div><div class="bar-row"><span class="bar-label">Turn 4 · Challenge</span><span class="bar-track"><span class="bar ambitious" style="width:47.2%"></span></span><span class="bar-val">$0.34</span></div><div class="bar-row"><span class="bar-label">Turn 5 · Range</span><span class="bar-track"><span class="bar ambitious" style="width:34.4%"></span></span><span class="bar-val">$0.25</span></div><div class="bar-row"><span class="bar-label">Turn 6 · Judge</span><span class="bar-track"><span class="bar ambitious" style="width:71.6%"></span></span><span class="bar-val">$0.51</span></div><div class="bar-row"><span class="bar-label">Turn 7 · Stretch</span><span class="bar-track"><span class="bar ambitious" style="width:100.0%"></span></span><span class="bar-val">$0.72</span></div><div class="bar-row"><span class="bar-label">Turn 8 · Lock</span><span class="bar-track"><span class="bar ambitious" style="width:30.3%"></span></span><span class="bar-val">$0.22</span></div></div></div><div class="card"><h3>Time by step</h3><div class="bars"><div class="bar-row"><span class="bar-label">Baseline · plain prompt</span><span class="bar-track"><span class="bar not-ambitious" style="width:15.7%"></span></span><span class="bar-val">1.7 min</span></div><div class="bar-row"><span class="bar-label">Baseline + plain push</span><span class="bar-track"><span class="bar not-ambitious" style="width:22.3%"></span></span><span class="bar-val">2.4 min</span></div><div class="bar-row"><span class="bar-label">Turn 1 · first version + checkpoint</span><span class="bar-track"><span class="bar first" style="width:10.1%"></span></span><span class="bar-val">1.1 min</span></div><div class="bar-row"><span class="bar-label">Turn 2 · Altitude</span><span class="bar-track"><span class="bar ambitious" style="width:33.9%"></span></span><span class="bar-val">3.6 min</span></div><div class="bar-row"><span class="bar-label">Turn 3 · Depth</span><span class="bar-track"><span class="bar ambitious" style="width:34.5%"></span></span><span class="bar-val">3.6 min</span></div><div class="bar-row"><span class="bar-label">Turn 4 · Challenge</span><span class="bar-track"><span class="bar ambitious" style="width:34.2%"></span></span><span class="bar-val">3.6 min</span></div><div class="bar-row"><span class="bar-label">Turn 5 · Range</span><span class="bar-track"><span class="bar ambitious" style="width:18.8%"></span></span><span class="bar-val">2.0 min</span></div><div class="bar-row"><span class="bar-label">Turn 6 · Judge</span><span class="bar-track"><span class="bar ambitious" style="width:96.7%"></span></span><span class="bar-val">10.2 min</span></div><div class="bar-row"><span class="bar-label">Turn 7 · Stretch</span><span class="bar-track"><span class="bar ambitious" style="width:100.0%"></span></span><span class="bar-val">10.6 min</span></div><div class="bar-row"><span class="bar-label">Turn 8 · Lock</span><span class="bar-track"><span class="bar ambitious" style="width:17.1%"></span></span><span class="bar-val">1.8 min</span></div></div></div></div><p class="hint">Full run: <b>18.1×</b> the baseline's cost and <b>22.0×</b> its time. The plain push: <b>1.4×</b> and <b>1.4×</b>. The preview alone: <b>1.2×</b> and <b>0.6×</b>.</p>
-  <details><summary>How the run restated the task</summary><pre class="restate">You asked for:   &lt;original&gt;
-Raises all of:   &lt;each part the request names, as the same kind of thing, and what excellent means for each&gt;
-Genre bar:       &lt;what this kind of thing is judged on by its users and best practitioners, including qualities judged by perception, and why they&#x27;d choose it over the alternatives&gt;
-Aiming at:       &lt;restated goal&gt;, because &lt;reason&gt;
-Excellent means: &lt;specific hard target, on every part of the ask, on the genre bar and on the goal&gt;
-Proven by:       &lt;the outside check: what will be run or rendered and measured, and the comparison with the first version&gt;
-Needs access to: &lt;gaps, or &quot;nothing new&quot;&gt;
-Mode:            plan|build · answerer · reviewer</pre></details>
+  <details><summary>How the run restated the task</summary><pre class="restate">You asked for:   A vivid, pointer-interactive, abstract neon solar-system particle implosion,
+                 a 10-second seamless loop, in three.js, as a single web page.
+Raises all of:   Vivid/neon: a rich, saturated neon look with bloom on a dark background.
+                 Pointer-interactive: a gravity well that bends orbits toward the pointer
+                 and leaves a glowing, fading trail, plus a click shockwave.
+                 Implosion: a build-up, a white-hot singularity, then a colourful shockwave out.
+                 10s loop: a numerically seamless seam, with a short assembly from the core inside the loop.
+                 Single page: still one HTML file, with particle count scaled to the device.
+Genre bar:       A showcase piece judged on: wow within about 1 second of opening, a pointer that
+                 feels physical, an implosion worth replaying, polish (no popping at the loop seam,
+                 no clutter), and smooth motion.
+Aiming at:       A showcase piece people share, because the goal is to wow on opening
+                 and for people to replay the implosion.
+Excellent means: 1. Collapse and rebirth: tension build, white-hot singularity, colour-shifting shockwave.
+                 2. Pointer: orbits visibly bend toward it, with a fading glow trail.
+                 3. First impression: striking from the first frames, via assembly from the core.
+                 4. Performance: smooth 60fps with the particle count scaled to the device.
+Proven by:       - Loop seam: t=0 vs t=10 frames compared numerically in headless Chrome.
+                 - Contact sheet of the 5-10s window, set against the first version.
+                 - A scripted pointer path as a sanity check.
+                 - A quick frame-time check only (software rendering, so rough).
+                 - You judge how the pointer feels in your own browser.
+Needs access to: Headless Chrome is installed, but Playwright isn&#x27;t, so I&#x27;d install it
+                 (in a separate tools folder, not the project) to capture frames.
+Mode:            build · you answer · you review at the end</pre></details>
 </section>
 <section><h2>Replies and files</h2><div class="tabs" role="tablist"><button role="tab" aria-selected="true" data-tab="not-ambitious-1" class="not-ambitious">Baseline</button><button role="tab" aria-selected="false" data-tab="ambitious-1" class="ambitious">/be-ambitious · run 1</button></div><div role="tabpanel" data-panel="not-ambitious-1"><div class="stats">
   <div><b>$0.23</b><span>cost</span></div>
@@ -130,7 +149,7 @@ Mode:            plan|build · answerer · reviewer</pre></details>
 <div class="md reply" data-md="not-ambitious/run-1/result.md"></div>
 <h3 class="label">Files (2)</h3>
 <div class="files"><ul><li><a href="not-ambitious/run-1/output/.plain/first/solar-implosion.html" data-file="not-ambitious/run-1/output/.plain/first/solar-implosion.html" data-kind="html">.plain/first/solar-implosion.html</a><span>10 KB</span></li><li><a href="not-ambitious/run-1/output/solar-implosion.html" data-file="not-ambitious/run-1/output/solar-implosion.html" data-kind="html">solar-implosion.html</a><span>13 KB</span></li></ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
-<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/claude-sonnet-5-5/threejs/neon-implosion/not-ambitious/run-1">on GitHub</a>.</p></div><div role="tabpanel" data-panel="ambitious-1" hidden><div class="stats">
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/autopilot/claude-sonnet-5-5/threejs/neon-implosion/not-ambitious/run-1">on GitHub</a>.</p></div><div role="tabpanel" data-panel="ambitious-1" hidden><div class="stats">
   <div><b>$2.91</b><span>cost</span></div>
   <div><b>36.5</b><span>minutes</span></div>
   <div><b>127,039</b><span>output tokens</span></div>
@@ -142,7 +161,7 @@ Mode:            plan|build · answerer · reviewer</pre></details>
 <div class="md reply" data-md="ambitious/run-1/result.md"></div>
 <h3 class="label">Files (7)</h3>
 <div class="files"><ul><li><a href="ambitious/run-1/output/CLAUDE.md" data-file="ambitious/run-1/output/CLAUDE.md" data-kind="md">CLAUDE.md</a><span>1 KB</span></li><li><a href="ambitious/run-1/output/check/capture.mjs" data-file="ambitious/run-1/output/check/capture.mjs" data-kind="text">check/capture.mjs</a><span>1 KB</span></li><li><a href="ambitious/run-1/output/check/judge.mjs" data-file="ambitious/run-1/output/check/judge.mjs" data-kind="text">check/judge.mjs</a><span>11 KB</span></li><li><a href="ambitious/run-1/output/check/package-lock.json" data-file="ambitious/run-1/output/check/package-lock.json" data-kind="text">check/package-lock.json</a><span>1 KB</span></li><li><a href="ambitious/run-1/output/check/package.json" data-file="ambitious/run-1/output/check/package.json" data-kind="text">check/package.json</a><span>375 B</span></li><li><a href="ambitious/run-1/output/check/sheet.mjs" data-file="ambitious/run-1/output/check/sheet.mjs" data-kind="text">check/sheet.mjs</a><span>1 KB</span></li><li><a href="ambitious/run-1/output/solar-implosion.html" data-file="ambitious/run-1/output/solar-implosion.html" data-kind="html">solar-implosion.html</a><span>21 KB</span></li></ul><div class="viewer" hidden><div class="viewer-head"><code></code><a target="_blank" rel="noopener">raw ↗</a></div><div class="viewer-body"></div></div></div>
-<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/claude-sonnet-5-5/threejs/neon-implosion/ambitious/run-1">on GitHub</a>.</p></div></section>
+<p class="hint">Replay the session in the terminal at the top of the page, or read the full transcript with every tool call <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples/autopilot/claude-sonnet-5-5/threejs/neon-implosion/ambitious/run-1">on GitHub</a>.</p></div></section>
 </main>
 <footer class="wrap foot">Generated from <a href="https://github.com/RichardOutram/claude-ambition/tree/main/examples">examples/</a> by <code>bench/ab.py report</code>.
 Outputs are shown exactly as produced. Model-made pages run in sandboxed frames.</footer>
