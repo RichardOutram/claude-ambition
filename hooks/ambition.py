@@ -48,8 +48,9 @@ def mark(session, kind):
 
 def last_prompt(path):
     """The user's latest real prompt in the transcript, with its timestamp: not a tool result, not text
-    Claude Code adds itself (expanded command bodies, hook feedback)."""
-    found = (None, None)
+    Claude Code adds itself (expanded command bodies, hook feedback,
+    local commands such as /model)."""
+    found, local = (None, None), False
     if not path or not os.path.exists(path):
         return found
     with open(path, encoding="utf-8", errors="replace") as f:
@@ -57,10 +58,22 @@ def last_prompt(path):
             if '"type":"user"' not in line or '"tool_result"' in line:  # cheap filter before parsing
                 continue
             m = json.loads(line)
-            if m.get("type") != "user" or m.get("isMeta"):
+            if m.get("type") != "user":
                 continue
             c = m.get("message", {}).get("content")
-            text = c if isinstance(c, str) else " ".join(b.get("text", "") for b in c or [] if b.get("type") == "text")
+            text = (c if isinstance(c, str) else " ".join(b.get("text", "") for b in c or [] if b.get("type") == "text")).strip()
+            # A local command (/model, /plugin, ...) is a caveat, the command and its output, the last two
+            # without isMeta. They aren't prompts: counting them made /be-ambitious push instead of arming.
+            # Prompt commands (/bugfix X) carry no caveat, so they still count as work.
+            if text.startswith("<local-command-caveat>"):
+                local = True
+                continue
+            if m.get("isMeta") or text.startswith(("<local-command-stdout>", "<local-command-stderr>")):
+                continue
+            if local and "<command-name>" in text:
+                local = False
+                continue
+            local = False
             found = (text, m.get("timestamp"))
     return found
 
