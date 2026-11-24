@@ -20,16 +20,16 @@ Visual results, with every page live: [results site](https://richardoutram.githu
 
 | Example | Verdict | Gate (turn 1) | Baseline | Plain push | Preview (turn 1) | Full run | Plugin |
 |---|---|---|---|---|---|---|---|
-| data/heat-pump | Beats the baseline | pass | $0.23 · 1.8 min | $0.37 · 3.0 min | $0.14 · 0.8 min | $3.49 · 20.4 min (9.4× the plain push) | ccf02d5 |
-| design/pricing-page | Beats the baseline | pass | $0.13 · 0.9 min | $0.33 · 2.3 min | $0.18 · 1.0 min | $2.20 · 11.9 min (6.7× the plain push) | ccf02d5 |
-| dev/cycling-prototype | Beats the baseline | pass | $0.20 · 1.4 min | $0.42 · 3.2 min | $0.36 · 2.0 min | $2.97 · 68.9 min (7.0× the plain push) | ccf02d5 |
-| dev/photo-rename | Ties the baseline | pass | $0.04 · 0.3 min | $0.20 · 1.6 min | $0.12 · 0.5 min | $4.21 · 56.9 min (20.5× the plain push) | ccf02d5 |
-| dev/url-shortener-architecture | Beats the baseline | pass | $0.09 · 0.9 min | $0.25 · 2.6 min | $0.18 · 1.0 min | $2.34 · 20.3 min (9.4× the plain push) | aa6de6f |
-| learn/bayes | Beats the baseline | pass | $0.12 · 0.9 min | $0.24 · 2.0 min | $0.20 · 1.1 min | $2.96 · 32.7 min (12.5× the plain push) | ccf02d5 |
-| game/puzzle | Beats the baseline | pass | $0.17 · 1.3 min | $0.44 · 28.8 min | $0.20 · 1.2 min | $1.83 · 15.6 min (4.1× the plain push) | aa6de6f |
-| plan/cycling-app | Beats the baseline | pass | $0.12 · 1.2 min | $0.24 · 2.4 min | $0.19 · 0.9 min | $3.06 · 19.9 min (12.8× the plain push) | c59ebef |
-| threejs/neon-implosion | Beats the baseline | pass | $0.16 · 1.7 min | $0.23 · 2.4 min | $0.20 · 1.1 min | $2.91 · 36.5 min (12.8× the plain push) | ccf02d5 |
-| write/candle-marketing | Beats the baseline | pass | $0.07 · 0.7 min | $0.15 · 1.5 min | $0.16 · 1.0 min | $3.97 · 23.0 min (26.9× the plain push) | aa6de6f |
+| data/heat-pump | Beats the baseline | pass | $0.23 · 1.8 min | $0.37 · 3.0 min | $0.14 · 0.8 min | $3.49 · 20.4 min (9.4× the plain push) | ccf02d5 · outdated |
+| design/pricing-page | Beats the baseline | pass | $0.13 · 0.9 min | $0.33 · 2.3 min | $0.10 · 1.0 min | $1.92 · 18.2 min (5.9× the plain push) | 601a750 · outdated |
+| dev/cycling-prototype | Beats the baseline | pass | $0.20 · 1.4 min | $0.42 · 3.2 min | $0.36 · 2.0 min | $2.97 · 68.9 min (7.0× the plain push) | ccf02d5 · outdated |
+| dev/photo-rename | Ties the baseline | pass | $0.04 · 0.3 min | $0.20 · 1.6 min | $0.12 · 0.5 min | $4.21 · 56.9 min (20.5× the plain push) | ccf02d5 · outdated |
+| dev/url-shortener-architecture | Beats the baseline | pass | $0.09 · 0.9 min | $0.25 · 2.6 min | $0.18 · 1.0 min | $2.34 · 20.3 min (9.4× the plain push) | aa6de6f · outdated |
+| learn/bayes | Beats the baseline | pass | $0.12 · 0.9 min | $0.24 · 2.0 min | $0.20 · 1.1 min | $2.96 · 32.7 min (12.5× the plain push) | ccf02d5 · outdated |
+| game/puzzle | Beats the baseline | pass | $0.17 · 1.3 min | $0.44 · 28.8 min | $0.20 · 1.2 min | $1.83 · 15.6 min (4.1× the plain push) | aa6de6f · outdated |
+| plan/cycling-app | Beats the baseline | pass | $0.12 · 1.2 min | $0.24 · 2.4 min | $0.19 · 0.9 min | $3.06 · 19.9 min (12.8× the plain push) | c59ebef · outdated |
+| threejs/neon-implosion | Beats the baseline | pass | $0.16 · 1.7 min | $0.23 · 2.4 min | $0.20 · 1.1 min | $2.91 · 36.5 min (12.8× the plain push) | ccf02d5 · outdated |
+| write/candle-marketing | Beats the baseline | pass | $0.07 · 0.7 min | $0.15 · 1.5 min | $0.16 · 1.0 min | $3.97 · 23.0 min (26.9× the plain push) | aa6de6f · outdated |
 
 ### data/heat-pump
 
@@ -42,6 +42,10 @@ Visual results, with every page live: [results site](https://richardoutram.githu
 ### design/pricing-page
 
 > Design a pricing page for an invoicing app for freelancers, as a single web page
+
+**Run 5:** Beats the baseline, gate pass. Lean push (one instruction per step): a distinctive invoice-themed brand with a plan picker and a trial-cost invoice, where the baseline, the plain push and its own first version are generic; 18 min and $1.92 against the full method's 47 min and $2.21. Weak points: on a phone the price sits below the first screen and the comparison table hides two columns.
+
+**Run 4:** Beats the baseline, gate pass. Comparison run with the whole method sent at step 2 (since removed). Better worry handling and phone plan rows than the baseline, but visually close to it, a currency bug (Starter stays $0 in GBP/EUR), and 47 min against the lean run's 18.
 
 **Run 1:** Beats the baseline, gate pass. Both are clean; the final adds a pricing idea (a clients-per-month selector across Starter/Solo/Pro) and trust lines, and stays clean on phone.
 

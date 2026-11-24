@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkwell — Simple pricing for freelancers</title>
+<meta name="description" content="Invoicing that gets you paid faster. Start free, upgrade when your business grows.">
+<style>
+  :root {
+    --bg: #faf8f4;
+    --surface: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b675f;
+    --line: #e7e2d8;
+    --accent: #2f5d50;
+    --accent-ink: #ffffff;
+    --accent-soft: #e4efe9;
+    --warm: #d9a441;
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151513; --surface: #1e1d1a; --ink: #f2efe8; --muted: #a39f94;
+      --line: #33312c; --accent: #6fb39d; --accent-ink: #10201b; --accent-soft: #22332d;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  :focus-visible { outline: 3px solid var(--warm); outline-offset: 2px; border-radius: 6px; }
+
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 24px 0; }
+  .logo { font-family: Georgia, serif; font-size: 1.4rem; font-weight: 700; text-decoration: none; }
+  .logo span { color: var(--accent); }
+  nav .links { display: flex; gap: 24px; align-items: center; font-size: .95rem; }
+  nav .links a { text-decoration: none; color: var(--muted); }
+  nav .links a:hover { color: var(--ink); }
+
+  header.hero { text-align: center; padding: 56px 0 32px; }
+  h1 { font-family: Georgia, "Times New Roman", serif; font-size: clamp(2.2rem, 5vw, 3.4rem); line-height: 1.1; letter-spacing: -.02em; max-width: 14em; margin: 0 auto 16px; }
+  .hero p { color: var(--muted); font-size: 1.15rem; max-width: 34em; margin: 0 auto; }
+
+  .toggle { display: inline-flex; margin-top: 32px; padding: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; }
+  .toggle button {
+    font: inherit; font-size: .95rem; border: 0; background: none; color: var(--muted);
+    padding: 8px 20px; border-radius: 999px; cursor: pointer;
+  }
+  .toggle button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .toggle .save { font-size: .75rem; background: var(--warm); color: #2a1f05; padding: 2px 8px; border-radius: 999px; margin-left: 6px; font-weight: 700; }
+
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin: 48px 0 24px; align-items: stretch; }
+  .plan {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 32px 28px; display: flex; flex-direction: column; position: relative;
+  }
+  .plan.featured { border: 2px solid var(--accent); box-shadow: 0 12px 40px -16px rgba(47,93,80,.35); }
+  .badge {
+    position: absolute; top: -13px; left: 28px; background: var(--accent); color: var(--accent-ink);
+    font-size: .75rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 999px;
+  }
+  .plan h2 { font-size: 1.25rem; }
+  .plan .tag { color: var(--muted); font-size: .95rem; margin: 4px 0 20px; min-height: 2.9em; }
+  .price { display: flex; align-items: baseline; gap: 6px; }
+  .price .amt { font-family: Georgia, serif; font-size: 3rem; font-weight: 700; letter-spacing: -.02em; }
+  .price .per { color: var(--muted); font-size: .95rem; }
+  .billed { color: var(--muted); font-size: .85rem; min-height: 1.3em; margin-bottom: 24px; }
+  .btn {
+    display: block; text-align: center; text-decoration: none; font-weight: 600;
+    padding: 12px 18px; border-radius: 10px; border: 1.5px solid var(--ink);
+    transition: transform .15s ease, background .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .plan ul { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 12px; font-size: .95rem; }
+  .plan li { display: flex; gap: 10px; }
+  .plan li::before {
+    content: ""; flex: none; width: 18px; height: 18px; margin-top: 2px; border-radius: 50%;
+    background: var(--accent-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M5 9.5l2.5 2.5L13 6.5' fill='none' stroke='%232f5d50' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/100% no-repeat;
+  }
+  .plan li.lead { font-weight: 600; }
+  .plan li.lead::before { display: none; }
+  .note { text-align: center; color: var(--muted); font-size: .9rem; }
+
+  .calc { margin: 40px auto 24px; max-width: 560px; text-align: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; }
+  .calc label { display: block; margin-bottom: 14px; color: var(--muted); }
+  .calc output { color: var(--ink); font-weight: 700; font-size: 1.2rem; }
+  .calc input { width: 100%; accent-color: var(--accent); }
+  .calc #rec { margin-top: 14px; font-weight: 600; }
+  .plan.glow { box-shadow: 0 0 0 3px var(--warm); }
+  .plan .save-line { color: var(--accent); font-size: .85rem; font-weight: 600; min-height: 1.3em; margin: -16px 0 16px; }
+  .trust { margin-top: 56px; text-align: center; color: var(--muted); font-size: .9rem; }
+  .trust ul { list-style: none; padding: 0; display: flex; justify-content: center; flex-wrap: wrap; gap: 12px 32px; margin-top: 14px; font-family: Georgia, serif; font-size: 1.15rem; font-weight: 700; opacity: .75; color: var(--ink); }
+  .guarantee { margin: 40px auto 0; max-width: 560px; display: flex; gap: 16px; align-items: center; background: var(--accent-soft); border-radius: var(--radius); padding: 20px 24px; }
+  .guarantee b { display: block; }
+  .guarantee span.ic { font-size: 2rem; }
+  .logo svg { vertical-align: -4px; margin-right: 6px; }
+  section { padding: 72px 0 0; }
+  section h3 { font-family: Georgia, serif; font-size: 1.9rem; text-align: center; margin-bottom: 32px; letter-spacing: -.01em; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; font-size: .95rem; }
+  th, td { padding: 14px 20px; text-align: center; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-weight: 700; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { color: var(--muted); }
+  .yes { color: var(--accent); font-weight: 700; }
+  .no { color: var(--muted); opacity: .6; }
+
+  .quote {
+    margin-top: 72px; background: var(--accent); color: var(--accent-ink); border-radius: var(--radius);
+    padding: 40px; text-align: center;
+  }
+  .quote p { font-family: Georgia, serif; font-size: 1.4rem; max-width: 30em; margin: 0 auto 12px; line-height: 1.35; }
+  .quote small { opacity: .85; }
+
+  .faq { max-width: 720px; margin: 0 auto; }
+  details { border-bottom: 1px solid var(--line); padding: 18px 0; }
+  summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-size: 1.4rem; line-height: 1; color: var(--accent); }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); margin-top: 10px; }
+
+  .cta { text-align: center; padding: 80px 0; }
+  .cta .btn { display: inline-block; padding: 14px 32px; font-size: 1.05rem; }
+  .cta p { color: var(--muted); margin-top: 12px; font-size: .9rem; }
+
+  footer { border-top: 1px solid var(--line); padding: 24px 0; color: var(--muted); font-size: .85rem; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+  @media (max-width: 860px) {
+    .plans { grid-template-columns: 1fr; max-width: 440px; margin-inline: auto; }
+    nav .links a:not(.btn) { display: none; }
+    .plan .tag { min-height: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav aria-label="Main">
+    <a class="logo" href="#"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect width="26" height="26" rx="7" fill="var(--accent)"/><path d="M8 18l1-4 7-7 3 3-7 7z" fill="var(--accent-ink)"/></svg>Ink<span>well</span></a>
+    <div class="links">
+      <a href="#compare">Compare</a>
+      <a href="#faq">FAQ</a>
+      <a href="#">Log in</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <h1>Send the invoice. Get paid. Get back to work.</h1>
+    <p>Inkwell is invoicing built for solo professionals. Start free, and upgrade only when your client list grows.</p>
+    <div class="toggle" role="group" aria-label="Billing period">
+      <button type="button" id="monthly" aria-pressed="false">Monthly</button>
+      <button type="button" id="yearly" aria-pressed="true">Yearly <span class="save">Save 20%</span></button>
+    </div>
+  </header>
+
+  <main>
+    <div class="plans">
+      <article class="plan">
+        <h2>Starter</h2>
+        <p class="tag">For trying things out or the occasional side gig.</p>
+        <div class="price"><span class="amt">$0</span><span class="per">forever</span></div>
+        <div class="billed">No credit card needed</div>
+        <a class="btn" href="#">Start for free</a>
+        <ul>
+          <li class="lead">Includes:</li>
+          <li>3 active clients</li>
+          <li>5 invoices per month</li>
+          <li>PDF invoices &amp; share links</li>
+          <li>Card &amp; bank payments</li>
+          <li>Email support</li>
+        </ul>
+      </article>
+
+      <article class="plan featured">
+        <span class="badge">Most popular</span>
+        <h2>Freelancer</h2>
+        <p class="tag">For full-time freelancers who want to look polished and get paid on time.</p>
+        <div class="price"><span class="amt" data-m="15" data-y="12">$12</span><span class="per">/ month</span></div>
+        <div class="billed" data-m="Billed monthly" data-y="Billed $144 yearly">Billed $144 yearly</div>
+        <a class="btn primary" href="#">Start 14-day free trial</a>
+        <ul>
+          <li class="lead">Everything in Starter, plus:</li>
+          <li>Unlimited clients &amp; invoices</li>
+          <li>Custom branding &amp; domain</li>
+          <li>Automatic payment reminders</li>
+          <li>Recurring invoices &amp; retainers</li>
+          <li>Time tracking &amp; expenses</li>
+          <li>Quotes that convert to invoices</li>
+        </ul>
+      </article>
+
+      <article class="plan">
+        <h2>Studio</h2>
+        <p class="tag">For small teams and freelancers who bring in collaborators.</p>
+        <div class="price"><span class="amt" data-m="35" data-y="28">$28</span><span class="per">/ month</span></div>
+        <div class="billed" data-m="Billed monthly" data-y="Billed $336 yearly">Billed $336 yearly</div>
+        <a class="btn" href="#">Start 14-day free trial</a>
+        <ul>
+          <li class="lead">Everything in Freelancer, plus:</li>
+          <li>Up to 5 team members</li>
+          <li>Multi-currency &amp; tax rules</li>
+          <li>Accounting sync (QuickBooks, Xero)</li>
+          <li>Profit &amp; tax reports</li>
+          <li>Priority support</li>
+        </ul>
+      </article>
+    </div>
+    <div class="calc" aria-labelledby="calc-h">
+      <h3 id="calc-h" style="margin-bottom:8px">Which plan fits you?</h3>
+      <label for="inv">I send about <output id="invOut" for="inv">8</output> invoices a month</label>
+      <input type="range" id="inv" min="1" max="40" value="8">
+      <p id="rec" aria-live="polite"></p>
+    </div>
+    <p class="note">All prices in USD. Payment processing fees (2.9% + 30¢) are charged by our payment partner, never marked up by us.</p>
+
+    <section id="compare">
+      <h3>Compare plans</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col"><span class="sr">Feature</span></th><th scope="col">Starter</th><th scope="col">Freelancer</th><th scope="col">Studio</th></tr></thead>
+          <tbody>
+            <tr><td>Clients</td><td>3</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Invoices per month</td><td>5</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Custom branding</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Automatic reminders</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Recurring invoices</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Time tracking</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Multi-currency</td><td class="no">—</td><td>3 currencies</td><td>Unlimited</td></tr>
+            <tr><td>Accounting sync</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+            <tr><td>Team members</td><td>1</td><td>1</td><td>5</td></tr>
+            <tr><td>Support</td><td>Email</td><td>Email</td><td>Priority</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="trust">
+      Syncs with the tools you already use
+      <ul><li>Stripe</li><li>PayPal</li><li>QuickBooks</li><li>Xero</li><li>Slack</li></ul>
+    </div>
+    <div class="guarantee"><span class="ic" aria-hidden="true">🛡️</span><div><b>30-day money-back guarantee</b>Not happy with a paid plan? Email us within 30 days for a full refund, no questions asked.</div></div>
+
+    <div class="quote">
+      <p>“I used to chase clients for weeks. Now reminders go out on their own and I’m paid in nine days on average.”</p>
+      <small>— Maya R., freelance illustrator</small>
+    </div>
+
+    <section id="faq">
+      <h3>Questions, answered</h3>
+      <div class="faq">
+        <details><summary>Can I switch plans or cancel anytime?</summary><p>Yes. Upgrade, downgrade, or cancel from your settings whenever you like. Changes are prorated and there are no cancellation fees.</p></details>
+        <details><summary>What happens if I go over the free plan limits?</summary><p>We’ll let you know and never delete anything. You can still view and download all your data; you’ll just need to upgrade to create more invoices that month.</p></details>
+        <details><summary>Do you charge extra for getting paid online?</summary><p>No. Inkwell adds no markup. You only pay the standard processing fee from our payment partner, and it’s the same on every plan.</p></details>
+        <details><summary>Is there a discount for students or nonprofits?</summary><p>Yes — contact support for 30% off any paid plan if you qualify.</p></details>
+        <details><summary>Can I export my data?</summary><p>Always. Export invoices, clients, and reports as CSV or PDF on any plan, including after you cancel.</p></details>
+      </div>
+    </section>
+
+    <div class="cta">
+      <h3 style="margin-bottom:20px">Your next invoice takes about 60 seconds.</h3>
+      <a class="btn primary" href="#">Start for free</a>
+      <p>Free forever on Starter · No credit card required</p>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap"><span>© 2026 Inkwell</span><span><a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="#">Contact</a></span></div>
+</footer>
+
+<style>.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style>
+<script>
+  const mBtn = document.getElementById('monthly'), yBtn = document.getElementById('yearly');
+  function setPeriod(yearly) {
+    yBtn.setAttribute('aria-pressed', yearly);
+    mBtn.setAttribute('aria-pressed', !yearly);
+    document.querySelectorAll('.amt[data-m]').forEach(el => el.textContent = '$' + (yearly ? el.dataset.y : el.dataset.m));
+    document.querySelectorAll('.billed[data-m]').forEach(el => el.textContent = yearly ? el.dataset.y : el.dataset.m);
+  }
+  // Annual savings line under yearly prices
+  document.querySelectorAll('.billed[data-m]').forEach(el => {
+    const amt = el.previousElementSibling.querySelector('.amt');
+    const s = document.createElement('div');
+    s.className = 'save-line'; s.dataset.save = (amt.dataset.m - amt.dataset.y) * 12;
+    el.after(s);
+  });
+  const _set = setPeriod;
+  setPeriod = function (y) {
+    _set(y);
+    document.querySelectorAll('.save-line').forEach(s => s.textContent = y ? 'You save $' + s.dataset.save + ' a year' : '');
+  };
+  // Plan recommender
+  const inv = document.getElementById('inv'), out = document.getElementById('invOut'), rec = document.getElementById('rec');
+  const plans = document.querySelectorAll('.plan');
+  function recommend() {
+    const n = +inv.value; out.textContent = n;
+    const i = n <= 5 ? 0 : 1;
+    plans.forEach((p, k) => p.classList.toggle('glow', k === i));
+    rec.textContent = i === 0 ? 'Starter covers you — free forever.' : 'Freelancer is your fit: unlimited invoices plus automatic reminders.';
+  }
+  inv.oninput = recommend; recommend(); setPeriod(true);
+  mBtn.onclick = () => setPeriod(false);
+  yBtn.onclick = () => setPeriod(true);
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "gate": "pass",
+  "result": "win",
+  "preview_worth": "yes",
+  "push_worth": "yes",
+  "summary": "Lean push (one instruction per step): a distinctive invoice-themed brand with a plan picker and a trial-cost invoice, where the baseline, the plain push and its own first version are generic; 18 min and $1.92 against the full method's 47 min and $2.21. Weak points: on a phone the price sits below the first screen and the comparison table hides two columns.",
+  "decided_by": "Claude, agreed by the user",
+  "date": "2026-11-24",
+  "plugin": {
+    "commit": "601a750",
+    "dirty": true,
+    "hash": "b25b82224a23",
+    "method": "7f90d072bc31"
+  }
+}

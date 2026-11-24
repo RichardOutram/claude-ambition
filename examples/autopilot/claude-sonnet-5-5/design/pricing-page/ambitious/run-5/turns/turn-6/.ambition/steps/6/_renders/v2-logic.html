@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inkwell — Pricing for freelancers</title>
+<meta name="description" content="Invoicing for one-person businesses. Start free, upgrade when you're busy, get paid sooner.">
+<style>
+  :root {
+    --paper: #f6f1e7;
+    --card: #fffdf8;
+    --ink: #14213d;
+    --muted: #57544c;
+    --line: #d9d1bf;
+    --stamp: #c23a24;
+    --mark: #f2c94c;
+    --mark-ink: #2b2208;
+    --tint: rgba(194, 58, 36, .07);
+    --feat-bg: #14213d;
+    --feat-ink: #f6f1e7;
+    --feat-muted: #bcc3d4;
+    --feat-line: #3a4768;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #12151c; --card: #1a1e28; --ink: #f1ece0; --muted: #a9aba2; --line: #323848;
+      --stamp: #ff8a70; --tint: rgba(255, 138, 112, .08);
+      --feat-bg: #f1ece0; --feat-ink: #14213d; --feat-muted: #4a4f5c; --feat-line: #cfc7b3;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  :focus-visible { outline: 3px solid var(--stamp); outline-offset: 3px; border-radius: 6px; }
+  .featured :focus-visible { outline-color: var(--mark); }
+  @media (prefers-color-scheme: dark) { .featured :focus-visible { outline-color: #14213d; } }
+  .mono { font-family: var(--mono); letter-spacing: .02em; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* nav */
+  nav { display: flex; justify-content: space-between; align-items: center; padding: 22px 0; }
+  .logo { font-family: var(--serif); font-size: 1.45rem; font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 8px; }
+  .logo span { color: var(--stamp); }
+  nav .links { display: flex; gap: 26px; font-size: .95rem; }
+  nav .links a { text-decoration: none; color: var(--muted); }
+  nav .links a:hover { color: var(--ink); }
+
+  /* hero as invoice header */
+  .hero { padding: 36px 0 8px; text-align: center; }
+  .meta {
+    display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 6px 22px;
+    font-family: var(--mono); font-size: .78rem; text-transform: uppercase; color: var(--muted);
+    border-top: 1.5px solid var(--ink); border-bottom: 1.5px solid var(--ink); padding: 8px 4px; margin-bottom: 36px;
+  }
+  .meta b { color: var(--ink); font-weight: 700; }
+  h1 {
+    font-family: var(--serif); font-weight: 700; font-size: clamp(2.5rem, 6vw, 4.3rem);
+    line-height: 1.02; letter-spacing: -.025em; max-width: 12em; margin: 0 auto 20px; text-wrap: balance;
+  }
+  h1 em { font-style: italic; color: var(--stamp); }
+  .hero p.sub { color: var(--muted); font-size: 1.15rem; max-width: 36em; margin: 0 auto; }
+
+  .toggle { display: inline-flex; margin-top: 32px; padding: 4px; background: var(--card); border: 1.5px solid var(--ink); border-radius: 999px; }
+  .toggle button { font: inherit; font-size: .95rem; border: 0; background: none; color: var(--muted); padding: 9px 22px; border-radius: 999px; cursor: pointer; }
+  .toggle button[aria-pressed="true"] { background: var(--ink); color: var(--paper); font-weight: 600; }
+  .toggle .save { font-family: var(--mono); font-size: .7rem; background: var(--mark); color: var(--mark-ink); padding: 2px 7px; border-radius: 999px; margin-left: 6px; font-weight: 700; }
+
+  /* plans */
+  .plans { display: grid; grid-template-columns: 1fr 1.12fr 1fr; gap: 22px; margin: 64px 0 28px; align-items: start; }
+  .plan {
+    position: relative; background: var(--card); border: 1.5px solid var(--line); border-radius: var(--radius);
+    padding: 30px 28px 28px; display: flex; flex-direction: column;
+  }
+  .plan.featured {
+    background: var(--feat-bg); color: var(--feat-ink); border-color: var(--feat-bg);
+    margin-top: -22px; padding-top: 40px; padding-bottom: 34px;
+    box-shadow: 0 24px 50px -22px rgba(20, 33, 61, .55);
+  }
+  .plan.featured .muted, .plan.featured .tag, .plan.featured .billed, .plan.featured .per, .plan.featured .fine { color: var(--feat-muted); }
+  .item { font-family: var(--mono); font-size: .75rem; text-transform: uppercase; color: var(--muted); letter-spacing: .08em; }
+  .plan.featured .item { color: var(--feat-muted); }
+  .plan h2 { font-family: var(--serif); font-size: 1.7rem; margin-top: 2px; }
+  .for { font-weight: 600; font-size: .95rem; margin-top: 2px; }
+  .tag { color: var(--muted); font-size: .95rem; margin: 10px 0 22px; min-height: 3em; }
+  .price { display: flex; align-items: baseline; gap: 6px; }
+  .price .amt { font-family: var(--serif); font-size: 3.4rem; font-weight: 700; letter-spacing: -.03em; line-height: 1; }
+  .featured .price .amt { font-size: 4.2rem; }
+  .per { color: var(--muted); font-size: .95rem; }
+  .billed { color: var(--muted); font-size: .85rem; margin: 6px 0 0; min-height: 1.3em; }
+  .save-line { font-family: var(--mono); font-size: .78rem; font-weight: 700; color: var(--stamp); min-height: 1.4em; margin: 2px 0 18px; }
+  .featured .save-line { color: var(--mark); }
+  @media (prefers-color-scheme: dark) { .featured .save-line { color: #a3261a; } }
+
+  .btn {
+    display: block; text-align: center; text-decoration: none; font-weight: 700; font-size: 1rem;
+    padding: 13px 18px; border-radius: 10px; border: 1.5px solid var(--ink); color: var(--ink);
+    transition: transform .15s ease, background .15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); background: var(--tint); }
+  .btn.primary { background: #c23a24; border-color: #c23a24; color: #fff; }
+  .btn.primary:hover { background: #a92f1b; }
+  .fine { font-size: .8rem; color: var(--muted); text-align: center; margin-top: 8px; min-height: 1.2em; }
+
+  /* perforated stub */
+  .tear { position: relative; border-top: 2px dashed var(--line); margin: 26px -28px 22px; }
+  .featured .tear { border-top-color: var(--feat-line); }
+  .tear::before, .tear::after {
+    content: ""; position: absolute; top: -11px; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--paper); border: 1.5px solid var(--line);
+  }
+  .tear::before { left: -11px; clip-path: inset(0 0 0 50%); }
+  .tear::after { right: -11px; clip-path: inset(0 50% 0 0); }
+  .featured .tear::before, .featured .tear::after { border-color: var(--feat-bg); }
+  .plan ul { list-style: none; padding: 0; display: grid; gap: 11px; font-size: .95rem; }
+  .plan li { display: flex; gap: 10px; }
+  .plan li::before { content: "✓"; flex: none; font-weight: 800; color: var(--stamp); width: 16px; }
+  .featured li::before { color: var(--mark); }
+  @media (prefers-color-scheme: dark) { .featured li::before { color: #a3261a; } }
+  .plan li.lead { font-family: var(--mono); font-size: .78rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .featured li.lead { color: var(--feat-muted); }
+  .plan li.lead::before { display: none; }
+
+  /* stamp + your pick */
+  .stamp {
+    position: absolute; top: -18px; right: -10px; transform: rotate(4deg);
+    font-family: var(--mono); font-weight: 800; font-size: .78rem; text-transform: uppercase; letter-spacing: .06em;
+    color: #fff; background: #c23a24; padding: 7px 12px; border-radius: 6px; box-shadow: 0 6px 16px -6px rgba(0,0,0,.5);
+  }
+  .pick {
+    display: none; position: absolute; top: -14px; left: 20px; background: var(--mark); color: var(--mark-ink);
+    font-family: var(--mono); font-weight: 800; font-size: .72rem; text-transform: uppercase; letter-spacing: .06em;
+    padding: 4px 10px; border-radius: 6px;
+  }
+  .plan.is-pick .pick { display: block; }
+  .plan.is-pick:not(.featured) { border-color: var(--ink); }
+
+  .calc { margin: 40px auto 18px; max-width: 580px; text-align: center; border: 1.5px dashed var(--line); border-radius: var(--radius); padding: 24px 28px; }
+  .calc h3 { font-family: var(--serif); font-size: 1.3rem; margin-bottom: 10px; }
+  .calc label { display: block; color: var(--muted); margin-bottom: 10px; }
+  .calc-row { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+  .calc .chk { display: flex; justify-content: center; align-items: center; gap: 8px; margin: 16px 0 0; color: var(--ink); cursor: pointer; }
+  .calc .chk input { accent-color: var(--stamp); width: 18px; height: 18px; }
+  .calc output { color: var(--ink); font-family: var(--mono); font-weight: 800; font-size: 1.15rem; }
+  .calc input { width: 100%; accent-color: var(--stamp); }
+  .calc #rec { margin-top: 12px; font-weight: 600; min-height: 3em; }
+  .note { text-align: center; color: var(--muted); font-size: .88rem; max-width: 46em; margin: 0 auto; }
+
+  section { padding: 84px 0 0; }
+  h3.sec { font-family: var(--serif); font-size: 2.1rem; text-align: center; margin-bottom: 8px; letter-spacing: -.015em; }
+  .sec-sub { text-align: center; color: var(--muted); margin-bottom: 32px; }
+
+  .table-wrap { overflow-x: auto; border: 1.5px solid var(--line); border-radius: var(--radius); background: var(--card); }
+  table { width: 100%; border-collapse: collapse; min-width: 580px; font-size: .95rem; }
+  th, td { padding: 14px 20px; text-align: center; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-family: var(--mono); text-transform: uppercase; font-size: .78rem; letter-spacing: .06em; }
+  th:nth-child(3), td:nth-child(3) { background: var(--tint); font-weight: 600; }
+  th:nth-child(3) { color: var(--stamp); }
+  tbody tr:last-child td { border-bottom: 0; }
+  td:first-child { color: var(--muted); font-weight: 400; }
+  .yes { color: var(--stamp); font-weight: 800; }
+  .no { color: var(--muted); }
+
+  .proof { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; margin-top: 84px; align-items: stretch; }
+  .quote { background: var(--ink); color: var(--paper); border-radius: var(--radius); padding: 36px; }
+  @media (prefers-color-scheme: dark) { .quote { background: var(--card); border: 1.5px solid var(--line); color: var(--ink); } }
+  .quote p { font-family: var(--serif); font-size: 1.5rem; line-height: 1.3; margin-bottom: 14px; }
+  .quote small { font-family: var(--mono); font-size: .8rem; opacity: .85; }
+  .guarantee { border: 1.5px solid var(--ink); border-radius: var(--radius); padding: 30px; display: flex; flex-direction: column; justify-content: center; gap: 10px; position: relative; }
+  .guarantee .seal { font-family: var(--mono); font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--stamp); font-weight: 800; border: 2px solid var(--stamp); align-self: flex-start; padding: 4px 10px; border-radius: 6px; transform: rotate(-3deg); }
+  .guarantee b { font-family: var(--serif); font-size: 1.35rem; }
+  .guarantee span.t { color: var(--muted); font-size: .95rem; }
+  .trust { margin-top: 48px; text-align: center; color: var(--muted); font-size: .85rem; font-family: var(--mono); text-transform: uppercase; letter-spacing: .06em; }
+  .trust ul { list-style: none; padding: 0; display: flex; justify-content: center; flex-wrap: wrap; gap: 10px 36px; margin-top: 12px; font-family: var(--serif); text-transform: none; letter-spacing: 0; font-size: 1.25rem; font-weight: 700; color: var(--ink); opacity: .8; }
+
+  .faq { max-width: 740px; margin: 0 auto; }
+  details { border-bottom: 1.5px solid var(--line); padding: 18px 0; }
+  summary { cursor: pointer; font-weight: 600; font-size: 1.05rem; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; font-family: var(--mono); font-size: 1.4rem; line-height: 1; color: var(--stamp); }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); margin-top: 10px; }
+
+  .cta { text-align: center; padding: 90px 0; }
+  .cta h3 { font-family: var(--serif); font-size: clamp(1.8rem, 4vw, 2.6rem); margin-bottom: 22px; letter-spacing: -.015em; }
+  .cta .btn { display: inline-block; padding: 15px 36px; font-size: 1.05rem; }
+  .cta p { color: var(--muted); margin-top: 14px; font-size: .9rem; }
+
+  footer { border-top: 1.5px solid var(--ink); padding: 22px 0 32px; color: var(--muted); font-size: .85rem; }
+  footer .wrap { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-family: var(--mono); }
+
+  @media (max-width: 900px) {
+    .plans { grid-template-columns: 1fr; max-width: 460px; margin: 52px auto 28px; gap: 34px; }
+    .plan.featured { order: -1; margin-top: 0; }
+    .tag { min-height: 0; }
+    .proof { grid-template-columns: 1fr; }
+    nav .links a:not(:last-child) { display: none; }
+  }
+  @media (max-width: 480px) {
+    .calc-row { grid-template-columns: 1fr; gap: 14px; }
+    .wrap { padding: 0 18px; }
+    .meta { font-size: .7rem; }
+    .stamp { right: -4px; }
+  }
+  @media (prefers-reduced-motion: reduce) { .btn { transition: none; } html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav aria-label="Main">
+    <a class="logo" href="#"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="#c23a24"/><path d="M9 20l1.2-4.4 7.6-7.6 3.2 3.2-7.6 7.6z" fill="#fff"/></svg><span>Ink<span>well</span></span></a>
+    <div class="links"><a href="#compare">Compare</a><a href="#faq">FAQ</a><a href="#">Log in</a></div>
+  </nav>
+
+  <header class="hero">
+    <div class="meta"><span>Invoice <b>№ 0001</b></span><span>Bill to: <b>You, freelancer</b></span><span>Terms: <b>Cancel anytime</b></span></div>
+    <h1>Get paid like the <em>pro</em> you are.</h1>
+    <p class="sub">Inkwell is invoicing for one-person businesses. Send a polished invoice in 60 seconds, and let the reminders do the awkward chasing.</p>
+    <div class="toggle" role="group" aria-label="Billing period">
+      <button type="button" id="monthly" aria-pressed="false">Monthly</button>
+      <button type="button" id="yearly" aria-pressed="true">Yearly <span class="save">Save 20%</span></button>
+    </div>
+  </header>
+
+  <main>
+    <div class="plans">
+      <article class="plan" data-i="0">
+        <span class="pick">Your pick</span>
+        <p class="item">Item 01</p>
+        <h2>Starter</h2>
+        <p class="for">Testing the waters</p>
+        <p class="tag">Your first few clients. No card, no catch, no time limit.</p>
+        <div class="price"><span class="amt">$0</span><span class="per">forever</span></div>
+        <div class="billed">Free while you’re getting started</div>
+        <div class="save-line"></div>
+        <a class="btn" href="#">Start free</a>
+        <p class="fine">No credit card needed</p>
+        <div class="tear"></div>
+        <ul>
+          <li class="lead">What you get</li>
+          <li>3 active clients</li>
+          <li>5 invoices per month</li>
+          <li>PDF invoices &amp; share links</li>
+          <li>Card &amp; bank payments</li>
+          <li>Email support</li>
+        </ul>
+      </article>
+
+      <article class="plan featured" data-i="1">
+        <span class="stamp">Freelancers’ pick</span>
+        <span class="pick">Your pick</span>
+        <p class="item">Item 02</p>
+        <h2>Freelancer</h2>
+        <p class="for">Full-time freelancers</p>
+        <p class="tag">Look polished, stop chasing, get paid sooner. Clients with automatic reminders pay about 6 days faster.</p>
+        <div class="price"><span class="amt" data-m="15" data-y="12">$12</span><span class="per">/ month</span></div>
+        <div class="billed" data-m="Billed monthly · about a coffee a week" data-y="Billed $144 yearly · about a coffee a week">Billed $144 yearly</div>
+        <div class="save-line" data-save="36"></div>
+        <a class="btn primary" href="#">Start 14-day free trial</a>
+        <p class="fine">No card needed to start</p>
+        <div class="tear"></div>
+        <ul>
+          <li class="lead">Everything in Starter, plus</li>
+          <li>Unlimited clients &amp; invoices</li>
+          <li>Your logo, colors &amp; own domain</li>
+          <li>Automatic payment reminders</li>
+          <li>Recurring invoices &amp; retainers</li>
+          <li>Time tracking &amp; expenses</li>
+          <li>Quotes that convert to invoices</li>
+        </ul>
+      </article>
+
+      <article class="plan" data-i="2">
+        <span class="pick">Your pick</span>
+        <p class="item">Item 03</p>
+        <h2>Studio</h2>
+        <p class="for">You + a few collaborators</p>
+        <p class="tag">Bring in a designer, a bookkeeper or a subcontractor without sharing a login.</p>
+        <div class="price"><span class="amt" data-m="35" data-y="28">$28</span><span class="per">/ month</span></div>
+        <div class="billed" data-m="Billed monthly" data-y="Billed $336 yearly">Billed $336 yearly</div>
+        <div class="save-line" data-save="84"></div>
+        <a class="btn" href="#">Try Studio free</a>
+        <p class="fine">Switch back to Freelancer anytime</p>
+        <div class="tear"></div>
+        <ul>
+          <li class="lead">Everything in Freelancer, plus</li>
+          <li>Up to 5 team members</li>
+          <li>Multi-currency &amp; tax rules</li>
+          <li>Accounting sync (QuickBooks, Xero)</li>
+          <li>Profit &amp; tax reports</li>
+          <li>Priority support</li>
+        </ul>
+      </article>
+    </div>
+
+    <div class="calc" aria-labelledby="calc-h">
+      <h3 id="calc-h">Not sure? Count your work.</h3>
+      <div class="calc-row">
+        <div><label for="inv">Invoices a month: <output id="invOut" for="inv">8</output></label><input type="range" id="inv" min="1" max="40" value="8"></div>
+        <div><label for="cli">Active clients: <output id="cliOut" for="cli">4</output></label><input type="range" id="cli" min="1" max="15" value="4"></div>
+      </div>
+      <label class="chk" for="team"><input type="checkbox" id="team"> I work with collaborators</label>
+      <p id="rec" aria-live="polite"></p>
+    </div>
+    <p class="note">All prices in USD. Payment processing (2.9% + 30¢) is charged by our payment partner and never marked up by us.</p>
+
+    <section id="compare">
+      <h3 class="sec">Compare plans</h3>
+      <p class="sec-sub">Every line item, side by side.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th scope="col"><span class="sr">Feature</span></th><th scope="col">Starter</th><th scope="col">Freelancer</th><th scope="col">Studio</th></tr></thead>
+          <tbody>
+            <tr><td>Clients</td><td>3</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Invoices per month</td><td>5</td><td>Unlimited</td><td>Unlimited</td></tr>
+            <tr><td>Custom branding</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Automatic reminders</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Recurring invoices</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Time tracking</td><td class="no">—</td><td class="yes">✓</td><td class="yes">✓</td></tr>
+            <tr><td>Multi-currency</td><td class="no">—</td><td>3 currencies</td><td>Unlimited</td></tr>
+            <tr><td>Accounting sync</td><td class="no">—</td><td class="no">—</td><td class="yes">✓</td></tr>
+            <tr><td>Team members</td><td>1</td><td>1</td><td>5</td></tr>
+            <tr><td>Support</td><td>Email</td><td>Email</td><td>Priority</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="proof">
+      <div class="quote">
+        <p>“I used to chase clients for weeks. Now reminders go out on their own and I’m paid in nine days on average.”</p>
+        <small>— MAYA R., FREELANCE ILLUSTRATOR</small>
+      </div>
+      <div class="guarantee">
+        <span class="seal">Guaranteed</span>
+        <b>30-day money-back guarantee</b>
+        <span class="t">Not happy with a paid plan? Email us within 30 days for a full refund, no questions asked.</span>
+      </div>
+    </div>
+
+    <div class="trust">
+      Syncs with the tools you already use
+      <ul><li>Stripe</li><li>PayPal</li><li>QuickBooks</li><li>Xero</li><li>Slack</li></ul>
+    </div>
+
+    <section id="faq">
+      <h3 class="sec">Questions, answered</h3>
+      <p class="sec-sub">The fine print, in plain English.</p>
+      <div class="faq">
+        <details><summary>Can I switch plans or cancel anytime?</summary><p>Yes. Upgrade, downgrade, or cancel from your settings whenever you like. Changes are prorated and there are no cancellation fees.</p></details>
+        <details><summary>What happens if I go over the free plan limits?</summary><p>We’ll let you know and never delete anything. You can still view and download all your data; you’ll just need to upgrade to create more invoices that month.</p></details>
+        <details><summary>Do you charge extra for getting paid online?</summary><p>No. Inkwell adds no markup. You only pay the standard processing fee from our payment partner, and it’s the same on every plan.</p></details>
+        <details><summary>Is there a discount for students or nonprofits?</summary><p>Yes — contact support for 30% off any paid plan if you qualify.</p></details>
+        <details><summary>Can I export my data?</summary><p>Always. Export invoices, clients, and reports as CSV or PDF on any plan, including after you cancel.</p></details>
+      </div>
+    </section>
+
+    <div class="cta">
+      <h3>Your next invoice takes about 60 seconds.</h3>
+      <a class="btn primary" href="#">Start for free</a>
+      <p>Free forever on Starter · No credit card required</p>
+    </div>
+  </main>
+</div>
+<footer>
+  <div class="wrap"><span>© 2026 Inkwell · Paid in full</span><span><a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="#">Contact</a></span></div>
+</footer>
+
+<script>
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const mBtn = $('#monthly'), yBtn = $('#yearly');
+  function setPeriod(yearly) {
+    yBtn.setAttribute('aria-pressed', yearly);
+    mBtn.setAttribute('aria-pressed', !yearly);
+    $$('.amt[data-m]').forEach(el => el.textContent = '$' + (yearly ? el.dataset.y : el.dataset.m));
+    $$('.billed[data-m]').forEach(el => el.textContent = yearly ? el.dataset.y : el.dataset.m);
+    $$('.save-line[data-save]').forEach(el => el.textContent = yearly ? 'You save $' + el.dataset.save + ' a year' : '');
+  }
+  mBtn.onclick = () => setPeriod(false);
+  yBtn.onclick = () => setPeriod(true);
+
+  const inv = $('#inv'), cli = $('#cli'), team = $('#team'), rec = $('#rec'), plans = $$('.plan');
+  function recommend() {
+    const n = +inv.value, c = +cli.value;
+    $('#invOut').textContent = n; $('#cliOut').textContent = c;
+    const i = team.checked ? 2 : (n > 5 || c > 3) ? 1 : 0;
+    plans.forEach(p => p.classList.toggle('is-pick', +p.dataset.i === i));
+    rec.textContent = [
+      'Starter covers you: up to 5 invoices and 3 clients, free forever. Upgrade the day you outgrow it.',
+      n > 5 && c > 3 ? 'Freelancer is your fit: you’re past Starter’s 5 invoices and 3 clients.'
+        : n > 5 ? 'Freelancer is your fit: Starter stops at 5 invoices a month, and reminders will chase the rest for you.'
+        : 'Freelancer is your fit: Starter stops at 3 active clients.',
+      'Studio is your fit: collaborators get their own logins, and everything in Freelancer comes along.'
+    ][i];
+  }
+  [inv, cli, team].forEach(el => el.oninput = recommend);
+  recommend(); setPeriod(true);
+</script>
+<script>addEventListener("load",()=>{const r=[];const t=(n,c,tm)=>{inv.value=n;cli.value=c;team.checked=tm;recommend();r.push(n+"/"+c+"/"+tm+"="+document.querySelector(".is-pick h2").textContent)};t(3,2,false);t(8,2,false);t(3,6,false);t(9,9,false);t(3,2,true);document.body.insertAdjacentHTML("beforeend","<pre id=res>"+r.join(" ; ")+"</pre>")})</script></body>
+</html>
