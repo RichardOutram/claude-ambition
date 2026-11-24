@@ -116,6 +116,10 @@ class VM:
             if ip and subprocess.run(["ssh", "-i", str(VM_KEY), *SSH_OPTS, "-o", "ConnectTimeout=3", f"admin@{ip}",
                                       "test -d /work || test -d /examples"], capture_output=True).returncode == 0:
                 self.ip = ip
+                # A fresh clone reads everything cold: the first python3 imports took 3-57 s, enough to time out the
+                # plugin's first hooks. Warm what every arm's session touches first (not counted in run time).
+                subprocess.run(self.ssh("python3 -c 'import json,os,re,sys,tempfile,datetime,hashlib,shutil,time,traceback'"
+                                        "; claude --version"), capture_output=True, timeout=300)
                 return self
             time.sleep(2)
         self.__exit__(None, None, None)
@@ -141,7 +145,7 @@ def in_vm(vm, args, env, plugin=None):
     inner[inner.index("--settings") + 1] = "/bench/settings.json"
     if plugin:
         inner[inner.index("--plugin-dir") + 1] = "/plugin"
-    keys = " ".join(f"{k}={shlex.quote(env[k])}" for k in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY") if env.get(k))
+    keys = " ".join(f"{k}={shlex.quote(env[k])}" for k in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "AMBITION_SNAPSHOT") if env.get(k))
     return vm.ssh(f"cd /work && env CLAUDE_CONFIG_DIR=/cfg DISABLE_AUTOUPDATER=1 {keys} " + " ".join(shlex.quote(x) for x in inner))
 
 
@@ -282,6 +286,8 @@ def load_env():
     else:
         isolation = "shared-user-config"
     env.pop("CLAUDECODE", None)  # allow running from inside a Claude Code session
+    # Every arm: the plugin's hook snapshots the work to .ambition/first/ and .ambition/steps/<n>/ (Claude isn't told)
+    env["AMBITION_SNAPSHOT"] = "1"
     return env, isolation
 
 
@@ -370,7 +376,7 @@ def in_docker(args, ws, env, plugin=None):
            "-v", f"{ws}:/work", "-v", f"{config_dir(env)}:/cfg", "-v", f"{settings}:/settings.json:ro"]
     if plugin:
         cmd += ["-v", f"{plugin}:/plugin:ro"]
-    for k in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY"):
+    for k in ("CLAUDE_CODE_OAUTH_TOKEN", "ANTHROPIC_API_KEY", "AMBITION_SNAPSHOT"):
         if env.get(k):
             cmd += ["-e", k]
     return cmd + [DOCKER_IMAGE] + inner
@@ -963,7 +969,8 @@ def turn_subjects(run):
 
 
 # A turn is a step of the method. Turn 1 is the plain first version (up to the checkpoint); push.md has the
-# model open every later step with a fixed marker line and copy the work to .ambition/steps/<n>/ at its end.
+# model open every later step with a fixed marker line; the hook snapshots the work to .ambition/steps/<n>/ when
+# the model ends the step with its done line (AMBITION_SNAPSHOT, set for every arm).
 STEP_MARK = re.compile(r"^\W{0,3}Step (\d)/8 · ([^\n]+?)\s*$", re.M)
 STEP_NAMES = {1: "First version", 2: "Altitude", 3: "Depth", 4: "Challenge", 5: "Range", 6: "Judge", 7: "Stretch", 8: "Lock"}
 # Relative token prices (input, output, cache write, cache read); the same ratios across current Claude models.

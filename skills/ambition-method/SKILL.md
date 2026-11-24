@@ -1,6 +1,6 @@
 ---
 name: ambition-method
-description: The ambition method, after Felix Rieseberg's essay "How to be more ambitious". The plugin's hooks hand it to Claude when the user pushes on from /be-ambitious or runs an /ambition step, so it stays out of every other session.
+description: The ambition method, after Felix Rieseberg's essay "How to be more ambitious", written down as the source for the step commands and push.md. Claude is never sent it as a whole: each step gets only its own short instruction.
 user-invocable: false
 disable-model-invocation: true
 ---

@@ -131,6 +131,12 @@ def events(session):
             d = json.loads(raw)
         except ValueError:
             continue
+        att = d.get("attachment") or {}
+        if d.get("type") == "attachment" and att.get("type") == "hook_additional_context" and att.get("hookEvent") == "Stop":
+            # the plugin's quiet hand-offs (additionalContext, not a block): show them like the old feedback
+            if d.get("timestamp"):
+                yield when(d["timestamp"]), "hook", "\n\n".join(att.get("content") or [])
+            continue
         if d.get("type") not in ("user", "assistant") or not d.get("timestamp"):
             continue
         t = when(d["timestamp"])

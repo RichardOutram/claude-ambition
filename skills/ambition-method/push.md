@@ -2,7 +2,7 @@
 
 The user chose to push the work further, one step at a time, the way a person runs one `/ambition` command after another in a single chat. Each step's instruction arrives on its own once the step before it is finished.
 
-The work as it stands is the **first version**: it's in `.ambition/first/` (if it isn't, copy the deliverable there now, and add `.ambition/` to the project's .gitignore if it has one that doesn't cover it). That folder is never edited again. It is the floor: the work must end up better than it on every part of the ask and on the goal, and worse on nothing. Improve the deliverable where it is, building on the first version rather than starting over, and keep everything that makes it good as this kind of thing.
+The work as it stands is the **first version**. Keep a way back to it that leaves the project as it is: note its git commit, or, if it isn't in git, copy it to your scratchpad or a temp folder outside the project. Never add copies or folders to the project for this. It is the floor: the work must end up better than it on every part of the ask and on the goal, and worse on nothing. Improve the deliverable where it is, building on the first version rather than starting over, and keep everything that makes it good as this kind of thing.
 
 You do the work yourself, in this conversation. Don't hand it to subagents; the only place they're welcome is Range, if several fields are worth exploring at once.
 
@@ -14,9 +14,9 @@ You do the work yourself, in this conversation. Don't hand it to subagents; the 
 
 - **Focus on this step.** Do this step's instruction in full, as if the user had just typed its command. Don't anticipate other steps or hold work back for them.
 - **No look, no claim.** Whenever you change something people look at, read or use, perceive the result the way they will: render it at the sizes they use and look, read it through, use it. If you can't, get that access first (install a browser or a renderer). If you still can't, say the genre bar is unchecked and leave how it looks, reads or feels as the first version had it.
-- **Look efficiently.** Every image you look at stays in this conversation and is re-read on every later turn. Look at a contact sheet (many frames or sizes in one image) rather than one image per frame, and take at most about three render-and-look rounds in a step. Keep working files (screenshots, scripts) under `.ambition/`, not in the deliverable.
+- **Look efficiently.** Every image you look at stays in this conversation and is re-read on every later turn. Look at a contact sheet (many frames or sizes in one image) rather than one image per frame, and take at most about three render-and-look rounds in a step. Keep working files (screenshots, scripts) in your scratchpad or a temp folder, not in the project.
 - **Never trade the genre for a number.** A change must make the work better for the goal without making it worse as this kind of thing. If it does, undo it.
-- **Reviewing.** If the user chose to push on step by step, or asks at any point to review each step, make sure `.ambition/review` exists. Then end every step with its report and stop before you copy it. Their reply is steering, not answers: act on it, then copy.
+- **Reviewing.** If the user chose to push on step by step, or asks at any point to review each step, end every step with its report and the step's over-to-you line, and stop. Their reply is steering, not answers: act on it, then end with the step's done line.
 - Respect the session's permission mode and the user's rules. Ambition never authorises skipping a confirmation the user requires.
 
 ## Step 2 · Altitude

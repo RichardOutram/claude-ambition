@@ -1,10 +1,14 @@
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ambition.py\" prompt", "timeout": 10 }] }
+      { "hooks": [
+        { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ambition.py\" prompt", "timeout": 30 }
+      ] }
     ],
     "Stop": [
-      { "hooks": [{ "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ambition.py\" stop", "timeout": 10 }] }
+      { "hooks": [
+        { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/ambition.py\" stop", "timeout": 60 }
+      ] }
     ]
   }
 }
