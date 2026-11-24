@@ -11,6 +11,11 @@ it's needed, so the first turn is exactly what Claude makes from a plain prompt.
           with step 2's instruction. After that, each time Claude ends with `▪ Step n/8 done`, continue with
           step n+1's instruction and nothing else, like a person typing the next command. `▪ Step n/8 · over
           to you` means the user is reviewing the step: stay quiet until Claude ends a later turn with done.
+  loop    /ambition-loop [goal], after a first version, pushes it with no questions: Claude answers Altitude
+          itself and sets a target its outside check can prove, then runs Depth to Stretch in rounds. Each
+          round ends with `▪ Round r · goal met` (on to Lock), `▪ Round r · not yet` (another round from Depth,
+          on top of the current work) or `▪ Round r · blocked` (on to Lock: it needs something from the user).
+          There is no round cap: the goal decides.
 Everything else passes straight through.
 
 The hand-offs are `additionalContext`, never a block: a block shows the user its whole text as a red "Stop hook
@@ -40,11 +45,13 @@ STEPS = {2: ("Altitude", None), 3: ("Depth", "ambition-b-depth"), 4: ("Challenge
 # Per-session marks. The plugin's data folder survives between calls (and between the bench's containers).
 STATE = os.path.join(os.environ.get("CLAUDE_PLUGIN_DATA") or os.path.join(tempfile.gettempdir(), "claude-ambition"), "sessions")
 FRONT = re.compile(r"/(?:[\w-]+:)?be-ambitious(?:\s+(.*))?", re.S)
+LOOP = re.compile(r"/(?:[\w-]+:)?ambition-loop(?:\s+(.*))?", re.S)
 STEP = re.compile(r"/(?:[\w-]+:)?ambition(?:-[a-g]-[\w-]+)?(?:\s.*)?", re.S)
 # The lines Claude ends a message with. Matched loosely (bold, a trailing full stop) in the last few lines.
 CHOICE = re.compile(r"▪\W*Push:\s*(step by step|straight through)", re.I)
 DONE = re.compile(r"▪\W*Step\s*(\d)\s*/\s*8\W*done\b", re.I)
 WAITING = re.compile(r"▪\W*Step\s*(\d)\s*/\s*8\W*over to you\b", re.I)
+ROUND = re.compile(r"▪\W*Round\s*(\d+)\W*(goal met|not yet|blocked)\b", re.I)
 LIMIT = 9500  # a hand-off longer than ~10,000 characters reaches Claude as a 2 KB preview and a file path
 SNAPSHOT_SKIP = {".ambition", ".plain", ".git", "node_modules", ".venv", "venv", "__pycache__", ".cache", ".next"}
 
@@ -138,18 +145,44 @@ def command_text(name):
     return "\n".join(l for l in body.splitlines() if not l.startswith(skip)).strip()
 
 
-def step_text(n, session, started, reviewing=False):
-    """Everything Claude gets for step n of a push, and nothing about the other steps."""
+def step_text(n, session, started, mode="straight", rnd=1):
+    """Everything Claude gets for step n of a push, and nothing about the other steps. mode: straight, review or
+    loop (rnd is the loop's round)."""
     name, command = STEPS[n]
     _, every, sections = push_parts()
+    marker = f"▸ Step {n}/8 · {name}" + (f" · round {rnd}" if mode == "loop" else "")
     parts = [f"Step {n} of pushing the work further: {name}. Open your first message with this line on its own, "
-             f"exactly: `▸ Step {n}/8 · {name}`. Write that line nowhere else."]
+             f"exactly: `{marker}`. Write that line nowhere else."]
+    if mode == "loop" and rnd > 1 and n == 3:
+        parts.append(f"Round {rnd} of the loop. The restatement and its target stand. The work as it is now is the "
+                     f"floor for this round: keep everything that held up. Go after what the last round's check "
+                     f"showed still falls short of the target, first.")
     if command:
         parts.append(command_text(command))
     parts.append(sections[n])
     if n == 8:
+        if mode == "loop":
+            parts.append("This push was a loop. In the report, add **Rounds:** for each round, what it changed and what "
+                         "the check showed after it, and whether the target was met. If it stopped blocked, say first "
+                         "what it needs from the user to go on.")
         parts.append(f"Run started: {started}\nMetrics command for the end: python3 {METRICS} {session} --since {started}")
-    if reviewing:
+    if mode == "loop":
+        parts.append(LOOP_RULES)
+        if n == 7:
+            parts.append(f"When this step is finished, run the outside check on the work as it is now, against every "
+                         f"part of the target in the restatement, and give a short round report: what the check "
+                         f"returned for each part, and what this round changed. Then end with exactly one of these "
+                         f"lines, on its own, as the very last line: `▪ Round {rnd} · goal met` if the check shows "
+                         f"every part of the target met; `▪ Round {rnd} · not yet` if it doesn't, after naming what "
+                         f"falls short; `▪ Round {rnd} · blocked` only if the target can't be reached without "
+                         f"something only the user can give (access, data, a decision), after naming it. Only what "
+                         f"the check returned counts as met, never your own opinion of the work. The next "
+                         f"instruction arrives then.")
+        else:
+            parts.append(f"When this step is finished, end with a short step report (did / found / changed course) and "
+                         f"this line on its own, as the very last line: `▪ Step {n}/8 done`. "
+                         + ("The loop ends there." if n == 8 else "The next instruction arrives then."))
+    elif mode == "review":
         parts.append(f"The user is reviewing each step. When this step is finished, end with a short step report (did / "
                      f"found / changed course) and this line on its own, as the very last line: `▪ Step {n}/8 · over to "
                      f"you`, and stop. Their reply is notes to steer by or a go-ahead: act on it, then end with `▪ Step "
@@ -165,16 +198,52 @@ def step_text(n, session, started, reviewing=False):
     return "\n\n".join(parts) + "\n\n## Every step\n\n" + every
 
 
-def push_text(session, started, reviewing=False):
+LOOP_RULES = ("**The loop asks nothing.** The user started it to run on its own until the goal is met: they told you to "
+              "use your judgement. Don't ask the user anything and don't stop to wait for them; where a step would ask, "
+              "decide from the repo, the conversation and sensible defaults, and list it as a labelled assumption. This "
+              "never overrides the session's permission mode or the user's rules: a confirmation they require still "
+              "gets asked.")
+
+
+def loop_text(session, started, goal):
+    """What Claude gets to start /ambition-loop: push.md's preamble and step 2, answered without the user."""
+    target = (f"The user gave the goal: {goal}\nTake it as the answer to what this is ultimately for, and aim the "
+              "target at it.\n\n" if goal else "")
+    return ("The user started /ambition-loop on the work already done in this conversation: push it further with the "
+            "ambition method, with no questions, in rounds, until the goal is met. That work is the first version.\n\n"
+            + push_parts()[0] + "\n\n---\n\n" + target
+            + "In this loop you answer Altitude's questions yourself, list each answer as a labelled assumption, and go "
+              "straight on from the restatement without waiting for confirmation. Make **Excellent means** a specific, "
+              "hard target that **Proven by** can check outright, part by part: it is what ends the loop.\n\n"
+            + step_text(2, session, started, "loop"))
+
+
+def push_text(session, started, mode="straight"):
     """push.md's preamble and step 2: all Claude needs to begin pushing on. Like the essay, each step is a short
     prompt of its own; the method as a whole (SKILL.md, reference/) isn't sent, so no step sees the others.
     (Sending the whole method first was tried on the bench, design/pricing-page run-4: slower, no better.)"""
-    return push_parts()[0] + "\n\n---\n\n" + step_text(2, session, started, reviewing)
+    return push_parts()[0] + "\n\n---\n\n" + step_text(2, session, started, mode)
+
+
+def read_step(session):
+    """The push under way: (step, started, mode, round)."""
+    n, started, *rest = read(mark(session, "step")).split()
+    return int(n), started, (rest[0] if rest else "straight"), int(rest[1]) if len(rest) > 1 else 1
+
+
+def write_step(session, n, started, mode, rnd=1):
+    write_mark(session, "step", f"{n} {started} {mode} {rnd}")
+
+
+def clear_nudges(session):
+    for n in STEPS:
+        if os.path.exists(mark(session, f"nudged-{n}")):
+            os.remove(mark(session, f"nudged-{n}"))
 
 
 def begin_push(session, started, mode):
     """Step 2 is under way: from here the Stop hook hands out the later steps."""
-    write_mark(session, "step", f"2 {started} {mode}")
+    write_step(session, 2, started, mode)
     for k in ["checkpoint", "replied", "nudged-choice"] + [f"nudged-{i}" for i in STEPS]:
         if os.path.exists(mark(session, k)):
             os.remove(mark(session, k))
@@ -224,11 +293,11 @@ def on_prompt(data):
     if front:
         task = (front.group(1) or "").strip()
         if not task and os.path.exists(mark(session, "step")):
-            n, started, *mode = read(mark(session, "step")).split()
-            n = int(n)
+            n, started, mode, rnd = read_step(session)
             return ("The user typed /be-ambitious while a push of the work is under way, at step "
-                     f"{n}/8 · {STEPS[n][0]}. Tell them that in one line, then carry on with that step.\n\n"
-                     + step_text(n, session, started, mode[:1] == ["review"]))
+                     f"{n}/8 · {STEPS[n][0]}" + (f", round {rnd} of a loop" if mode == "loop" else "")
+                     + ". Tell them that in one line, then carry on with that step.\n\n"
+                     + step_text(n, session, started, mode, rnd))
         if not task and last_prompt(data.get("transcript_path"))[0]:
             started = now()
             begin_push(session, started, "straight")
@@ -242,6 +311,20 @@ def on_prompt(data):
                       "what it would without the plugin:\n\n" + task)
         return {"decision": "block", "reason": reason, "hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit", "suppressOriginalPrompt": True}}
+    loop = LOOP.fullmatch(prompt)
+    if loop:
+        if os.path.exists(mark(session, "step")):
+            n, _, mode, rnd = read_step(session)
+            what = f"round {rnd} of a loop" if mode == "loop" else "a push"
+            return {"decision": "block", "hookSpecificOutput": {"hookEventName": "UserPromptSubmit"},
+                    "reason": f"Ambition: {what} is already under way, at step {n}/8 · {STEPS[n][0]}. It carries on."}
+        if not last_prompt(data.get("transcript_path"))[0]:
+            return {"decision": "block", "hookSpecificOutput": {"hookEventName": "UserPromptSubmit"},
+                    "reason": "Ambition: /ambition-loop pushes work already done in this chat. Send the task first, "
+                              "then run /ambition-loop (optionally with the goal) on what Claude made."}
+        started = now()
+        begin_push(session, started, "loop")
+        return loop_text(session, started, (loop.group(1) or "").strip())
     if os.path.exists(mark(session, "checkpoint")):  # a reply to the checkpoint question
         write_mark(session, "replied")
     waiting = mark(session, "waiting")
@@ -278,27 +361,42 @@ def on_stop(data):
                          "through`. The instructions arrive then. If they didn't, just stop.")
             return None
         started = read(mark(session, "checkpoint"))
-        reviewing = choice.group(1).lower() == "step by step"
-        begin_push(session, started, "review" if reviewing else "straight")
-        return push_text(session, started, reviewing)
+        mode = "review" if choice.group(1).lower() == "step by step" else "straight"
+        begin_push(session, started, mode)
+        return push_text(session, started, mode)
     if not os.path.exists(mark(session, "step")):
         return None
-    n, started, *mode = read(mark(session, "step")).split()
-    n, reviewing = int(n), mode[:1] == ["review"]
+    n, started, mode, rnd = read_step(session)
+    loop = mode == "loop"
+    rounded = ROUND.search(reply) if loop and n == 7 else None
+    if rounded and int(rounded.group(1)) == rnd:  # the end of a loop round: the check decides
+        snapshot(data, f"rounds/{rnd}/7")
+        clear_nudges(session)
+        if rounded.group(2).lower() == "not yet":  # no cap: another round, for as long as the goal isn't met
+            write_step(session, 3, started, mode, rnd + 1)
+            return step_text(3, session, started, mode, rnd + 1)
+        write_step(session, 8, started, mode, rnd)
+        return step_text(8, session, started, mode, rnd)
     done = DONE.search(reply)
-    if done and int(done.group(1)) == n:
-        snapshot(data, f"steps/{n}")
+    if done and int(done.group(1)) == n and not (loop and n == 7):
+        snapshot(data, f"steps/{n}" if not loop else f"rounds/{rnd}/{n}")
         if n >= 8:  # the push is over
             end_push(session)
             return None
-        write_mark(session, "step", f"{n + 1} {started} {'review' if reviewing else 'straight'}")
-        return step_text(n + 1, session, started, reviewing)
+        write_step(session, n + 1, started, mode, rnd)
+        return step_text(n + 1, session, started, mode, rnd)
     if WAITING.search(reply):
         write_mark(session, "waiting", str(n))
         return None
     nudged = mark(session, f"nudged-{n}")
     # once per step; Altitude stops for answers by design, and step by step every step waits for the user
-    if n > 2 and not reviewing and not os.path.exists(nudged):
+    if loop and not os.path.exists(nudged):  # the loop never waits for the user, Altitude included
+        write_mark(session, f"nudged-{n}")
+        line = (f"one of `▪ Round {rnd} · goal met`, `▪ Round {rnd} · not yet` or `▪ Round {rnd} · blocked`"
+                if n == 7 else f"`▪ Step {n}/8 done`")
+        return (f"This is /ambition-loop, which asks the user nothing. If step {n} is finished, end with its report "
+                f"and {line} as the very last line. If not, carry on with it, deciding anything you'd have asked.")
+    if n > 2 and mode == "straight" and not os.path.exists(nudged):
         write_mark(session, f"nudged-{n}")
         return (f"If step {n} is finished, end with its step report and the line `▪ Step {n}/8 done` as the "
                  "very last line. If you're waiting for the user, just stop.")

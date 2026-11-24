@@ -68,6 +68,7 @@ The last three only happen if you ask for them. Models also have habits that wor
 | Piece | Type | What it does |
 |---|---|---|
 | `/be-ambitious`, then your task | skill + hooks | **The front door.** Does your task exactly as Claude normally would, then asks whether to push it further. If you do, it interviews you for the real goal, runs the seven moves one at a time in the same conversation, as if you'd typed each step's command, and reports what changed. |
+| `/ambition-loop [goal]` | skill + hooks | **Hands-off.** After a first version, pushes it with no questions: Claude sets the goal and a target its own outside check can prove, then works in rounds until the check shows the target met. |
 | `ambition-method` | method files | **The method itself:** the defaults it counters, the seven moves, operating rules and reference notes. Claude never gets it as a whole: each step gets only its own short instruction, plus a few working rules. Nothing of it is in any other session. |
 | `/ambition` … `/ambition-g-lock` | commands | The seven moves as separate steps, for when you want to drive by hand. |
 
@@ -102,9 +103,22 @@ migrate the billing service to the new queue
 - **Steer it in your own words when you push on.** "Push it further, use your judgement" answers the questions for you and lists the assumptions. You can also ask it to treat the task as a plan, to write a log of the run, or to skip the metrics. Plan or build is otherwise detected for you, and plan mode produces an ambitious plan that stops for your approval.
 - **Push after the fact.** Ask for something the normal way, look at it, then type `/be-ambitious` on its own.
 
-**How it works:** two small hooks (`hooks/ambition.py`) do it all. A prompt hook blocks `/be-ambitious` before Claude sees it and marks the session (in the plugin's data folder). A Stop hook notices when the next turn ends and adds the checkpoint question. When you choose to push on, it hands Claude the first step's instruction, not the whole method: a short prompt per step left the model more room and measured better. After that, each time Claude ends a step with its done line (`▪ Step n/8 done`), the Stop hook hands Claude the next step's instruction and nothing else, so every step gets its full attention. Nothing is copied into your project, and the hand-offs arrive quietly rather than as hook errors. Typing `/be-ambitious` mid-push tells you which step it's on and carries on from there. Until then, nothing of the plugin is in Claude's context, not even the method's name in the skill list. On your first `/ambition` step, the prompt hook adds the same few working rules the guided steps get. In every other turn and session they do nothing. They need `python3`.
+**How it works:** two small hooks (`hooks/ambition.py`) do it all. A prompt hook blocks `/be-ambitious` before Claude sees it and marks the session (in the plugin's data folder). A Stop hook notices when the next turn ends and adds the checkpoint question. When you choose to push on, it hands Claude the first step's instruction, not the whole method: a short prompt per step left the model more room and measured better. After that, each time Claude ends a step with its done line (`▪ Step n/8 done`), the Stop hook hands Claude the next step's instruction and nothing else, so every step gets its full attention. Nothing is copied into your project, and the hand-offs arrive quietly rather than as hook errors. `/ambition-loop` uses the same hand-offs, with a round line (`▪ Round r · goal met`, `not yet` or `blocked`) after Stretch deciding whether to lock in or go round again. Typing `/be-ambitious` mid-push tells you which step it's on and carries on from there. Until then, nothing of the plugin is in Claude's context, not even the method's name in the skill list. On your first `/ambition` step, the prompt hook adds the same few working rules the guided steps get. In every other turn and session they do nothing. They need `python3`.
 
-### 2. Drive the steps yourself
+### 2. Hands-off: `/ambition-loop`
+
+```
+migrate the billing service to the new queue
+/ambition-loop                    ← after the first version: keep going until the goal is met
+/ambition-loop zero dropped messages under a 10x burst   ← or name the goal yourself
+```
+
+- **It asks nothing.** Claude answers the Altitude questions itself, from the conversation and the repo, lists each answer as a labelled assumption, and restates the task with a specific, hard target that an outside check (tests, a run, a measurement) can prove part by part. Your permission mode and rules still apply: a confirmation you require is still asked.
+- **It works in rounds until the check says the goal is met.** Each round runs Depth, Challenge, Range, Judge and Stretch on top of the work as it stands, then runs the check against the target. Met: it locks in and reports, round by round. Not met: it names what falls short and starts another round from Depth. Blocked (it needs access, data or a decision only you can give): it stops and says what it needs.
+- **There's no round cap.** The goal decides, so a target out of reach can cost a lot of time and tokens. Press Esc to stop it at any point; the work so far stays where it is. Steps are marked `▸ Step n/8 · Name · round r`.
+- Run it on work already done in the chat. With no work yet, it tells you to send the task first.
+
+### 3. Drive the steps yourself
 
 Run `/ambition <task>`, then follow each `Next →` pointer. Any step also works on its own. `/ambition-e-judge` is worth running on any work you don't yet trust.
 
